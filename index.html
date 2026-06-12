@@ -12,7 +12,10 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:#f8fafc;color:
 #header{flex-shrink:0;padding:10px 20px 6px;background:#fff;border-bottom:1px solid #e2e8f0}
 #header h1{font-size:0.93rem;font-weight:700}
 #header p{font-size:0.69rem;color:#94a3b8;margin-top:2px}
-#analyse-panel{flex-shrink:0;background:#fff;border-bottom:2px solid #e2e8f0;padding:12px 22px 14px;font-size:0.77rem;line-height:1.6;color:#334155;overflow-y:auto;max-height:28vh}
+#analyse-panel{flex-shrink:0;position:relative;background:#fff;border-bottom:2px solid #e2e8f0;padding:12px 22px 14px;font-size:0.77rem;line-height:1.6;color:#334155;overflow-y:auto;max-height:28vh}
+#analysis-wrap{position:relative;flex-shrink:0;background:#fff;border-bottom:2px solid #e2e8f0}
+#analysis-wrap #analyse-panel{border-bottom:0}
+#read-more{display:none}
 #controls{flex-shrink:0;display:flex;align-items:center;gap:6px;padding:5px 14px;background:#fff;border-bottom:1px solid #e2e8f0;flex-wrap:wrap}
 .tab{padding:3px 12px;font-size:0.76rem;font-weight:600;cursor:pointer;border-radius:20px;border:1.5px solid #cbd5e1;color:#64748b;background:#fff;transition:all 0.15s}
 .tab.a-blue{background:#1e40af;border-color:#1e40af;color:#fff}
@@ -30,6 +33,8 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:#f8fafc;color:
 .cl-blue{background:#1e40af}.cl-teal{background:#0f766e}
 .canvas-wrap{flex:1;min-height:0;position:relative;overflow:hidden}
 .canvas-wrap canvas{position:absolute;top:0;left:0}
+.value-readout{position:absolute;z-index:3;top:6px;right:8px;padding:4px 7px;border-radius:6px;background:rgba(255,255,255,0.92);border:1px solid #e2e8f0;box-shadow:0 2px 8px rgba(15,23,42,0.08);font-size:0.68rem;font-weight:700;color:#1e293b;pointer-events:none;opacity:0;transition:opacity 0.12s}
+.value-readout.on{opacity:1}
 #stats-bar{flex-shrink:0;background:#fff;border-top:1px solid #e2e8f0;display:flex;flex-wrap:wrap;padding:3px 14px;gap:20px}
 .stat{font-size:0.67rem;color:#94a3b8}.stat b{color:#1e293b}
 noscript{display:block;padding:12px 16px;background:#fff7ed;color:#9a3412;border-bottom:1px solid #fed7aa;font-size:0.85rem}
@@ -39,22 +44,27 @@ noscript{display:block;padding:12px 16px;background:#fff7ed;color:#9a3412;border
   #header{padding:9px 12px 7px}
   #header h1{font-size:0.86rem;line-height:1.25}
   #header p{font-size:0.64rem;line-height:1.25}
-  #analyse-panel{max-height:26vh;padding:10px 12px;font-size:0.72rem;line-height:1.45}
-  #controls{position:sticky;top:0;z-index:10;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;gap:5px;padding:7px 10px;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+  #analysis-wrap.is-collapsed::after{content:'';position:absolute;left:0;right:0;bottom:34px;height:44px;background:linear-gradient(180deg,rgba(255,255,255,0),#fff 75%);pointer-events:none}
+  #analyse-panel{max-height:255px;padding:10px 12px 0;font-size:0.72rem;line-height:1.45;overflow:hidden}
+  #analysis-wrap.is-expanded #analyse-panel{max-height:none;padding-bottom:8px;overflow:visible}
+  #read-more{display:flex;align-items:center;justify-content:center;width:100%;height:34px;border:0;border-top:1px solid #e2e8f0;background:#fff;color:#1e40af;font-size:0.72rem;font-weight:800}
+  #controls{position:sticky;top:0;z-index:10;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:7px 10px;overflow:visible}
   #controls .tab,#controls .li,#sp95-ref,#vue-gz{flex:0 0 auto}
+  #sp95-ref.mobile-on,#vue-gz.mobile-on{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
   .tab{padding:5px 10px;font-size:0.72rem;white-space:nowrap}
-  .sep{flex:0 0 1px}
-  #legend{margin-left:4px;flex:0 0 auto;flex-wrap:nowrap;gap:7px}
-  .li{font-size:0.61rem;white-space:nowrap}
+  .sep,#sp95-ref span{display:none}
+  #legend{margin-left:0;gap:0}
+  .li{display:none}
   #charts-area{display:block;min-height:auto;overflow:visible}
   .chart-row{height:330px;min-height:330px;display:flex;border-bottom:2px solid #94a3b8}
   .chart-label{padding:5px 10px;font-size:0.64rem;line-height:1.25}
   .canvas-wrap{min-height:0}
+  .value-readout{top:5px;right:6px;font-size:0.66rem}
   #stats-bar{display:grid;grid-template-columns:1fr;gap:2px;padding:7px 10px}
   .stat{font-size:0.65rem;line-height:1.35}
 }
 @media (max-width:420px){
-  #analyse-panel{max-height:22vh}
+  #analyse-panel{max-height:245px}
   .chart-row{height:300px;min-height:300px}
   .tab{font-size:0.69rem;padding:5px 9px}
   #legend{gap:6px}
@@ -67,7 +77,10 @@ noscript{display:block;padding:12px 16px;background:#fff7ed;color:#9a3412;border
   <h1>Écart de prix HT &mdash; Corse vs Bouches-du-Rh&ocirc;ne &mdash; 2022&ndash;2026</h1>
   <p>Prix march&eacute; HT (remises neutralis&eacute;es par enseigne) &middot; Stations actives hors autoroute</p>
 </div>
-<div id="analyse-panel"></div>
+<div id="analysis-wrap" class="is-collapsed">
+  <div id="analyse-panel"></div>
+  <button type="button" id="read-more" aria-expanded="false" onclick="toggleAnalysis()">▾ Lire la suite</button>
+</div>
 <div id="controls">
   <button type="button" class="tab a-blue" id="btn-gz" aria-pressed="true" onclick="switchCarbu('gazole',this)">Gazole</button>
   <button type="button" class="tab" id="btn-sp" aria-pressed="false" onclick="switchCarbu('sp95',this)">SP95</button>
@@ -127,6 +140,7 @@ const ANALYSES={
   sp95:`<p style="margin-bottom:8px">Sur la période janvier 2022 – juin 2026, l'écart HT Corse/BdR sur le <strong>SP95</strong> s'établit en moyenne à <strong>+14,6 c/L</strong> toutes stations confondues et à <strong>+11,5 c/L</strong> réseau vs réseau. Alors que la Corse ne commercialise pas de E10, dans les Bouches-du-Rhône un tiers des stations ont arrêté de vendre du SP95 depuis 2022 — l'E10, vendu en moyenne <strong>4 centimes moins cher</strong>, ayant pris sa place comme carburant essence de référence sur le continent. Les Corses sont ainsi privés d'un carburant plus attractif. La comparaison avec l'E10 des BdR porte l'écart à <strong>+18,6 c/L</strong> toutes stations et <strong>+15,5 c/L</strong> réseau vs réseau.</p><p style="margin-bottom:8px">Dans les Bouches-du-Rhône, les grandes surfaces (Leclerc, Intermarché, Carrefour...) vendent le carburant en moyenne <strong>6 centimes de moins</strong> que les stations traditionnelles. La Corse n'en a aucune. Mais l'enjeu dépasse ces 6 centimes : en 2022, quand TotalEnergies a baissé ses prix, VITO a immédiatement suivi sur toute l'île. Une grande surface qui pratiquerait des prix bas entraînerait probablement l'ensemble du marché corse à la baisse.</p><p style="margin-bottom:8px">La tendance est à l'aggravation : de <strong>+13,2 c/L en 2022</strong> à <strong>+17,5 c/L en 2025</strong>. Le bouclier TotalEnergies à 1,99 € limite la hausse quand les cours montent. Mais si les stations corses atteignent plus vite le seuil du bouclier, elles sont les moins rapides à s'en décoller quand le marché baisse. La remise TotalEnergies de septembre–octobre 2022, suivie par VITO, a réduit l'écart à <strong>+11,2 c/L</strong> — preuve que la surcharge n'est pas une fatalité.</p><p style="color:#991b1b;font-weight:600">Comme pour le Gazole, la sanction du 17 novembre 2025 n'a produit aucun effet correctif : l'écart SP95 a atteint <strong>+19,6 c/L HT</strong> en décembre 2025 — son niveau le plus élevé depuis 2022 — dans les semaines suivant immédiatement la publication de la décision.</p>`};
 
 let charts={},currentCarbu='gazole',currentGran='daily',currentRef='sp95',currentVue='prix';
+let resizeTimer,resizeObserver,lastChartWidth=0;
 
 function ts(s){return new Date(s).getTime();}
 function genTicks(minTs,maxTs){
@@ -172,47 +186,105 @@ function makePlugin(minTs,maxTs,ck){
 const crosshairPlugin={
   id:'crosshair',
   afterDraw(chart){
-    if(!chart._crosshairX) return;
+    if(!chart._crosshair) return;
     const {ctx,chartArea:{top,bottom}}=chart;
     ctx.save();
     ctx.strokeStyle='rgba(100,116,139,0.5)';
     ctx.lineWidth=1;
     ctx.setLineDash([4,2]);
     ctx.beginPath();
-    ctx.moveTo(chart._crosshairX,top);
-    ctx.lineTo(chart._crosshairX,bottom);
+    ctx.moveTo(chart._crosshair.x,top);
+    ctx.lineTo(chart._crosshair.x,bottom);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle=chart.data.datasets[0].borderColor;
+    ctx.fillStyle='#fff';
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.arc(chart._crosshair.x,chart._crosshair.y,4,0,Math.PI*2);
+    ctx.fill();
     ctx.stroke();
     ctx.restore();
   },
   afterEvent(chart,args){
     const e=args.event;
-    if(e.type==='mousemove'&&chart.chartArea){
-      const x=e.x;
+    const activeTypes=['mousemove','click','touchstart','touchmove','pointermove'];
+    if(activeTypes.includes(e.type)&&chart.chartArea){
+      const x=e.x,y=e.y;
       if(x>=chart.chartArea.left&&x<=chart.chartArea.right){
-        chart._crosshairX=x;
+        const pts=chart.data.datasets[0].data;
+        const xValue=chart.scales.x.getValueForPixel(x);
+        let nearest=pts[0];
+        for(const p of pts){
+          if(Math.abs(p.x-xValue)<Math.abs(nearest.x-xValue))nearest=p;
+        }
+        chart._crosshair={
+          x:chart.scales.x.getPixelForValue(nearest.x),
+          y:chart.scales.y.getPixelForValue(nearest.y),
+          point:nearest
+        };
+        updateReadout(chart,nearest);
+        if(e.type!=='mousemove'){
+          scheduleReadoutClear(chart,1800);
+        }
       } else {
-        chart._crosshairX=null;
+        chart._crosshair=null;
+        updateReadout(chart,null);
       }
       chart.draw();
-    } else if(e.type==='mouseout'){
-      chart._crosshairX=null;
+    } else if(['mouseout','touchend','touchcancel','pointerout','pointerleave'].includes(e.type)){
+      chart._crosshair=null;
+      updateReadout(chart,null);
       chart.draw();
     }
   }
 };
+
+function scheduleReadoutClear(chart,delay){
+  clearTimeout(chart._readoutTimer);
+  chart._readoutTimer=setTimeout(function(){
+    chart._crosshair=null;
+    updateReadout(chart,null);
+    chart.draw();
+  },delay);
+}
+
+function updateReadout(chart,point){
+  const el=chart.canvas.parentElement.querySelector('.value-readout');
+  if(!el)return;
+  if(!point){
+    el.classList.remove('on');
+    return;
+  }
+  const label=currentVue==='marge'?'Marge':'Prix';
+  const date=new Date(point.x).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'});
+  el.textContent=`${date} · ${label} ${(point.y>=0?'+':'')}${point.y.toFixed(2)} c/L HT`;
+  el.classList.add('on');
+}
 
 function buildOne(cid,wid,grp,sid,color,raw){
   setStats(sid,raw);
   const wrap=document.getElementById(wid);
   const W=wrap.clientWidth, H=wrap.clientHeight;
   const canvas=document.getElementById(cid);
+  if(!wrap.querySelector('.value-readout')){
+    const readout=document.createElement('div');
+    readout.className='value-readout';
+    wrap.appendChild(readout);
+  }
   canvas.width=W; canvas.height=H;
+  canvas.style.width='100%';
+  canvas.style.height='100%';
   const allTs=raw.map(d=>ts(d.date));
   const minTs=Math.min(...allTs),maxTs=Math.max(...allTs);
   const ticks=genTicks(minTs,maxTs);
   const ck=currentCarbu==='gazole'?'Gazole':'SP95';
   const isD=currentGran==='daily';
-  if(charts[cid])charts[cid].destroy();
+  if(charts[cid]){
+    charts[cid]._crosshair=null;
+    updateReadout(charts[cid],null);
+    charts[cid].destroy();
+  }
   charts[cid]=new Chart(canvas,{
     type:'line',
     data:{datasets:[{
@@ -223,10 +295,13 @@ function buildOne(cid,wid,grp,sid,color,raw){
     }]},
     plugins:[makePlugin(minTs,maxTs,ck),crosshairPlugin],
     options:{
-      responsive:false,maintainAspectRatio:false,animation:false,
+      responsive:true,maintainAspectRatio:false,animation:false,
+      events:['mousemove','mouseout','click','touchstart','touchmove','touchend','touchcancel','pointermove','pointerout','pointerleave'],
       layout:{padding:{right:10,bottom:2}},
-      hover:{mode:'index',intersect:false},
+      hover:{mode:null,intersect:false},
+      interaction:{mode:'nearest',axis:'x',intersect:false},
       plugins:{legend:{display:false},tooltip:{
+        enabled:false,
         backgroundColor:'#fff',borderColor:'#e2e8f0',borderWidth:1,
         titleColor:'#94a3b8',bodyColor:'#1e293b',padding:8,
         callbacks:{
@@ -267,6 +342,7 @@ function buildCharts(){
   document.getElementById('lbl2').textContent='Corse vs réseau traditionnel BdR (hors GMS)'+refLbl;
   buildOne('chart1','wrap1','all','s1','#1e40af',d.all);
   buildOne('chart2','wrap2','reseau','s2','#0f766e',d.reseau);
+  lastChartWidth=document.getElementById('wrap1').clientWidth;
 }
 
 const ANALYSE_MARGE_GZ=`<p style="margin-bottom:8px">La marge de distribution, c'est tout ce qui sépare le prix du carburant à sa sortie du marché de gros (cotation Rotterdam) du prix hors taxes payé à la pompe. C'est la part qui revient à la chaîne de distribution dans son ensemble. Il s'agit d'une marge théorique, car elle part d'un prix de référence : des groupes intégrés spécialisés dans le trading, comme TotalEnergies, ENI ou Rubis, peuvent en réalité s'approvisionner en dessous de ce cours — leur marge réelle est donc probablement supérieure à celle calculée ici.</p><p style="margin-bottom:8px"><em>La marge de distribution est calculée en soustrayant du prix HT à la pompe l'accise sur les carburants (différenciée selon la zone et la période) et la cotation Rotterdam du Gazole publiée par l'UFIP. Ce qui reste représente ce que les distributeurs conservent pour couvrir leurs coûts et dégager un bénéfice.</em></p><p style="margin-bottom:8px">La marge de distribution en Corse s'établit en moyenne à <strong>+43 c€/L</strong> sur 2023-2025, contre <strong>+24 c€/L</strong> dans les Bouches-du-Rhône — soit près du double. L'écart est passé de <strong>+13,9 c€/L début 2022</strong> à <strong>+20,9 c€/L en 2025</strong>. Si les coûts d'insularité expliquaient cet écart, il serait stable dans le temps. Son aggravation continue de <strong>+50%</strong> en quatre ans démontre qu'il s'agit d'une politique tarifaire délibérée — ce que l'Autorité de la concurrence a précisément sanctionné dans sa décision 25-D-07. En septembre-octobre 2022, la remise TotalEnergies a comprimé les marges à leur niveau le plus bas de toute la période analysée — prouvant que les opérateurs ont la capacité d'absorber des baisses significatives sur leurs marges.</p><p style="color:#991b1b;font-weight:600">Fait le plus significatif : dans les semaines suivant la sanction du 17 novembre 2025, non seulement l'écart de marge a atteint son niveau record à <strong>+24 c€/L</strong> (semaine du 15 décembre 2025), mais la marge corse elle-même culminait à près de <strong>+49 c€/L</strong> — son plus haut niveau depuis 2022. La décision n'a produit aucun effet correctif sur les comportements tarifaires.</p>`;
@@ -277,6 +353,27 @@ function updateAnalyse(c,vue){
   } else {
     document.getElementById('analyse-panel').innerHTML=ANALYSES[c];
   }
+  resetAnalysisClamp();
+}
+
+function resetAnalysisClamp(){
+  const wrap=document.getElementById('analysis-wrap');
+  const btn=document.getElementById('read-more');
+  wrap.classList.remove('is-expanded');
+  wrap.classList.add('is-collapsed');
+  btn.setAttribute('aria-expanded','false');
+  btn.textContent='▾ Lire la suite';
+  document.getElementById('analyse-panel').scrollTop=0;
+}
+function toggleAnalysis(){
+  const wrap=document.getElementById('analysis-wrap');
+  const btn=document.getElementById('read-more');
+  const expanded=wrap.classList.toggle('is-expanded');
+  wrap.classList.toggle('is-collapsed',!expanded);
+  btn.setAttribute('aria-expanded',expanded?'true':'false');
+  btn.textContent=expanded?'▴ Réduire':'▾ Lire la suite';
+  if(!expanded)document.getElementById('analyse-panel').scrollTop=0;
+  scheduleBuildCharts();
 }
 
 function setPressed(id,on){
@@ -289,6 +386,8 @@ function syncControls(){
   setPressed('btn-sp',currentCarbu==='sp95');
   document.getElementById('sp95-ref').style.display=currentCarbu==='sp95'?'flex':'none';
   document.getElementById('vue-gz').style.display=currentCarbu==='gazole'?'flex':'none';
+  document.getElementById('sp95-ref').classList.toggle('mobile-on',currentCarbu==='sp95');
+  document.getElementById('vue-gz').classList.toggle('mobile-on',currentCarbu==='gazole');
 
   document.getElementById('btn-sp95ref').className='tab'+(currentRef==='sp95'?' a-orange':'');
   document.getElementById('btn-e10ref').className='tab'+(currentRef==='e10'?' a-orange':'');
@@ -345,13 +444,37 @@ window.addEventListener('load',function(){
   requestAnimationFrame(function(){
     requestAnimationFrame(function(){
       buildCharts();
+      observeChartSize();
     });
   });
 });
-let resizeTimer;
-window.addEventListener('resize',function(){
+function scheduleBuildCharts(){
   clearTimeout(resizeTimer);
   resizeTimer=setTimeout(function(){requestAnimationFrame(buildCharts);},120);
+}
+function observeChartSize(){
+  setInterval(function(){
+    const width=Math.round(document.getElementById('wrap1').clientWidth);
+    if(width&&Math.abs(width-lastChartWidth)>2){
+      scheduleBuildCharts();
+    }
+  },400);
+  if(!('ResizeObserver' in window))return;
+  resizeObserver=new ResizeObserver(function(entries){
+    const width=Math.round(document.getElementById('wrap1').clientWidth);
+    if(width&&Math.abs(width-lastChartWidth)>2){
+      scheduleBuildCharts();
+    }
+  });
+  resizeObserver.observe(document.getElementById('charts-area'));
+  resizeObserver.observe(document.getElementById('wrap1'));
+  resizeObserver.observe(document.getElementById('wrap2'));
+}
+window.addEventListener('resize',function(){
+  scheduleBuildCharts();
+});
+window.addEventListener('orientationchange',function(){
+  scheduleBuildCharts();
 });
 </script>
 </body>
