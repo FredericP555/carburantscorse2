@@ -25,6 +25,15 @@ jobs:
         run: python -m compileall -q a4c_common carburantscorse2 scripts
       - name: Validate dashboard data loader
         run: python scripts/migrate_index_data_source.py index.html --check
+      - name: Check inline dashboard JavaScript syntax
+        run: |
+          python - <<'PY'
+          import pathlib, re
+          html = pathlib.Path('index.html').read_text(encoding='utf-8')
+          blocks = re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', html, flags=re.S | re.I)
+          pathlib.Path('/tmp/carburantscorse2-inline.js').write_text('\n'.join(blocks), encoding='utf-8')
+          PY
+          node --check /tmp/carburantscorse2-inline.js
       - name: Build live append-only candidate
         run: python -m scripts.build_append_candidate
       - name: Exercise append-only promotion guard
