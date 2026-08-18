@@ -1,0 +1,34 @@
+name: Bootstrap c2 data loader
+
+on:
+  push:
+    branches: [automation-v1]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-index:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: automation-v1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Patch index.html safely
+        run: python scripts/migrate_index_data_source.py index.html
+      - name: Commit migrated index
+        run: |
+          if git diff --quiet -- index.html; then
+            echo "index.html already migrated"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Load dashboard data from data.json"
+          git push origin HEAD:automation-v1
