@@ -18,6 +18,7 @@ import re
 import pandas as pd
 
 from a4c_common.official_prices import download_annual_zip, iter_observations_from_zip
+from a4c_common.shared_release import load_shared_observations
 from a4c_common.ufip import expand_daily, fetch_rotterdam_gazole
 from carburantscorse2.publication import (
     build_gap_series,
@@ -85,7 +86,49 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--end", help="Requested last daily date YYYY-MM-DD; default yesterday. Publication is capped at source freshness.")
     parser.add_argument("--output", default="outputs/candidate-data.json")
     parser.add_argument("--summary", default="outputs/candidate-summary.json")
+    parser.add_argument(
+        "--official-source",
+        choices=("auto", "shared", "direct"),
+        default="auto",
+        help=(
+            "Official-price ingestion source. auto tries the shared c1 GitHub Release then "
+            "falls back to the government ZIPs; shared fails closed if the release is missing."
+        ),
+    )
     return parser.parse_args()
+
+
+def load_official_observations(years: tuple[int, int], mode: str) -> tuple[list[dict], dict]:
+    """Load official observations without changing any c2 reliability/publication rule."""
+    if mode in ("auto", "shared"):
+        try:
+            rows, source = load_shared_observations(years)
+            print(
+                "Using shared official snapshot "
+                f"{source.get('release_tag')} ({source.get('shared_rows')} source rows; "
+                f"max={source.get('shared_source_max_date')})"
+            )
+            return rows, source
+        except Exception as exc:
+            if mode == "shared":
+                raise RuntimeError(f"Required shared official source is unavailable: {exc}") from exc
+            print(f"Shared official source unavailable ({exc}); falling back to direct government ZIPs")
+
+    observations: list[dict] = []
+    for year in years:
+        path = download_annual_zip(year)
+        observations.extend(
+            iter_observations_from_zip(
+                path,
+                source_year=year,
+                departments=("13", "20"),
+                fuels=("Gazole", "SP95", "E10"),
+            )
+        )
+    return observations, {
+        "kind": "direct-government",
+        "years": list(years),
+    }
 
 
 def main() -> None:
@@ -96,17 +139,8 @@ def main() -> None:
     previous_daily_cutoff = max_date(candidate_data["gazole"]["sp95"]["daily"]["all"])
     initial_legacy_cutoff = baseline_meta.get("legacy_daily_cutoff", INITIAL_LEGACY_DAILY_CUTOFF)
 
-    observations: list[dict] = []
-    for year in (requested_end.year - 1, requested_end.year):
-        path = download_annual_zip(year)
-        observations.extend(
-            iter_observations_from_zip(
-                path,
-                source_year=year,
-                departments=("13", "20"),
-                fuels=("Gazole", "SP95", "E10"),
-            )
-        )
+    years = (requested_end.year - 1, requested_end.year)
+    observations, official_source = load_official_observations(years, args.official_source)
     obs = pd.DataFrame(observations)
     if obs.empty:
         raise RuntimeError("No official observations were parsed")
@@ -192,6 +226,10 @@ def main() -> None:
             "daily_target_end": target_end.strftime("%Y-%m-%d"),
             "weekly_complete_through": weekly_end.strftime("%Y-%m-%d"),
             "official_source_max_date": source_max.strftime("%Y-%m-%d"),
+            "official_ingestion_source": official_source.get("kind"),
+            "official_shared_release_tag": official_source.get("release_tag"),
+            "official_shared_sha256": official_source.get("sha256"),
+            "official_shared_source_max_date": official_source.get("shared_source_max_date"),
             "ufip_last_observed_date": ufip_last,
             "legacy_daily_cutoff": initial_legacy_cutoff,
             "unknown_recent_bdr_stations": unknown,
