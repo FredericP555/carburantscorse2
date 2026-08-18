@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Build an append-only carburantscorse2 candidate from the live public sources.
 
-Historical values already embedded in ``index.html`` are treated as immutable. Current
-annual government files are allowed to contain retrospective corrections: those corrections
-are audited, but they never rewrite a date that is already published.
+Historical values already published are immutable. If ``data.json`` exists it is the
+baseline; otherwise the first migration bootstraps from the DATA/MARGES_GZ constants in
+``index.html``. Current annual government files may contain retrospective corrections,
+but those corrections are never allowed to rewrite a date already present in the baseline.
 """
 from __future__ import annotations
 
@@ -27,6 +28,7 @@ from carburantscorse2.publication import (
 from carburantscorse2.publication_margin import build_margin_series
 
 ROOT = Path(__file__).resolve().parents[1]
+INITIAL_LEGACY_DAILY_CUTOFF = "2026-06-06"
 
 
 def parse_js_object(name: str, html: str) -> dict:
@@ -36,6 +38,18 @@ def parse_js_object(name: str, html: str) -> dict:
     raw = match.group(1)
     quoted = re.sub(r"([{,])\s*([A-Za-z_][A-Za-z0-9_]*)\s*:", r'\1"\2":', raw)
     return json.loads(quoted)
+
+
+def load_baseline() -> tuple[dict, dict, dict, str]:
+    data_path = ROOT / "data.json"
+    if data_path.exists():
+        obj = json.loads(data_path.read_text(encoding="utf-8"))
+        if "DATA" not in obj or "MARGES_GZ" not in obj:
+            raise RuntimeError("data.json must contain DATA and MARGES_GZ")
+        return deepcopy(obj["DATA"]), deepcopy(obj["MARGES_GZ"]), dict(obj.get("meta", {})), "data.json"
+
+    html = (ROOT / "index.html").read_text(encoding="utf-8")
+    return parse_js_object("DATA", html), parse_js_object("MARGES_GZ", html), {}, "index.html"
 
 
 def max_date(rows: list[dict]) -> pd.Timestamp:
@@ -77,11 +91,9 @@ def main() -> None:
     target_end = pd.Timestamp(args.end).normalize() if args.end else pd.Timestamp(date.today() - timedelta(days=1))
     weekly_end = last_complete_sunday(target_end)
 
-    html = (ROOT / "index.html").read_text(encoding="utf-8")
-    legacy_data = parse_js_object("DATA", html)
-    legacy_margins = parse_js_object("MARGES_GZ", html)
-    candidate_data = deepcopy(legacy_data)
-    candidate_margins = deepcopy(legacy_margins)
+    candidate_data, candidate_margins, baseline_meta, baseline_source = load_baseline()
+    previous_daily_cutoff = max_date(candidate_data["gazole"]["sp95"]["daily"]["all"])
+    initial_legacy_cutoff = baseline_meta.get("legacy_daily_cutoff", INITIAL_LEGACY_DAILY_CUTOFF)
 
     observations: list[dict] = []
     for year in (target_end.year - 1, target_end.year):
@@ -101,7 +113,7 @@ def main() -> None:
 
     categories = load_bdr_categories(ROOT / "config" / "bdr_categories_published_2026-06-06.csv")
     state = build_publication_state(obs, global_end=target_end, bdr_categories=categories)
-    first_unpublished = max_date(legacy_data["gazole"]["sp95"]["daily"]["all"]) + pd.Timedelta(days=1)
+    first_unpublished = previous_daily_cutoff + pd.Timedelta(days=1)
     unknown = unknown_recent_bdr_stations(state, since=first_unpublished)
 
     cases = [
@@ -159,17 +171,19 @@ def main() -> None:
         ufip_last = None if observed_rotterdam.empty else str(pd.to_datetime(observed_rotterdam["date"]).max().date())
     else:
         additions["margins/all"] = additions["margins/reseau"] = 0
-        ufip_last = None
+        ufip_last = baseline_meta.get("ufip_last_observed_date")
 
     output = {
         "meta": {
             "generated_at": pd.Timestamp.now(tz="UTC").isoformat(),
             "publication_mode": "append-only",
+            "baseline_source": baseline_source,
+            "previous_daily_cutoff": previous_daily_cutoff.strftime("%Y-%m-%d"),
             "daily_target_end": target_end.strftime("%Y-%m-%d"),
             "weekly_complete_through": weekly_end.strftime("%Y-%m-%d"),
             "official_source_max_date": source_max.strftime("%Y-%m-%d"),
             "ufip_last_observed_date": ufip_last,
-            "legacy_daily_cutoff": (first_unpublished - pd.Timedelta(days=1)).strftime("%Y-%m-%d"),
+            "legacy_daily_cutoff": initial_legacy_cutoff,
             "unknown_recent_bdr_stations": unknown,
         },
         "DATA": candidate_data,
@@ -196,8 +210,6 @@ def main() -> None:
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(summary, ensure_ascii=False, indent=2))
 
-    # A station with no GMS/traditional classification would silently bias the network
-    # comparison. Produce the audit artifact first, then block the candidate.
     if unknown:
         raise SystemExit(f"Unclassified recent BDR stations: {', '.join(unknown)}")
 
