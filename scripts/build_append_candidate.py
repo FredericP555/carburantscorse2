@@ -32,9 +32,11 @@ INITIAL_LEGACY_DAILY_CUTOFF = "2026-06-06"
 
 
 def parse_js_object(name: str, html: str) -> dict:
-    match = re.search(rf"const\s+{re.escape(name)}=(.*?);\n", html, flags=re.S)
+    # ``index.html`` used const historically and now uses let so it can be replaced by
+    # data.json at runtime. Accept both to keep the bootstrap path recoverable.
+    match = re.search(rf"(?:const|let)\s+{re.escape(name)}=(.*?);\n", html, flags=re.S)
     if not match:
-        raise RuntimeError(f"Cannot find const {name} in index.html")
+        raise RuntimeError(f"Cannot find {name} in index.html")
     raw = match.group(1)
     quoted = re.sub(r"([{,])\s*([A-Za-z_][A-Za-z0-9_]*)\s*:", r'\1"\2":', raw)
     return json.loads(quoted)
@@ -80,7 +82,7 @@ def last_complete_sunday(day: pd.Timestamp) -> pd.Timestamp:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--end", help="Last daily date YYYY-MM-DD; default yesterday")
+    parser.add_argument("--end", help="Requested last daily date YYYY-MM-DD; default yesterday. Publication is capped at source freshness.")
     parser.add_argument("--output", default="outputs/candidate-data.json")
     parser.add_argument("--summary", default="outputs/candidate-summary.json")
     return parser.parse_args()
@@ -88,15 +90,14 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    target_end = pd.Timestamp(args.end).normalize() if args.end else pd.Timestamp(date.today() - timedelta(days=1))
-    weekly_end = last_complete_sunday(target_end)
+    requested_end = pd.Timestamp(args.end).normalize() if args.end else pd.Timestamp(date.today() - timedelta(days=1))
 
     candidate_data, candidate_margins, baseline_meta, baseline_source = load_baseline()
     previous_daily_cutoff = max_date(candidate_data["gazole"]["sp95"]["daily"]["all"])
     initial_legacy_cutoff = baseline_meta.get("legacy_daily_cutoff", INITIAL_LEGACY_DAILY_CUTOFF)
 
     observations: list[dict] = []
-    for year in (target_end.year - 1, target_end.year):
+    for year in (requested_end.year - 1, requested_end.year):
         path = download_annual_zip(year)
         observations.extend(
             iter_observations_from_zip(
@@ -110,6 +111,14 @@ def main() -> None:
     if obs.empty:
         raise RuntimeError("No official observations were parsed")
     source_max = pd.to_datetime(obs["date"]).max().normalize()
+
+    # Never manufacture a publication day beyond the freshness of the official stock.
+    target_end = min(requested_end, source_max)
+    weekly_end = last_complete_sunday(target_end)
+    if target_end < previous_daily_cutoff:
+        raise RuntimeError(
+            f"Official source is older than current publication baseline: source={target_end.date()} baseline={previous_daily_cutoff.date()}"
+        )
 
     categories = load_bdr_categories(ROOT / "config" / "bdr_categories_published_2026-06-06.csv")
     state = build_publication_state(obs, global_end=target_end, bdr_categories=categories)
@@ -179,6 +188,7 @@ def main() -> None:
             "publication_mode": "append-only",
             "baseline_source": baseline_source,
             "previous_daily_cutoff": previous_daily_cutoff.strftime("%Y-%m-%d"),
+            "requested_daily_target_end": requested_end.strftime("%Y-%m-%d"),
             "daily_target_end": target_end.strftime("%Y-%m-%d"),
             "weekly_complete_through": weekly_end.strftime("%Y-%m-%d"),
             "official_source_max_date": source_max.strftime("%Y-%m-%d"),
