@@ -38,6 +38,14 @@ class SharedFreshnessTests(unittest.TestCase):
         self.assertEqual(report["source_progression"], "advanced")
         self.assertEqual(report["failures"], [])
 
+    def test_release_timestamp_can_be_recovered_from_current_tag_format(self):
+        current = candidate(release_at=None)
+        current["official_shared_release_tag"] = "a4c-shared-20260824T051500Z-123456"
+        report = self.evaluate(current, baseline())
+        self.assertEqual(report["status"], "ok")
+        self.assertEqual(report["release_timestamp_source"], "release-tag")
+        self.assertEqual(report["release_published_at"], "2026-08-24T05:15:00Z")
+
     def test_fresh_release_with_unchanged_but_recent_stock_is_explicit_noop(self):
         report = self.evaluate(candidate(source_max="2026-08-23"), baseline("2026-08-23"))
         self.assertEqual(report["status"], "ok")
