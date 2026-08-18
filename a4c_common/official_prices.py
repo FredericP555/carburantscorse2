@@ -14,6 +14,9 @@ The common layer does only things that are methodologically shared and reversibl
 - retain whether the station is an autoroute station instead of silently dropping it;
 - flag the recovered 1.10–3.00 €/L reliability band without correcting values;
 - optionally deduplicate to the last declaration per station/fuel/calendar day.
+
+The default territorial scope remains departments 13 and 20 for carburantscorse2, but callers
+may request any postal department prefix, or ``departments=None`` to parse all departments.
 """
 from __future__ import annotations
 
@@ -85,12 +88,13 @@ def download_annual_zip(
 
 
 def department_from_cp(cp: str) -> str | None:
-    cp = (cp or "").strip().zfill(5)
-    if cp.startswith("13"):
-        return "13"
+    """Return the two-digit postal department prefix used by the observatories."""
+    cp = (cp or "").strip()
+    if len(cp) != 5 or not cp.isdigit():
+        return None
     if cp.startswith("20"):
         return "20"
-    return None
+    return cp[:2]
 
 
 def _child_text(elem: ET.Element, tag: str) -> str:
@@ -124,11 +128,15 @@ def iter_observations_from_zip(
     zip_path: Path,
     *,
     source_year: int | None = None,
-    departments: Sequence[str] = DEFAULT_DEPARTMENTS,
+    departments: Sequence[str] | None = DEFAULT_DEPARTMENTS,
     fuels: Sequence[str] = DEFAULT_FUELS,
 ) -> Iterator[dict]:
-    """Yield normalized observations without applying dashboard-specific exclusions."""
-    department_set = set(departments)
+    """Yield normalized observations without applying dashboard-specific exclusions.
+
+    ``departments=None`` disables the geographic filter. Passing an explicit sequence retains
+    the historical selective behaviour; by default only departments 13 and 20 are parsed.
+    """
+    department_set = None if departments is None else set(departments)
     fuel_set = set(fuels)
     with zipfile.ZipFile(zip_path) as zf:
         xml_name = next((n for n in zf.namelist() if n.lower().endswith(".xml")), None)
@@ -144,7 +152,9 @@ def iter_observations_from_zip(
                 attrs = elem.attrib
                 cp = (attrs.get("cp") or "").strip()
                 department = department_from_cp(cp)
-                if department not in department_set:
+                if department is None or (
+                    department_set is not None and department not in department_set
+                ):
                     elem.clear()
                     continue
 
