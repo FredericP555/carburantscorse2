@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Network regression against the data currently embedded in index.html.
 
-The check intentionally uses the *current official annual archives* and reconstructs the
-published 2026 price-gap series through the historical cutoff 2026-06-06. It proves that
-the append profile can continue the dashboard without changing already-published values.
+The check uses the current official annual archives and the live UFIP custom export to
+reconstruct the values already published through 2026-06-06. It protects the dashboard
+history before the updater is allowed to append new dates.
 """
 from __future__ import annotations
 
+from datetime import date
 import json
 import re
 from pathlib import Path
@@ -14,7 +15,9 @@ from pathlib import Path
 import pandas as pd
 
 from a4c_common.official_prices import download_annual_zip, iter_observations_from_zip
+from a4c_common.ufip import expand_daily, fetch_rotterdam_gazole
 from carburantscorse2.publication import build_gap_series, build_publication_state, load_bdr_categories
+from carburantscorse2.publication_margin import build_margin_series
 
 ROOT = Path(__file__).resolve().parents[1]
 CUTOFF = pd.Timestamp("2026-06-06")
@@ -53,6 +56,7 @@ def compare(label: str, actual: list[dict], expected: list[dict], start: str) ->
 def main() -> None:
     html = (ROOT / "index.html").read_text(encoding="utf-8")
     embedded = parse_js_object("DATA", html)
+    embedded_margins = parse_js_object("MARGES_GZ", html)
 
     observations = []
     for year in (2025, 2026):
@@ -86,12 +90,7 @@ def main() -> None:
             bdr_scope=scope,
             granularity="daily",
         )
-        compare(
-            f"{label} daily",
-            daily,
-            embedded[key][ref]["daily"][group],
-            DAILY_START,
-        )
+        compare(f"{label} daily", daily, embedded[key][ref]["daily"][group], DAILY_START)
         weekly = build_gap_series(
             state,
             corsica_fuel=corsica_fuel,
@@ -99,14 +98,23 @@ def main() -> None:
             bdr_scope=scope,
             granularity="weekly",
         )
-        compare(
-            f"{label} weekly",
-            weekly,
-            embedded[key][ref]["weekly"][group],
-            WEEKLY_START,
-        )
+        compare(f"{label} weekly", weekly, embedded[key][ref]["weekly"][group], WEEKLY_START)
 
     print("Published 2026 price regression: PASS")
+
+    # Fetch a little history before 1 Jan so the first calendar days can be forward-filled
+    # even if UFIP has no observation on New Year's Day itself.
+    ufip_start = date(2025, 12, 15)
+    ufip_end = CUTOFF.date()
+    rot_observed = fetch_rotterdam_gazole(ufip_start, ufip_end)
+    rot_daily = expand_daily(rot_observed, ufip_start, ufip_end)
+    margin_state = state[state["date"] >= pd.Timestamp("2026-01-01")].copy()
+
+    margin_all = build_margin_series(margin_state, rot_daily, bdr_scope="all")
+    compare("Gazole margin / toutes BDR", margin_all, embedded_margins["all"], WEEKLY_START)
+    margin_network = build_margin_series(margin_state, rot_daily, bdr_scope="network")
+    compare("Gazole margin / réseau BDR", margin_network, embedded_margins["reseau"], WEEKLY_START)
+    print("Published 2026 margin regression: PASS")
 
 
 if __name__ == "__main__":
