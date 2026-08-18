@@ -118,7 +118,7 @@ def build_publication_state(
         if "source_timestamp" not in fill_cols:
             fill_cols.append("source_timestamp")
         with pd.option_context("future.no_silent_downcasting", True):
-            frame[fill_cols] = frame[fill_cols].ffill().infer_objects(copy=False)
+            frame[fill_cols] = frame[fill_cols].ffill().infer_objects()
 
         department = str(group.loc[0, "department"])
         threshold = GAP_THRESHOLDS[department]
@@ -134,7 +134,7 @@ def build_publication_state(
                 frame.loc[mask, "gap_suspect"] = True
 
         last_date = real_dates[-1]
-        frame["station_inactive"] = frame["date"] > (last_date + pd.Timedelta(days=threshold))
+        frame["station_inactive"] = frame["date"] > (last_date + pd.Timedelta(int(threshold), unit="D"))
         frame["eligible_publication"] = ~(
             frame["price_aberrant"].fillna(True).astype(bool)
             | frame["gap_suspect"]

@@ -2,9 +2,9 @@ name: Update carburantscorse2 weekly
 
 on:
   schedule:
-    # Two UTC slots cover 07:20 Europe/Paris across DST; the gate below keeps only one.
-    - cron: '20 5 * * 1'
-    - cron: '20 6 * * 1'
+    # Two UTC slots cover 07:40 Europe/Paris across DST; the gate below keeps only one.
+    - cron: '40 5 * * 1'
+    - cron: '40 6 * * 1'
   workflow_dispatch:
 
 permissions:
@@ -63,6 +63,15 @@ jobs:
       - name: Build append-only candidate from shared c1 source
         if: steps.gate.outputs.run == 'true'
         run: python -m scripts.build_append_candidate --official-source shared
+
+      - name: Verify fresh c1 release and official stock
+        if: steps.gate.outputs.run == 'true' && github.event_name == 'schedule'
+        run: >-
+          python -m scripts.check_shared_freshness
+          --candidate outputs/candidate-data.json
+          --baseline data.json
+          --max-release-age-hours 12
+          --max-source-age-days 4
 
       - name: Promote candidate after append-only checks
         if: steps.gate.outputs.run == 'true'

@@ -10,10 +10,11 @@ from __future__ import annotations
 
 import argparse
 from copy import deepcopy
-from datetime import date, timedelta
+from datetime import datetime, timedelta
 import json
 from pathlib import Path
 import re
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
@@ -30,6 +31,7 @@ from carburantscorse2.publication_margin import build_margin_series
 
 ROOT = Path(__file__).resolve().parents[1]
 INITIAL_LEGACY_DAILY_CUTOFF = "2026-06-06"
+PARIS_TZ = ZoneInfo("Europe/Paris")
 
 
 def parse_js_object(name: str, html: str) -> dict:
@@ -66,7 +68,7 @@ def append_new(existing: list[dict], generated: list[dict], *, complete_through:
         stamp = pd.Timestamp(row["date"])
         if stamp <= last:
             continue
-        if complete_through is not None and stamp + pd.Timedelta(days=6) > complete_through:
+        if complete_through is not None and stamp + pd.Timedelta(6, unit="D") > complete_through:
             continue
         additions.append(row)
     combined = existing + additions
@@ -78,12 +80,24 @@ def append_new(existing: list[dict], generated: list[dict], *, complete_through:
 
 def last_complete_sunday(day: pd.Timestamp) -> pd.Timestamp:
     day = day.normalize()
-    return day - pd.Timedelta(days=(day.weekday() + 1) % 7)
+    offset_days = int((day.weekday() + 1) % 7)
+    return day - pd.Timedelta(offset_days, unit="D")
+
+
+def default_requested_end(now: datetime | None = None) -> pd.Timestamp:
+    """Return yesterday using the observatory's Europe/Paris publication clock."""
+    if now is None:
+        paris_now = datetime.now(PARIS_TZ)
+    elif now.tzinfo is None:
+        paris_now = now.replace(tzinfo=PARIS_TZ)
+    else:
+        paris_now = now.astimezone(PARIS_TZ)
+    return pd.Timestamp(paris_now.date() - timedelta(days=1))
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--end", help="Requested last daily date YYYY-MM-DD; default yesterday. Publication is capped at source freshness.")
+    parser.add_argument("--end", help="Requested last daily date YYYY-MM-DD; default yesterday in Europe/Paris. Publication is capped at source freshness.")
     parser.add_argument("--output", default="outputs/candidate-data.json")
     parser.add_argument("--summary", default="outputs/candidate-summary.json")
     parser.add_argument(
@@ -133,7 +147,7 @@ def load_official_observations(years: tuple[int, int], mode: str) -> tuple[list[
 
 def main() -> None:
     args = parse_args()
-    requested_end = pd.Timestamp(args.end).normalize() if args.end else pd.Timestamp(date.today() - timedelta(days=1))
+    requested_end = pd.Timestamp(args.end).normalize() if args.end else default_requested_end()
 
     candidate_data, candidate_margins, baseline_meta, baseline_source = load_baseline()
     previous_daily_cutoff = max_date(candidate_data["gazole"]["sp95"]["daily"]["all"])
@@ -156,7 +170,7 @@ def main() -> None:
 
     categories = load_bdr_categories(ROOT / "config" / "bdr_categories_published_2026-06-06.csv")
     state = build_publication_state(obs, global_end=target_end, bdr_categories=categories)
-    first_unpublished = previous_daily_cutoff + pd.Timedelta(days=1)
+    first_unpublished = previous_daily_cutoff + pd.Timedelta(1, unit="D")
     unknown = unknown_recent_bdr_stations(state, since=first_unpublished)
 
     cases = [
@@ -196,9 +210,9 @@ def main() -> None:
             additions[path_key] = count
 
     last_margin_period = max(max_date(candidate_margins["all"]), max_date(candidate_margins["reseau"]))
-    first_new_margin_week = last_margin_period + pd.Timedelta(days=7)
+    first_new_margin_week = last_margin_period + pd.Timedelta(7, unit="D")
     if first_new_margin_week <= weekly_end:
-        ufip_fetch_start = (first_new_margin_week - pd.Timedelta(days=14)).date()
+        ufip_fetch_start = (first_new_margin_week - pd.Timedelta(14, unit="D")).date()
         ufip_fetch_end = weekly_end.date()
         observed_rotterdam = fetch_rotterdam_gazole(ufip_fetch_start, ufip_fetch_end)
         rotterdam = expand_daily(observed_rotterdam, ufip_fetch_start, ufip_fetch_end)
@@ -228,6 +242,7 @@ def main() -> None:
             "official_source_max_date": source_max.strftime("%Y-%m-%d"),
             "official_ingestion_source": official_source.get("kind"),
             "official_shared_release_tag": official_source.get("release_tag"),
+            "official_shared_release_published_at": official_source.get("release_published_at"),
             "official_shared_sha256": official_source.get("sha256"),
             "official_shared_source_max_date": official_source.get("shared_source_max_date"),
             "ufip_last_observed_date": ufip_last,

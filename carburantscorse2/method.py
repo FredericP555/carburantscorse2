@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Recovered 14-Jun-2026 reliability profile for carburantscorse2.
+"""RESEARCH-ONLY recovered 14-Jun-2026 reliability profile for carburantscorse2.
 
-This file follows the executable reference scripts saved in the user's methodology
-archive, not the older prose methodology where thresholds differ. The mismatch is
-kept explicit in docs/methodology-differences.md and will be resolved by regression
-against the published dashboard before production is changed.
+This module is deliberately NOT the production publication method. It preserves the
+reconstructed research profile (including its 90-day Corsica gap threshold) for audit,
+comparisons and historical regression work. The production updater must use
+``carburantscorse2.publication`` instead.
+
+The coexistence of the two profiles is documented in ``docs/methodology-differences.md``.
+Do not align these thresholds silently: changing either profile is a methodological change
+that must be versioned and regression-tested explicitly.
 """
 from __future__ import annotations
 
@@ -93,7 +97,7 @@ def build_daily_series(daily_observations: pd.DataFrame, *, global_end: pd.Times
             fill_cols.append("source_timestamp")
         with pd.option_context("future.no_silent_downcasting", True):
             filled = frame[fill_cols].ffill()
-        frame[fill_cols] = filled.infer_objects(copy=False)
+        frame[fill_cols] = filled.infer_objects()
 
         real_dates = set(group["date"])
         frame["real_observation"] = frame["date"].isin(real_dates)
