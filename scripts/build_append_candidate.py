@@ -95,6 +95,12 @@ def default_requested_end(now: datetime | None = None) -> pd.Timestamp:
     return pd.Timestamp(paris_now.date() - timedelta(days=1))
 
 
+def official_year_window(requested_end: pd.Timestamp) -> tuple[int, int]:
+    """Return N-1/N so a January run can carry late-December station state forward."""
+    day = pd.Timestamp(requested_end).normalize()
+    return day.year - 1, day.year
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--end", help="Requested last daily date YYYY-MM-DD; default yesterday in Europe/Paris. Publication is capped at source freshness.")
@@ -153,7 +159,7 @@ def main() -> None:
     previous_daily_cutoff = max_date(candidate_data["gazole"]["sp95"]["daily"]["all"])
     initial_legacy_cutoff = baseline_meta.get("legacy_daily_cutoff", INITIAL_LEGACY_DAILY_CUTOFF)
 
-    years = (requested_end.year - 1, requested_end.year)
+    years = official_year_window(requested_end)
     observations, official_source = load_official_observations(years, args.official_source)
     obs = pd.DataFrame(observations)
     if obs.empty:
