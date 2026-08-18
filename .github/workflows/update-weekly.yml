@@ -1,0 +1,111 @@
+name: Update carburantscorse2 weekly
+
+on:
+  schedule:
+    # Two UTC slots cover 07:20 Europe/Paris across DST; the gate below keeps only one.
+    - cron: '20 5 * * 1'
+    - cron: '20 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: carburantscorse2-weekly
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Europe/Paris schedule gate
+        id: gate
+        shell: bash
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          hour=$(TZ=Europe/Paris date +%H)
+          weekday=$(TZ=Europe/Paris date +%u)
+          if [ "$weekday" = "1" ] && [ "$hour" = "07" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping duplicate DST slot: Europe/Paris weekday=$weekday hour=$hour"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.run == 'true'
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        if: steps.gate.outputs.run == 'true'
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        if: steps.gate.outputs.run == 'true'
+        run: pip install -r requirements.txt
+
+      - name: Unit tests
+        if: steps.gate.outputs.run == 'true'
+        run: python -m unittest discover -s tests -v
+
+      - name: Validate dashboard loader
+        if: steps.gate.outputs.run == 'true'
+        run: python scripts/migrate_index_data_source.py index.html --check
+
+      - name: Build append-only candidate from shared c1 source
+        if: steps.gate.outputs.run == 'true'
+        run: python -m scripts.build_append_candidate --official-source shared
+
+      - name: Promote candidate after append-only checks
+        if: steps.gate.outputs.run == 'true'
+        id: promote
+        run: python -m scripts.promote_candidate
+
+      - name: Upload audit candidate
+        if: steps.gate.outputs.run == 'true' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: carburantscorse2-weekly-audit
+          path: |
+            outputs/candidate-data.json
+            outputs/candidate-summary.json
+          retention-days: 30
+
+      - name: Commit updated data.json
+        if: steps.gate.outputs.run == 'true' && steps.promote.outputs.changed == 'true' && github.ref_name == github.event.repository.default_branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Update carburantscorse2 data through ${{ steps.promote.outputs.daily_target_end }}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Trigger GitHub Pages rebuild
+        if: steps.gate.outputs.run == 'true' && steps.promote.outputs.changed == 'true' && github.ref_name == github.event.repository.default_branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          code=$(curl -sS -o /tmp/pages-build.json -w '%{http_code}' \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pages/builds")
+          cat /tmp/pages-build.json || true
+          if [ "$code" != "201" ]; then
+            echo "GitHub Pages build trigger returned HTTP $code" >&2
+            exit 1
+          fi
+
+      - name: No-op summary
+        if: steps.gate.outputs.run == 'true' && steps.promote.outputs.changed != 'true'
+        run: echo "No new publishable point; data.json and Pages remain unchanged."
