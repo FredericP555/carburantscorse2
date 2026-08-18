@@ -34,8 +34,8 @@ jobs:
           pathlib.Path('/tmp/carburantscorse2-inline.js').write_text('\n'.join(blocks), encoding='utf-8')
           PY
           node --check /tmp/carburantscorse2-inline.js
-      - name: Build live append-only candidate
-        run: python -m scripts.build_append_candidate
+      - name: Build live append-only candidate from shared c1 source
+        run: python -m scripts.build_append_candidate --official-source shared
       - name: Exercise append-only promotion guard
         run: python -m scripts.promote_candidate
       - name: Upload candidate and audit summary
