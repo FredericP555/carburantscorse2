@@ -26,6 +26,7 @@ jobs:
       - name: Build live append-only candidate
         run: python -m scripts.build_append_candidate
       - name: Upload candidate and audit summary
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: carburantscorse2-candidate
