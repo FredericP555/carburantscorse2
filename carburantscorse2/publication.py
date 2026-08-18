@@ -134,7 +134,7 @@ def build_publication_state(
                 frame.loc[mask, "gap_suspect"] = True
 
         last_date = real_dates[-1]
-        frame["station_inactive"] = frame["date"] > (last_date + pd.Timedelta(days=threshold))
+        frame["station_inactive"] = frame["date"] > (last_date + pd.Timedelta(int(threshold), unit="D"))
         frame["eligible_publication"] = ~(
             frame["price_aberrant"].fillna(True).astype(bool)
             | frame["gap_suspect"]
