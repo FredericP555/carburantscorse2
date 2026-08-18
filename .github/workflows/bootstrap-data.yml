@@ -1,0 +1,50 @@
+name: Bootstrap c2 versioned data
+
+on:
+  push:
+    branches: [automation-v1]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c2-bootstrap-data
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: automation-v1
+      - name: Stop if data.json already exists
+        id: existing
+        run: |
+          if [ -f data.json ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-python@v5
+        if: steps.existing.outputs.exists == 'false'
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install dependencies
+        if: steps.existing.outputs.exists == 'false'
+        run: pip install -r requirements.txt
+      - name: Build first append-only data file
+        if: steps.existing.outputs.exists == 'false'
+        run: python -m scripts.build_append_candidate
+      - name: Commit versioned data
+        if: steps.existing.outputs.exists == 'false'
+        run: |
+          cp outputs/candidate-data.json data.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data.json
+          git commit -m "Bootstrap append-only dashboard data"
+          git push origin HEAD:automation-v1
