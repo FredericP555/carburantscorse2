@@ -7,7 +7,7 @@ from carburantscorse2.publication import build_publication_state, build_gap_seri
 
 
 def row(station, department, fuel, day, price, hour=12):
-    stamp = pd.Timestamp(day) + pd.Timedelta(hours=hour)
+    stamp = pd.Timestamp(day) + pd.Timedelta(int(hour), unit="h")
     return {
         "station_id": str(station),
         "department": str(department),
