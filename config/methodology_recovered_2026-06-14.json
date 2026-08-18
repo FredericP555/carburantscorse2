@@ -1,0 +1,14 @@
+{
+  "profile": "carburantscorse2_recovered_2026-06-14",
+  "source": "Recovered executable pipeline saved 2026-06-14",
+  "territories": {"13": "Bouches-du-Rhone", "20": "Corse"},
+  "fuels": ["Gazole", "SP95", "E10"],
+  "e10_corse": "excluded",
+  "motorway": "excluded in project profile, retained in common snapshot",
+  "price_band_eur_l": {"min": 1.10, "max": 3.00, "automatic_correction": false},
+  "gap_suspect_days": {"13:Gazole": 30, "13:E10": 30, "13:SP95": 21, "20:Gazole": 90, "20:SP95": 90},
+  "inactive_days": {"13": 60, "20": 180},
+  "reliable_average_excludes": ["price_aberrant", "gap_suspect", "station_inactive"],
+  "vat": {"20": 0.13, "13": 0.20},
+  "gazole_excise_eur_l": {"20": 0.594, "13_through_2024": 0.594, "13_from_2025": 0.6075}
+}

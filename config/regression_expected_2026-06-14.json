@@ -1,0 +1,21 @@
+{
+  "source_snapshot": "recovered A4C archive saved 2026-06-14",
+  "source_rows": 441935,
+  "expected": {
+    "releves_origine": 441935,
+    "releves_deduplices_jour": 408662,
+    "series_journalieres": 1420478,
+    "prix_aberrants_releves": 38,
+    "lignes_prix_aberrant": 88,
+    "lignes_gap_suspect": 205921,
+    "lignes_station_inactive": 144096,
+    "lignes_fiables_moyennes": 1214469
+  },
+  "expected_by_department_fuel": [
+    {"department":"13","fuel":"E10","rows":389182,"reliable":341119,"aberrant":42,"gap_suspect":48021,"inactive":35490},
+    {"department":"13","fuel":"Gazole","rows":442789,"reliable":393190,"aberrant":17,"gap_suspect":49582,"inactive":33787},
+    {"department":"13","fuel":"SP95","rows":158526,"reliable":92305,"aberrant":5,"gap_suspect":66216,"inactive":47057},
+    {"department":"20","fuel":"Gazole","rows":214986,"reliable":194554,"aberrant":13,"gap_suspect":20419,"inactive":13878},
+    {"department":"20","fuel":"SP95","rows":214995,"reliable":193301,"aberrant":11,"gap_suspect":21683,"inactive":13884}
+  ]
+}
