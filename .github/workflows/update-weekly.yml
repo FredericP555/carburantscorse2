@@ -60,9 +60,9 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         run: python scripts/migrate_index_data_source.py index.html --check
 
-      - name: Build append-only candidate
+      - name: Build append-only candidate from shared c1 source
         if: steps.gate.outputs.run == 'true'
-        run: python -m scripts.build_append_candidate
+        run: python -m scripts.build_append_candidate --official-source shared
 
       - name: Promote candidate after append-only checks
         if: steps.gate.outputs.run == 'true'
