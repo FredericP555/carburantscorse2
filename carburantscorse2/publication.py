@@ -118,7 +118,7 @@ def build_publication_state(
         if "source_timestamp" not in fill_cols:
             fill_cols.append("source_timestamp")
         with pd.option_context("future.no_silent_downcasting", True):
-            frame[fill_cols] = frame[fill_cols].ffill().infer_objects(copy=False)
+            frame[fill_cols] = frame[fill_cols].ffill().infer_objects()
 
         department = str(group.loc[0, "department"])
         threshold = GAP_THRESHOLDS[department]
