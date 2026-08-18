@@ -24,4 +24,4 @@ jobs:
       - name: Compile Python sources
         run: python -m compileall -q a4c_common carburantscorse2 scripts
       - name: Reproduce published 2026 price series
-        run: python scripts/regression_published_2026.py
+        run: python -m scripts.regression_published_2026
