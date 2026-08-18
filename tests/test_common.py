@@ -1,13 +1,22 @@
 from __future__ import annotations
 
 import io
+import tempfile
 import unittest
+import zipfile
 from datetime import date, datetime
+from pathlib import Path
 
 import pandas as pd
 from openpyxl import Workbook
 
-from a4c_common.official_prices import annual_url, deduplicate_daily, is_price_in_reference_band
+from a4c_common.official_prices import (
+    annual_url,
+    deduplicate_daily,
+    department_from_cp,
+    is_price_in_reference_band,
+    iter_observations_from_zip,
+)
 from a4c_common.ufip import expand_daily, parse_rotterdam_gazole_xlsx
 from carburantscorse2.margins import compute_gazole_margin, excise_gazole_eur_l
 from carburantscorse2.method import build_daily_series, deduplicate_daily as c2_dedup
@@ -24,6 +33,27 @@ class CommonTests(unittest.TestCase):
         self.assertTrue(is_price_in_reference_band(3.00))
         self.assertFalse(is_price_in_reference_band(1.099))
         self.assertFalse(is_price_in_reference_band(None))
+
+    def test_department_from_cp_is_generic_but_keeps_corsica_prefix(self):
+        self.assertEqual(department_from_cp("13001"), "13")
+        self.assertEqual(department_from_cp("75001"), "75")
+        self.assertEqual(department_from_cp("20200"), "20")
+        self.assertIsNone(department_from_cp("ABC"))
+
+    def test_common_parser_can_disable_geographic_filter(self):
+        xml = b'''<?xml version="1.0" encoding="UTF-8"?>
+<pdv_liste>
+  <pdv id="13000001" cp="13001" pop="R"><ville>Marseille</ville><prix nom="Gazole" id="1" maj="2026-08-18T08:00:00" valeur="1.80"/></pdv>
+  <pdv id="75000001" cp="75001" pop="R"><ville>Paris</ville><prix nom="Gazole" id="1" maj="2026-08-18T08:00:00" valeur="1.90"/></pdv>
+</pdv_liste>'''
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "sample.zip"
+            with zipfile.ZipFile(path, "w") as zf:
+                zf.writestr("PrixCarburants_annuel_2026.xml", xml)
+            default_rows = list(iter_observations_from_zip(path))
+            all_rows = list(iter_observations_from_zip(path, departments=None))
+        self.assertEqual([row["department"] for row in default_rows], ["13"])
+        self.assertEqual([row["department"] for row in all_rows], ["13", "75"])
 
     def test_common_last_declaration_of_day_wins(self):
         rows = [
