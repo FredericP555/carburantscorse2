@@ -14,6 +14,7 @@ import argparse
 from datetime import date, datetime, timezone
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +33,18 @@ def _parse_datetime(value: str) -> datetime:
 
 def _parse_date(value: str) -> date:
     return date.fromisoformat(value)
+
+
+def _release_timestamp(candidate_meta: dict[str, Any]) -> tuple[str | None, str | None]:
+    raw = candidate_meta.get("official_shared_release_published_at")
+    if raw:
+        return str(raw), "metadata"
+    tag = str(candidate_meta.get("official_shared_release_tag") or "")
+    match = re.fullmatch(r"a4c-shared-(\d{8}T\d{6}Z)-.+", tag)
+    if match:
+        parsed = datetime.strptime(match.group(1), "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
+        return parsed.isoformat().replace("+00:00", "Z"), "release-tag"
+    return None, None
 
 
 def evaluate_shared_freshness(
@@ -53,7 +66,7 @@ def evaluate_shared_freshness(
     if candidate_meta.get("official_ingestion_source") != "c1-github-release":
         failures.append("candidate is not using the required c1 GitHub Release source")
 
-    release_raw = candidate_meta.get("official_shared_release_published_at")
+    release_raw, release_timestamp_source = _release_timestamp(candidate_meta)
     source_raw = candidate_meta.get("official_shared_source_max_date") or candidate_meta.get("official_source_max_date")
 
     release_age_hours: float | None = None
@@ -115,6 +128,7 @@ def evaluate_shared_freshness(
         "status": "fail" if failures else "ok",
         "release_tag": candidate_meta.get("official_shared_release_tag"),
         "release_published_at": release_raw,
+        "release_timestamp_source": release_timestamp_source,
         "release_age_hours": None if release_age_hours is None else round(release_age_hours, 2),
         "source_max_date": source_raw,
         "source_age_days": source_age_days,
