@@ -23,6 +23,8 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Compile Python sources
         run: python -m compileall -q a4c_common carburantscorse2 scripts
+      - name: Validate dashboard data loader
+        run: python scripts/migrate_index_data_source.py index.html --check
       - name: Build live append-only candidate
         run: python -m scripts.build_append_candidate
       - name: Upload candidate and audit summary
