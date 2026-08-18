@@ -83,8 +83,6 @@ def main() -> None:
     candidate_data = deepcopy(legacy_data)
     candidate_margins = deepcopy(legacy_margins)
 
-    # One government download per annual stock inside this workflow workspace. 2025 is
-    # retained as look-back state for stations whose last change precedes 1 Jan 2026.
     observations: list[dict] = []
     for year in (target_end.year - 1, target_end.year):
         path = download_annual_zip(year)
@@ -142,8 +140,6 @@ def main() -> None:
             candidate_data[key][ref]["weekly"][group] = combined
             additions[path_key] = count
 
-    # Margins are published only for completed Monday-Sunday weeks. Fetch enough UFIP
-    # look-back to forward-fill a holiday/weekend at the beginning of the new interval.
     last_margin_period = max(max_date(candidate_margins["all"]), max_date(candidate_margins["reseau"]))
     first_new_margin_week = last_margin_period + pd.Timedelta(days=7)
     if first_new_margin_week <= weekly_end:
@@ -199,6 +195,11 @@ def main() -> None:
     out_path.write_text(json.dumps(output, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(summary, ensure_ascii=False, indent=2))
+
+    # A station with no GMS/traditional classification would silently bias the network
+    # comparison. Produce the audit artifact first, then block the candidate.
+    if unknown:
+        raise SystemExit(f"Unclassified recent BDR stations: {', '.join(unknown)}")
 
 
 if __name__ == "__main__":
