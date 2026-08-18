@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""One-time safe migration of index.html from embedded data to data.json.
+"""Safe one-time migrations for the carburantscorse2 dashboard shell.
 
 The legacy embedded DATA and MARGES_GZ objects are deliberately kept as a fallback.
-The migration only makes them mutable, loads data.json before the first chart render,
-and leaves the existing UI/CSS/chart code unchanged.
+The migration makes them mutable, loads data.json before the first chart render, and
+makes the period slider depend on the chart width/history rather than a frozen June-2026
+month count. It does not change the underlying chart series or editorial content.
 """
 from __future__ import annotations
 
@@ -30,6 +31,28 @@ async function loadDashboardData(){
 }
 '''.strip()
 
+RESPONSIVE_HELPERS = r'''
+let currentMonths=12;  // 12 derniers mois par défaut quand le graphique est étroit
+function usePeriodSlider(){
+  const area=document.getElementById('charts-area');
+  const width=area&&area.clientWidth?area.clientWidth:window.innerWidth;
+  return width<850;
+}
+function getHistoryMonths(){
+  const raw=DATA&&DATA.gazole&&DATA.gazole.sp95&&DATA.gazole.sp95.daily?DATA.gazole.sp95.daily.all:[];
+  if(!raw||raw.length<2)return 12;
+  const first=new Date(raw[0].date),last=new Date(raw[raw.length-1].date);
+  return Math.max(12,(last.getFullYear()-first.getFullYear())*12+(last.getMonth()-first.getMonth())+1);
+}
+function syncPeriodSliderRange(){
+  const sl=document.getElementById('slider-mois');
+  if(!sl)return;
+  const total=getHistoryMonths();
+  sl.max=String(total);
+  if(currentMonths>total){currentMonths=total;sl.value=String(total);}
+}
+'''.strip()
+
 
 def migrate(text: str) -> tuple[str, bool]:
     original = text
@@ -53,6 +76,32 @@ def migrate(text: str) -> tuple[str, bool]:
     elif "window.addEventListener('load',async function(){\n  await loadDashboardData();" not in text:
         raise RuntimeError('loader exists but is not wired before initial render')
 
+    old_helpers = (
+        "let currentMonths=12;  // nb de mois affichés sur mobile vertical (12 par défaut)\n"
+        "function isMobilePortrait(){return window.innerWidth<700 && window.innerHeight>window.innerWidth;}"
+    )
+    if old_helpers in text:
+        text = text.replace(old_helpers, RESPONSIVE_HELPERS, 1)
+    elif 'function usePeriodSlider()' not in text or 'function getHistoryMonths()' not in text:
+        raise RuntimeError('period slider helper block not found')
+
+    text = text.replace('isMobilePortrait()', 'usePeriodSlider()')
+    text = text.replace(
+        'const totalMonths=54; // janv 2022 -> juin 2026 ~ 54 mois',
+        'const totalMonths=getHistoryMonths();',
+        1,
+    )
+
+    load_marker = 'await loadDashboardData();\n  updateSliderVisibility();'
+    if load_marker in text:
+        text = text.replace(
+            load_marker,
+            'await loadDashboardData();\n  syncPeriodSliderRange();\n  updateSliderVisibility();',
+            1,
+        )
+    elif 'await loadDashboardData();\n  syncPeriodSliderRange();\n  updateSliderVisibility();' not in text:
+        raise RuntimeError('period slider range is not synchronized after data load')
+
     return text, text != original
 
 
@@ -66,7 +115,6 @@ def main() -> None:
     source = path.read_text(encoding='utf-8')
     migrated, changed = migrate(source)
 
-    # Structural invariants: exactly one mutable declaration and one loader call.
     if migrated.count('let DATA=') != 1:
         raise RuntimeError('expected exactly one let DATA declaration')
     if migrated.count('let MARGES_GZ=') != 1:
@@ -75,16 +123,20 @@ def main() -> None:
         raise RuntimeError('expected exactly one data.json fetch')
     if migrated.count('await loadDashboardData();') != 1:
         raise RuntimeError('expected exactly one pre-render loader call')
+    if migrated.count('syncPeriodSliderRange();') != 1:
+        raise RuntimeError('expected exactly one period-range synchronization call')
+    if 'isMobilePortrait()' in migrated or 'const totalMonths=54' in migrated:
+        raise RuntimeError('legacy frozen mobile-period logic still present')
 
     if args.check:
         if changed:
-            raise SystemExit('index.html still needs the data-loader migration')
-        print('index.html data-loader migration: OK')
+            raise SystemExit('index.html still needs the dashboard-shell migration')
+        print('index.html dashboard-shell migration: OK')
         return
 
     if changed:
         path.write_text(migrated, encoding='utf-8')
-        print('index.html migrated to data.json with embedded fallback')
+        print('index.html migrated: data.json loader + responsive data-driven period slider')
     else:
         print('index.html already migrated; no change')
 
