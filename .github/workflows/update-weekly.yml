@@ -40,11 +40,13 @@ jobs:
               schedule = os.environ.get('EVENT_SCHEDULE', '')
               try:
                   parts = schedule.split()
-                  scheduled_minute = int(parts[0])
                   scheduled_hour = int(parts[1])
               except Exception:
-                  scheduled_minute = scheduled_hour = -1
-              run = scheduled_hour == expected_utc_hour and scheduled_minute == 40
+                  scheduled_hour = -1
+              # The two cron entries carry the minute. The gate only chooses which UTC
+              # hour corresponds to 07:xx Europe/Paris, so changing the common cron minute
+              # cannot silently disable production.
+              run = scheduled_hour == expected_utc_hour
 
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
               fh.write(f"run={'true' if run else 'false'}\n")
