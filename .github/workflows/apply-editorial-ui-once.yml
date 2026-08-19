@@ -1,12 +1,8 @@
 name: Apply editorial UI once
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - scripts/apply_dynamic_editorial.py
-      - .github/workflows/apply-editorial-ui-once.yml
+  issues:
+    types: [opened]
 
 permissions:
   contents: write
@@ -18,6 +14,7 @@ concurrency:
 
 jobs:
   apply:
+    if: github.event.issue.title == 'A4C editorial sync trigger'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
