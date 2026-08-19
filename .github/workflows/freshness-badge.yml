@@ -1,0 +1,75 @@
+name: Validate and install freshness badge
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - freshness.js
+      - scripts/install_freshness_badge.py
+      - .github/workflows/freshness-badge.yml
+  push:
+    branches: [main]
+    paths:
+      - freshness.js
+      - scripts/install_freshness_badge.py
+      - .github/workflows/freshness-badge.yml
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  freshness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check freshness JavaScript syntax
+        run: node --check freshness.js
+      - name: Verify installer is idempotent
+        shell: bash
+        run: |
+          cp index.html /tmp/index-freshness.html
+          python scripts/install_freshness_badge.py /tmp/index-freshness.html
+          python scripts/install_freshness_badge.py /tmp/index-freshness.html
+          test "$(grep -o '<script src="freshness.js"></script>' /tmp/index-freshness.html | wc -l)" -eq 1
+          grep -q 'A4C_updateFreshnessBadge' freshness.js
+          grep -q 'semaine complète au' freshness.js
+          grep -q 'partielle au' freshness.js
+      - name: Install in production HTML
+        if: github.event_name == 'push'
+        run: python scripts/install_freshness_badge.py index.html
+      - name: Commit production HTML
+        if: github.event_name == 'push'
+        id: commit
+        shell: bash
+        run: |
+          if git diff --quiet -- index.html; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Load adaptive freshness badge'
+          git push origin HEAD:main
+          echo 'changed=true' >> "$GITHUB_OUTPUT"
+      - name: Trigger GitHub Pages rebuild
+        if: github.event_name == 'push' && steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          code=$(curl -sS -o /tmp/pages-build.json -w '%{http_code}' \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pages/builds")
+          cat /tmp/pages-build.json || true
+          test "$code" = "201"
