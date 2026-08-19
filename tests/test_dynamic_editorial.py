@@ -1,7 +1,23 @@
 from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
 import unittest
 
-HTML = Path(__file__).resolve().parents[1].joinpath('index.html').read_text(encoding='utf-8')
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPT = ROOT / 'scripts' / 'apply_dynamic_editorial.py'
+
+
+def transformed_html():
+    with tempfile.TemporaryDirectory() as td:
+        work = Path(td)
+        shutil.copy2(ROOT / 'index.html', work / 'index.html')
+        subprocess.run([sys.executable, str(SCRIPT)], cwd=work, check=True, capture_output=True, text=True)
+        return (work / 'index.html').read_text(encoding='utf-8')
+
+
+HTML = transformed_html()
 
 
 class DynamicEditorialTests(unittest.TestCase):
@@ -36,6 +52,16 @@ class DynamicEditorialTests(unittest.TestCase):
         self.assertIn('meta.current_active&&meta.current_active_since', HTML)
         self.assertIn("editorialBouclierStatus('Gazole')", HTML)
         self.assertIn("editorialBouclierStatus('SP95')", HTML)
+
+    def test_patch_is_idempotent(self):
+        with tempfile.TemporaryDirectory() as td:
+            work = Path(td)
+            shutil.copy2(ROOT / 'index.html', work / 'index.html')
+            subprocess.run([sys.executable, str(SCRIPT)], cwd=work, check=True, capture_output=True, text=True)
+            once = (work / 'index.html').read_text(encoding='utf-8')
+            subprocess.run([sys.executable, str(SCRIPT)], cwd=work, check=True, capture_output=True, text=True)
+            twice = (work / 'index.html').read_text(encoding='utf-8')
+            self.assertEqual(once, twice)
 
 
 if __name__ == '__main__':
