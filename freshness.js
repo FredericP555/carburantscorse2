@@ -78,6 +78,37 @@
     }
     return typeof resolution!=='undefined'&&resolution==='w';
   }
+
+  // C2 already has a period selector and filtering logic, but historically enabled it only
+  // below ~850 px. Keep that same control and same 12-month default on desktop too: no new
+  // data path, no duplicate selector, only a consistent visibility/filter policy.
+  function enableC2PeriodSliderEverywhere(){
+    const slider=document.getElementById('periode-slider');
+    if(!slider||typeof window.onSliderPeriode!=='function')return false;
+
+    window.usePeriodSlider=function(){return true;};
+    window.updateSliderVisibility=function(){
+      const panel=document.getElementById('periode-slider');
+      if(!panel)return;
+      panel.style.display=window.innerWidth<=700?'block':'flex';
+    };
+
+    if(!document.getElementById('a4c-c2-desktop-period-style')){
+      const style=document.createElement('style');
+      style.id='a4c-c2-desktop-period-style';
+      style.textContent=`
+        @media(min-width:701px){
+          #periode-slider{align-items:center;gap:12px;padding:5px 14px 6px!important}
+          #periode-slider label{margin:0;white-space:nowrap;flex:0 0 auto}
+          #periode-slider input[type=range]{width:min(360px,40vw);height:20px;flex:0 1 360px}
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    window.updateSliderVisibility();
+    return true;
+  }
+
   function ensureBadge(){
     let badge=document.getElementById('a4c-freshness-badge');
     if(badge)return badge;
@@ -134,12 +165,14 @@
     badge.className=age==null?'warn':age<=3?'fresh':age<=7?'warn':'stale';
   }
 
+  enableC2PeriodSliderEverywhere();
   window.A4C_updateFreshnessBadge=updateFreshnessBadge;
   document.addEventListener('click',function(e){
     const t=e.target&&e.target.closest&&e.target.closest('[data-res],[data-carbu],#btn-daily,#btn-weekly,#btn-prix,#btn-marge,#btn-gz,#btn-sp,#btn-sp95ref,#btn-e10ref');
     if(t)setTimeout(updateFreshnessBadge,0);
   });
   window.addEventListener('load',function(){
+    enableC2PeriodSliderEverywhere();
     let tries=0;
     const timer=setInterval(function(){
       tries++;
