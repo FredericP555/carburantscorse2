@@ -225,6 +225,14 @@ function setStats(px,raw){
   document.getElementById(px+'-min').textContent=(Math.min(...e)>=0?'+':'')+Math.min(...e).toFixed(2)+' c/L HT';
   document.getElementById(px+'-max').textContent='+'+Math.max(...e).toFixed(2)+' c/L HT';
 }
+function getBouclierMeta(ck){
+  const root=window.A4C_DATA_META&&window.A4C_DATA_META.bouclier;
+  return root&&root[ck]?root[ck]:null;
+}
+function getBouclierRanges(ck){
+  const meta=getBouclierMeta(ck);
+  return meta&&Array.isArray(meta.ranges)?meta.ranges:(BOUCLIER[ck]||[]);
+}
 function makePlugin(minTs,maxTs,ck){
   return{id:'zp',
     beforeDraw(c){
@@ -236,7 +244,7 @@ function makePlugin(minTs,maxTs,ck){
         ctx.save();ctx.fillStyle=color;ctx.fillRect(x1,top,x2-x1,bottom-top);ctx.restore();
       };
       ZONES.forEach(p=>fillPeriod(p,`rgba(34,197,94,${p.alpha_fill})`));
-      (BOUCLIER[ck]||[]).forEach(p=>fillPeriod(p,'rgba(251,191,36,0.20)'));
+      getBouclierRanges(ck).forEach(p=>fillPeriod(p,'rgba(251,191,36,0.20)'));
       if(ck==='Gazole'){
         (BOUCLIER.Gazole_promo||[]).forEach(p=>fillPeriod(p,'rgba(234,88,12,0.09)'));
       }
@@ -441,11 +449,19 @@ function buildOne(cid,wid,grp,sid,color,raw){
 
 function updateBouclierInfo(){
   const bi=document.getElementById('bouclier-info');if(!bi)return;
+  const ck=currentCarbu==='gazole'?'Gazole':'SP95';
+  const meta=getBouclierMeta(ck);
+  let base;
   if(currentCarbu==='gazole'){
-    bi.innerHTML='■ Bouclier tarifaire TotalEnergies : <b>1,99 €/L TTC</b> d’août 2023 au 19 mars 2026 · <b>2,09 €/L TTC</b> du 20 mars au 7 avr. 2026 · <b>2,25 €/L TTC</b> depuis le 8 avr. 2026 <span style="color:rgba(234,88,12,0.85)">· Promo 2,09 €/L les ponts de mai 2026</span>';
+    base='■ Bouclier tarifaire TotalEnergies : <b>1,99 €/L TTC</b> d’août 2023 au 19 mars 2026 · <b>2,09 €/L TTC</b> du 20 mars au 7 avr. 2026 · <b>2,25 €/L TTC</b> depuis le 8 avr. 2026 <span style="color:rgba(234,88,12,0.85)">· Promo 2,09 €/L les ponts de mai 2026</span>';
   }else{
-    bi.innerHTML='■ Bouclier tarifaire TotalEnergies : <b>1,99 €/L TTC</b> depuis mars 2023';
+    base='■ Bouclier tarifaire TotalEnergies : <b>1,99 €/L TTC</b> depuis mars 2023';
   }
+  if(meta&&meta.current_active&&meta.current_active_since){
+    const d=new Date(meta.current_active_since+'T12:00:00');
+    base+=' · <b>Actuellement contraignant depuis le '+d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})+'</b>';
+  }
+  bi.innerHTML=base;
 }
 
 function buildCharts(){
