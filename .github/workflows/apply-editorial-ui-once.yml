@@ -1,8 +1,8 @@
 name: Apply editorial UI once
 
 on:
-  issues:
-    types: [opened]
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
@@ -14,12 +14,13 @@ concurrency:
 
 jobs:
   apply:
-    if: github.event.issue.title == 'A4C editorial sync trigger'
+    if: github.head_ref == 'agent/editorial-sync-trigger'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 1
       - uses: actions/setup-python@v5
         with:
