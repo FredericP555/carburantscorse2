@@ -9,11 +9,12 @@ class DynamicBouclierMetaTests(unittest.TestCase):
         self.assertIn('"bouclier": metadata.get("bouclier")', reader)
         self.assertIn('"bouclier": official_source.get("bouclier") or baseline_meta.get("bouclier")', builder)
 
-    def test_dashboard_prefers_dynamic_ranges_with_static_fallback(self):
+    def test_dashboard_uses_c1_ranges_as_the_only_shield_source(self):
         html = Path('index.html').read_text(encoding='utf-8')
         self.assertIn('function getBouclierRanges(ck)', html)
-        self.assertIn("Array.isArray(meta.ranges)?meta.ranges:(BOUCLIER[ck]||[])", html)
-        self.assertIn("getBouclierRanges(ck).forEach", html)
+        self.assertIn('Array.isArray(meta.ranges)?meta.ranges:[]', html)
+        self.assertNotIn('Array.isArray(meta.ranges)?meta.ranges:(BOUCLIER[ck]||[])', html)
+        self.assertIn('getBouclierRanges(ck).forEach', html)
         self.assertIn('current_active_since', html)
 
 
