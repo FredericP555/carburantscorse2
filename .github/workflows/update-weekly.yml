@@ -60,9 +60,9 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         run: python scripts/migrate_index_data_source.py index.html --check
 
-      - name: Build append-only candidate from shared c1 source
+      - name: Build append-only candidate and resolve only new BDR IDs
         if: steps.gate.outputs.run == 'true'
-        run: python -m scripts.build_append_candidate --official-source shared
+        run: python -m scripts.build_append_candidate_incremental --official-source shared
 
       - name: Verify fresh c1 release and official stock
         if: steps.gate.outputs.run == 'true' && github.event_name == 'schedule'
@@ -86,16 +86,22 @@ jobs:
           path: |
             outputs/candidate-data.json
             outputs/candidate-summary.json
+            config/bdr_station_brands.json
           retention-days: 30
 
-      - name: Commit updated data.json
-        if: steps.gate.outputs.run == 'true' && steps.promote.outputs.changed == 'true' && github.ref_name == github.event.repository.default_branch
+      - name: Commit updated data and incremental BDR registry
+        if: steps.gate.outputs.run == 'true' && github.ref_name == github.event.repository.default_branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data.json
+          git add data.json config/bdr_station_brands.json
           git diff --cached --quiet && exit 0
-          git commit -m "Update carburantscorse2 data through ${{ steps.promote.outputs.daily_target_end }}"
+          if [ "${{ steps.promote.outputs.changed }}" = "true" ]; then
+            msg="Update carburantscorse2 data through ${{ steps.promote.outputs.daily_target_end }}"
+          else
+            msg="Resolve new BDR station brands"
+          fi
+          git commit -m "$msg"
           git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - name: Trigger GitHub Pages rebuild
@@ -117,4 +123,4 @@ jobs:
 
       - name: No-op summary
         if: steps.gate.outputs.run == 'true' && steps.promote.outputs.changed != 'true'
-        run: echo "No new publishable point; data.json and Pages remain unchanged."
+        run: echo "No new publishable price point; only an incremental station registry change may have been committed."
