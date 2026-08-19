@@ -1,0 +1,32 @@
+name: Apply timeline wording clarification (temporary)
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ github.head_ref == 'agent/clarify-total-timeline-copy' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/clarify-total-timeline-copy
+      - name: Check whether wording patch is needed
+        id: needed
+        run: |
+          if grep -q "septembre–octobre 2022" index.html; then echo "value=yes" >> "$GITHUB_OUTPUT"; else echo "value=no" >> "$GITHUB_OUTPUT"; fi
+      - name: Apply wording clarification
+        if: steps.needed.outputs.value == 'yes'
+        run: python scripts/_clarify_total_copy.py
+      - name: Commit clarified wording
+        if: steps.needed.outputs.value == 'yes'
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add index.html
+          git commit -m "Clarify Total timeline wording [copy-patched]"
+          git push origin HEAD:agent/clarify-total-timeline-copy
