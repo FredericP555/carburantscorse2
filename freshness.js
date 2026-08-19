@@ -79,20 +79,15 @@
     return typeof resolution!=='undefined'&&resolution==='w';
   }
 
-  // C2 already has a period selector and filtering logic, but historically enabled it only
-  // below ~850 px. Keep that same control and same 12-month default on desktop too: no new
-  // data path, no duplicate selector, only a consistent visibility/filter policy.
   function enableC2PeriodSliderEverywhere(){
     const slider=document.getElementById('periode-slider');
     if(!slider||typeof window.onSliderPeriode!=='function')return false;
-
     window.usePeriodSlider=function(){return true;};
     window.updateSliderVisibility=function(){
       const panel=document.getElementById('periode-slider');
       if(!panel)return;
       panel.style.display=window.innerWidth<=700?'block':'flex';
     };
-
     if(!document.getElementById('a4c-c2-desktop-period-style')){
       const style=document.createElement('style');
       style.id='a4c-c2-desktop-period-style';
@@ -106,6 +101,44 @@
       document.head.appendChild(style);
     }
     window.updateSliderVisibility();
+    return true;
+  }
+
+  function installC2AdaptiveAxis(){
+    if(typeof buildAnnualTicks!=='function'||typeof formatAnnualTick!=='function')return false;
+    buildAnnualTicks=function(minTs,maxTs){
+      const spanMonths=Math.max(1,(maxTs-minTs)/(30.44*DAY_MS));
+      const step=spanMonths<=15?2:spanMonths<=30?3:12;
+      const weekly=(typeof currentGran!=='undefined'&&currentGran==='weekly')||
+        (typeof currentCarbu!=='undefined'&&currentCarbu==='gazole'&&typeof currentVue!=='undefined'&&currentVue==='marge');
+      const out=[];
+      if(step===12){
+        const y0=new Date(minTs).getFullYear(),y1=new Date(maxTs).getFullYear();
+        for(let y=y0;y<=y1;y++){
+          const d=new Date(y,0,1);
+          if(weekly){while(d.getDay()!==1)d.setDate(d.getDate()+1);}
+          const v=d.getTime();
+          if(v>=minTs&&v<=maxTs)out.push({value:v});
+        }
+        return out;
+      }
+      const start=new Date(minTs);
+      let d=new Date(start.getFullYear(),start.getMonth(),1);
+      if(d.getTime()<minTs)d.setMonth(d.getMonth()+1);
+      while(d.getTime()<=maxTs){
+        const tick=new Date(d.getTime());
+        if(weekly){while(tick.getDay()!==1)tick.setDate(tick.getDate()+1);}
+        const v=tick.getTime();
+        if(v>=minTs&&v<=maxTs)out.push({value:v});
+        d.setMonth(d.getMonth()+step);
+      }
+      return out;
+    };
+    formatAnnualTick=function(v){
+      const d=new Date(v);
+      const months=['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
+      return months[d.getMonth()]+' '+String(d.getFullYear()).slice(2);
+    };
     return true;
   }
 
@@ -166,6 +199,7 @@
   }
 
   enableC2PeriodSliderEverywhere();
+  installC2AdaptiveAxis();
   window.A4C_updateFreshnessBadge=updateFreshnessBadge;
   document.addEventListener('click',function(e){
     const t=e.target&&e.target.closest&&e.target.closest('[data-res],[data-carbu],#btn-daily,#btn-weekly,#btn-prix,#btn-marge,#btn-gz,#btn-sp,#btn-sp95ref,#btn-e10ref');
@@ -173,6 +207,7 @@
   });
   window.addEventListener('load',function(){
     enableC2PeriodSliderEverywhere();
+    installC2AdaptiveAxis();
     let tries=0;
     const timer=setInterval(function(){
       tries++;
