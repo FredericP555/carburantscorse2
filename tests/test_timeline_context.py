@@ -14,7 +14,9 @@ class TimelineContextTests(unittest.TestCase):
         for marker in (
             "date:'2022-02-24',label:'Invasion Ukraine'",
             "date:'2025-11-17',label:'Sanctions Autorité'",
-            'date:\'2026-02-28\',label:"Guerre d\'Iran"',
+            "date:'2026-02-28',label:'Début guerre Iran'",
+            "date:'2026-06-17',label:'Accord / cessez-le-feu Iran'",
+            "date:'2026-07-07',label:'Reprise frappes Iran'",
         ):
             self.assertIn(marker, self.html)
 
