@@ -231,7 +231,7 @@ function getBouclierMeta(ck){
 }
 function getBouclierRanges(ck){
   const meta=getBouclierMeta(ck);
-  return meta&&Array.isArray(meta.ranges)?meta.ranges:(BOUCLIER[ck]||[]);
+  return meta&&Array.isArray(meta.ranges)?meta.ranges:[];
 }
 function makePlugin(minTs,maxTs,ck){
   return{id:'zp',
