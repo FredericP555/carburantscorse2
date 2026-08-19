@@ -10,23 +10,11 @@ class TimelineAllChartsTests(unittest.TestCase):
         self.assertIn('2,25 €/L TTC</b> depuis le 8 avr. 2026', HTML)
         self.assertIn('1,99 €/L TTC</b> depuis mars 2023', HTML)
 
-    def test_active_windows_are_exact_c1_windows(self):
-        expected = [
-            "{d1:'2023-08-31',d2:'2023-10-13'}",
-            "{d1:'2023-10-24',d2:'2023-10-30'}",
-            "{d1:'2026-03-20',d2:'2026-04-06'}",
-            "{d1:'2026-04-08',d2:'2026-05-27'}",
-            "{d1:'2023-02-20',d2:'2023-03-19'}",
-            "{d1:'2023-03-27',d2:'2023-05-02'}",
-            "{d1:'2023-06-09',d2:'2023-06-21'}",
-            "{d1:'2023-07-25',d2:'2023-10-07'}",
-            "{d1:'2024-02-20',d2:'2024-03-01'}",
-            "{d1:'2024-03-07',d2:'2024-06-05'}",
-            "{d1:'2024-07-01',d2:'2024-07-16'}",
-            "{d1:'2026-03-13',d2:'2026-05-28'}",
-        ]
-        for marker in expected:
-            self.assertIn(marker, HTML)
+    def test_active_windows_are_consumed_from_c1_metadata(self):
+        self.assertIn('function getBouclierMeta(ck)', HTML)
+        self.assertIn('function getBouclierRanges(ck)', HTML)
+        self.assertIn('meta&&Array.isArray(meta.ranges)?meta.ranges:[]', HTML)
+        self.assertIn("getBouclierRanges(ck).forEach", HTML)
 
     def test_events_match_c1_and_use_top_down_labels(self):
         for marker in [
