@@ -99,8 +99,11 @@ def migrate(text: str) -> tuple[str, bool]:
             'await loadDashboardData();\n  syncPeriodSliderRange();\n  updateSliderVisibility();',
             1,
         )
-    elif 'await loadDashboardData();\n  syncPeriodSliderRange();\n  updateSliderVisibility();' not in text:
-        raise RuntimeError('period slider range is not synchronized after data load')
+    else:
+        standard = 'await loadDashboardData();\n  syncPeriodSliderRange();\n  updateSliderVisibility();'
+        editorial = 'await loadDashboardData();\n  syncDynamicPeriodLabels();\n  syncPeriodSliderRange();\n  updateSliderVisibility();'
+        if standard not in text and editorial not in text:
+            raise RuntimeError('period slider range is not synchronized after data load')
 
     return text, text != original
 
