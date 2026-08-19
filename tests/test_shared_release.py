@@ -5,6 +5,8 @@ import gzip
 import hashlib
 import io
 import json
+import os
+from unittest.mock import patch
 import unittest
 
 from a4c_common.shared_release import (
@@ -13,6 +15,7 @@ from a4c_common.shared_release import (
     SCHEMA,
     _asset_url,
     _decode_snapshot,
+    _request_headers,
     _select_shared_release,
 )
 
@@ -36,6 +39,13 @@ class SharedReleaseTests(unittest.TestCase):
             ],
         }
         self.assertEqual(_asset_url(release, DATA_ASSET), "https://example.test/data")
+
+    def test_github_token_is_only_sent_to_api_github_com(self):
+        with patch.dict(os.environ, {"GITHUB_TOKEN": "test-token"}, clear=False):
+            api_headers = _request_headers("https://api.github.com/repos/x/y/releases")
+            asset_headers = _request_headers("https://github.com/x/y/releases/download/tag/data.gz")
+        self.assertEqual(api_headers.get("Authorization"), "Bearer test-token")
+        self.assertNotIn("Authorization", asset_headers)
 
     def test_decode_validates_checksum_and_restores_types(self):
         fields = [
