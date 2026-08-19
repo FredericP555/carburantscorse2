@@ -151,5 +151,6 @@ def load_shared_observations(
         "sha256": metadata.get("sha256"),
         "shared_source_max_date": metadata.get("max_date"),
         "shared_rows": metadata.get("rows"),
+        "bouclier": metadata.get("bouclier"),
     }
     return rows, source

@@ -251,6 +251,7 @@ def main() -> None:
             "official_shared_release_published_at": official_source.get("release_published_at"),
             "official_shared_sha256": official_source.get("sha256"),
             "official_shared_source_max_date": official_source.get("shared_source_max_date"),
+            "bouclier": official_source.get("bouclier") or baseline_meta.get("bouclier"),
             "ufip_last_observed_date": ufip_last,
             "legacy_daily_cutoff": initial_legacy_cutoff,
             "unknown_recent_bdr_stations": unknown,
