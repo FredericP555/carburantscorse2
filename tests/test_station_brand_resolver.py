@@ -19,6 +19,9 @@ class StationBrandResolverTests(unittest.TestCase):
         self.assertEqual(classify_brand("Esso"), ("traditionnel", "major_tradi"))
         self.assertEqual(classify_brand("E.Leclerc"), ("gms_lowcost", "gms"))
 
+    def test_unrecognized_brand_fails_closed(self):
+        self.assertEqual(classify_brand("Nouvelle enseigne inconnue"), ("inconnu", "inconnu"))
+
     def test_known_ids_do_not_need_lookup(self):
         legacy = {"13000001": "gms"}
         registry = {
