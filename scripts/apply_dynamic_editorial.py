@@ -190,12 +190,16 @@ def main():
     helper_marker = "// ── Texte éditorial dynamique"
     if marker not in text:
         raise SystemExit("toggleAnalyse marker not found")
+    helper_block = HELPERS.strip("\n")
     if helper_marker in text:
-        start = text.index(helper_marker)
-        end = text.index(marker, start)
-        text = text[:start] + HELPERS + "\n" + text[end:]
+        marker_start = text.index(helper_marker)
+        start = len(text[:marker_start].rstrip("\n"))
+        end = text.index(marker, marker_start)
+        prefix = text[:start].rstrip("\n")
+        suffix = text[end:].lstrip("\n")
+        text = prefix + "\n\n" + helper_block + "\n\n" + suffix
     else:
-        text = text.replace(marker, HELPERS + "\n" + marker, 1)
+        text = text.replace(marker, helper_block + "\n\n" + marker, 1)
 
     if OLD_UPDATE in text:
         text = text.replace(OLD_UPDATE, NEW_UPDATE, 1)

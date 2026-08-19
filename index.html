@@ -502,6 +502,11 @@ function editorialMean(rows,field,start,end){
 function editorialYearMean(rows,year,field){
   return editorialMean(rows,field||'ecart',year+'-01-01',year+'-12-31');
 }
+function editorialMax(rows,field,start,end){
+  const f=field||'ecart';
+  const vals=(rows||[]).filter(r=>(!start||r.date>=start)&&(!end||r.date<=end)&&Number.isFinite(Number(r[f])));
+  return vals.length?vals.reduce((best,r)=>Number(r[f])>Number(best[f])?r:best):null;
+}
 function editorialCommonPeriod(){
   const lists=[...arguments].filter(r=>Array.isArray(r)&&r.length);
   if(!lists.length)return null;
@@ -555,6 +560,7 @@ function editorialBouclierStatus(fuel){
 function buildGazolePriceAnalysis(){
   const all=DATA&&DATA.gazole&&DATA.gazole.sp95&&DATA.gazole.sp95.daily?DATA.gazole.sp95.daily.all:[];
   const net=DATA&&DATA.gazole&&DATA.gazole.sp95&&DATA.gazole.sp95.daily?DATA.gazole.sp95.daily.reseau:[];
+  const weekly=DATA&&DATA.gazole&&DATA.gazole.sp95&&DATA.gazole.sp95.weekly?DATA.gazole.sp95.weekly.all:[];
   const p=editorialCommonPeriod(all,net);
   if(!p)return ANALYSES.gazole;
   const meanAll=editorialMean(all,'ecart',p.start,p.end);
@@ -563,9 +569,20 @@ function buildGazolePriceAnalysis(){
   const lastFullYear=new Date(p.end+'T12:00:00').getFullYear()-1;
   const trend=lastFullYear>=firstYear?editorialTrend(all,firstYear,lastFullYear):null;
   const discount=editorialMean(all,'ecart','2022-09-01','2022-11-15');
+  const sanctionPeak=editorialMax(weekly,'ecart','2025-11-17','2025-12-31');
+  const through2025Peak=editorialMax(weekly,'ecart',null,'2025-12-31');
+  const overallPeak=editorialMax(weekly,'ecart');
+  const wasRecord=!!(sanctionPeak&&through2025Peak&&sanctionPeak.date===through2025Peak.date&&Number(sanctionPeak.ecart)===Number(through2025Peak.ecart));
+  let recordText='';
+  if(sanctionPeak){
+    recordText=`Fait le plus significatif : après la sanction de l’Autorité de la concurrence du 17 novembre 2025, l’écart Gazole a atteint <strong>${editorialSigned(Number(sanctionPeak.ecart))} c/L HT</strong> la semaine du <strong>${editorialLongDate(sanctionPeak.date)}</strong>${wasRecord?', alors un record depuis 2022':''}.`;
+    if(overallPeak&&Number(overallPeak.ecart)>Number(sanctionPeak.ecart)){
+      recordText+=` Il a depuis été dépassé : <strong>${editorialSigned(Number(overallPeak.ecart))} c/L HT</strong> la semaine du <strong>${editorialLongDate(overallPeak.date)}</strong>.`;
+    }
+  }
   const trendText=trend?`Sur les années complètes, l'écart passe de <strong>${editorialSigned(trend.first)} c/L en ${firstYear}</strong> à <strong>${editorialSigned(trend.last)} c/L en ${lastFullYear}</strong>, ${editorialEvolutionText(trend.pct)} — indépendamment des fluctuations des cours du pétrole.`:'';
   const discountText=discount==null?'':` La remise TotalEnergies de −20 c/L du 1er septembre au 15 novembre 2022, répercutée par VITO, a ramené l'écart moyen de cette période à <strong>${editorialSigned(discount)} c/L</strong> — preuve que la surcharge corse n'est pas une fatalité liée aux coûts d'insularité.`;
-  return `<p style="margin-bottom:8px">Sur la période ${editorialMonthYear(p.start)} – ${editorialMonthYear(p.end)}, l'écart HT Corse/BdR sur le <strong>Gazole</strong> s'établit en moyenne à <strong>${editorialSigned(meanAll)} c/L</strong> toutes stations confondues, et à <strong>${editorialSigned(meanNet)} c/L</strong> réseau vs réseau.</p><p style="margin-bottom:8px">${trendText} L'Autorité de la concurrence a reconnu le caractère anticoncurrentiel de cette politique dans sa décision 25-D-07 du 17 novembre 2025 (sanction de 187,5 M€).${discountText} Les zones jaunes du graphique correspondent aux périodes où le bouclier TotalEnergies est effectivement contraignant selon la règle de l'observatoire.${editorialBouclierStatus('Gazole')}</p><p style="color:#991b1b;font-weight:600">Fait le plus significatif : dans les semaines suivant la sanction du 17 novembre 2025, l'écart Gazole a atteint son niveau record à <strong>+22,7 c/L HT</strong> en décembre 2025. La décision n'a produit aucun effet correctif observable sur les prix.</p>`;
+  return `<p style="margin-bottom:8px">Sur la période ${editorialMonthYear(p.start)} – ${editorialMonthYear(p.end)}, l'écart HT Corse/BdR sur le <strong>Gazole</strong> s'établit en moyenne à <strong>${editorialSigned(meanAll)} c/L</strong> toutes stations confondues, et à <strong>${editorialSigned(meanNet)} c/L</strong> réseau vs réseau.</p><p style="margin-bottom:8px">${trendText}${discountText} Les zones jaunes du graphique correspondent aux périodes où le bouclier TotalEnergies est effectivement contraignant selon la règle de l'observatoire.${editorialBouclierStatus('Gazole')}</p>${recordText?`<p style="color:#991b1b;font-weight:600">${recordText}</p>`:''}`;
 }
 function buildSp95PriceAnalysis(){
   const spAll=DATA&&DATA.sp95&&DATA.sp95.sp95&&DATA.sp95.sp95.daily?DATA.sp95.sp95.daily.all:[];
