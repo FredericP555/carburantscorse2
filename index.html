@@ -122,9 +122,11 @@ noscript{display:block;padding:12px 16px;background:#fff7ed;color:#9a3412;border
   </div>
 </div>
 <div id="legende-events-mobile" style="display:none;flex-shrink:0;background:#fff;border-top:1px solid #e2e8f0;padding:5px 12px;font-size:0.62rem;color:#64748b;line-height:1.7">
-  <span style="color:rgba(220,38,38,0.85);font-weight:bold">─ ─</span> Invasion Ukraine (fév. 2022) &nbsp;
-  <span style="color:rgba(14,116,144,0.85);font-weight:bold">─ ─</span> Sanctions Autorité concurrence (nov. 2025) &nbsp;
-  <span style="color:rgba(124,58,237,0.85);font-weight:bold">─ ─</span> Guerre d'Iran (fév. 2026)
+  <span style="color:rgba(220,38,38,0.85);font-weight:bold">─ ─</span> Invasion Ukraine (24 fév. 2022) &nbsp;
+  <span style="color:rgba(14,116,144,0.85);font-weight:bold">─ ─</span> Sanctions Autorité concurrence (17 nov. 2025) &nbsp;
+  <span style="color:rgba(124,58,237,0.85);font-weight:bold">─ ─</span> Début guerre Iran (28 fév. 2026) &nbsp;
+  <span style="color:rgba(124,58,237,0.85);font-weight:bold">─ ─</span> Accord / cessez-le-feu Iran (17 juin 2026) &nbsp;
+  <span style="color:rgba(124,58,237,0.85);font-weight:bold">─ ─</span> Reprise frappes Iran (7 juil. 2026)
 </div>
 <div id="stats-bar">
   <div class="stat">Toutes BdR — Moy&nbsp;: <b id="s1-moy">-</b> Min&nbsp;: <b id="s1-min">-</b> Max&nbsp;: <b id="s1-max">-</b></div>
@@ -169,7 +171,9 @@ const BOUCLIER={
 const EVENTS=[
   {date:'2022-02-24',label:'Invasion Ukraine',color:'rgba(220,38,38,0.85)'},
   {date:'2025-11-17',label:'Sanctions Autorité',color:'rgba(14,116,144,0.85)'},
-  {date:'2026-02-28',label:"Guerre d'Iran",color:'rgba(124,58,237,0.85)'},
+  {date:'2026-02-28',label:'Début guerre Iran',color:'rgba(124,58,237,0.85)'},
+  {date:'2026-06-17',label:'Accord / cessez-le-feu Iran',color:'rgba(124,58,237,0.85)'},
+  {date:'2026-07-07',label:'Reprise frappes Iran',color:'rgba(124,58,237,0.85)'},
 ];
 const ANALYSES={
   gazole:`<p style="margin-bottom:8px">Sur la période janvier 2022 – juin 2026, l'écart HT Corse/BdR sur le <strong>Gazole</strong> s'établit en moyenne à <strong>+16,7 c/L</strong> toutes stations confondues, et à <strong>+13,8 c/L</strong> réseau vs réseau. </p><p style="margin-bottom:8px">La tendance est à l'aggravation : l'écart passe de <strong>+13,2 c/L en 2022</strong> à <strong>+19,5 c/L en 2025</strong>, soit près de 50% de dégradation en quatre ans — indépendamment des fluctuations des cours du pétrole. L'Autorité de la concurrence a reconnu le caractère anticoncurrentiel de cette politique dans sa décision 25-D-07 du 17 novembre 2025 (sanction de 187,5 M€). La remise TotalEnergies de −20 c/L du 1er septembre au 15 novembre 2022, répercutée par VITO, a réduit l'écart à <strong>+9 c/L</strong> — preuve que la surcharge corse n'est pas une fatalité liée aux coûts d'insularité. Le bouclier tarifaire Total a été effectivement actif sur plusieurs fenêtres en 2023, puis de nouveau à partir de mars 2026 ; les zones jaunes du graphique reprennent ces périodes observées.</p><p style="color:#991b1b;font-weight:600">Fait le plus significatif : dans les semaines suivant la sanction du 17 novembre 2025, l'écart Gazole a atteint son niveau record à <strong>+22,7 c/L HT</strong> en décembre 2025. La décision n'a produit aucun effet correctif observable sur les prix.</p>`,
