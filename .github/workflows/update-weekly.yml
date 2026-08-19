@@ -19,8 +19,6 @@ jobs:
   update:
     runs-on: ubuntu-latest
     timeout-minutes: 35
-    env:
-      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Select the 07:40 Europe/Paris slot
         id: gate
@@ -78,6 +76,8 @@ jobs:
 
       - name: Build append-only candidate and resolve only new BDR IDs
         if: steps.gate.outputs.run == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: python -m scripts.build_append_candidate_incremental --official-source shared
 
       - name: Verify fresh c1 release and official stock
