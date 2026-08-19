@@ -73,16 +73,24 @@ def main() -> None:
 
     additions = summary.get("additions", {})
     total_additions = sum(int(v) for v in additions.values())
-    if total_additions == 0:
-        print("No new public point: data.json stays unchanged")
+    bouclier_changed = candidate.get("meta", {}).get("bouclier") != baseline.get("meta", {}).get("bouclier")
+
+    if total_additions == 0 and not bouclier_changed:
+        print("No new public point or bouclier metadata: data.json stays unchanged")
         write_output("changed", "false")
         return
 
-    # Use the exact compact candidate bytes produced by the builder.
+    # Use the exact compact candidate bytes produced by the builder. Public series have
+    # already passed the strict append-only checks above; a metadata-only promotion is
+    # therefore allowed only when the authoritative bouclier detector output changed.
     target_path.write_text(candidate_path.read_text(encoding="utf-8"), encoding="utf-8")
-    print(f"Promoted candidate: {total_additions} new public points")
+    if total_additions:
+        print(f"Promoted candidate: {total_additions} new public points")
+    else:
+        print("Promoted candidate: bouclier metadata changed; public series are identical")
     write_output("changed", "true")
     write_output("total_additions", str(total_additions))
+    write_output("bouclier_changed", "true" if bouclier_changed else "false")
     write_output("daily_target_end", str(target_end))
     write_output("weekly_complete_through", str(candidate["meta"].get("weekly_complete_through", "")))
 
