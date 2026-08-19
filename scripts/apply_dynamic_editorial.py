@@ -7,6 +7,7 @@ margin averages) are computed in the browser from the exact series being display
 """
 from pathlib import Path
 
+# This script is idempotent; updating it on main also triggers the targeted deployment workflow.
 PATH = Path("index.html")
 
 HELPERS = r'''
