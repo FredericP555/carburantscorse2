@@ -32,7 +32,7 @@ Pour la période courante 2026, ce profil est désormais reproduit de manière d
 - hebdomadaire = moyenne de toutes les lignes station-jour du lundi au dimanche, et non moyenne des écarts journaliers ;
 - pour la vue « réseau traditionnel », la catégorie BDR est reprise du registre qui a servi au dashboard publié.
 
-Avec ces règles, les six séries de prix 2026 du dashboard (Gazole/SP95, BDR toutes stations/réseau, et référence E10) sont reproduites exactement au centième sur la période contrôlée jusqu'au 6 juin 2026. La CI contient désormais un contrôle réseau contre les données réellement embarquées dans `index.html`.
+Avec ces règles, les six séries de prix 2026 du dashboard (Gazole/SP95, BDR toutes stations/réseau, et référence E10) sont reproduites exactement au centième **lorsqu'elles sont rejouées sur le snapshot source historique sauvegardé en juin 2026**, jusqu'au 6 juin 2026. Cette affirmation ne vaut pas pour un recalcul de l'historique à partir du stock annuel officiel téléchargé plusieurs mois plus tard : le stock courant contient des corrections rétrospectives et ne reproduit donc plus nécessairement, au centième, les valeurs figées en juin. C'est précisément la raison pour laquelle la production est append-only et ne réécrit jamais une date déjà publiée. Le détail de cette dérive de source est documenté dans `docs/publication-regression.md`.
 
 ## 3. Particularités historiques 2022
 
