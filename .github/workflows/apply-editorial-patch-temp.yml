@@ -1,0 +1,55 @@
+name: TEMP apply dynamic editorial patch
+
+on:
+  push:
+    branches:
+      - agent/dynamic-editorial-c2
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Apply editorial patch
+        run: python scripts/apply_dynamic_editorial.py
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Validate dashboard loader
+        run: python scripts/migrate_index_data_source.py index.html --check
+      - name: Check inline dashboard JavaScript syntax
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          html=Path('index.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script>(.*?)</script>',html,flags=re.S)
+          if not scripts:
+              raise SystemExit('No inline script found')
+          Path('/tmp/c2-inline.js').write_text('\n'.join(scripts),encoding='utf-8')
+          PY
+          node --check /tmp/c2-inline.js
+      - name: Commit patched index
+        shell: bash
+        run: |
+          if git diff --quiet -- index.html; then
+            echo 'index.html already patched'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Make c2 editorial text dynamic'
+          git push origin HEAD:agent/dynamic-editorial-c2
