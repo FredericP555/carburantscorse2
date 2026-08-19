@@ -4,6 +4,10 @@ on:
   workflow_run:
     workflows: ["Validate c2 automation core"]
     types: [completed]
+  pull_request:
+    branches: [main]
+    paths:
+      - .editorial-deploy-check
   workflow_dispatch:
 
 permissions:
@@ -16,7 +20,7 @@ concurrency:
 
 jobs:
   apply:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
