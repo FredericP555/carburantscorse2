@@ -35,6 +35,8 @@ jobs:
           PY
           node --check /tmp/carburantscorse2-inline.js
       - name: Build live append-only candidate with incremental BDR resolver
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: python -m scripts.build_append_candidate_incremental --official-source shared
       - name: Exercise append-only promotion guard
         run: python -m scripts.promote_candidate
