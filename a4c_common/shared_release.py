@@ -11,9 +11,11 @@ import gzip
 import hashlib
 import io
 import json
+import os
 import urllib.request
 from datetime import date, datetime
 from typing import Iterable
+from urllib.parse import urlparse
 
 DEFAULT_REPOSITORY = "FredericP555/carburantscorse1"
 DEFAULT_TAG_PREFIX = "a4c-shared-"
@@ -24,14 +26,22 @@ REQUIRED_DEPARTMENTS = {"13", "20"}
 REQUIRED_FUELS = {"Gazole", "SP95", "E10"}
 
 
+def _request_headers(url: str) -> dict[str, str]:
+    headers = {
+        "User-Agent": "A4C-carburantscorse2/2.0",
+        "Accept": "application/vnd.github+json",
+    }
+    # GitHub's REST API is rate-limited much more tightly when unauthenticated. The
+    # workflow exposes github.token as GITHUB_TOKEN; keep public asset downloads public
+    # and send the token only to api.github.com.
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if token and urlparse(url).hostname == "api.github.com":
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
 def _request_bytes(url: str, *, timeout: int = 120) -> bytes:
-    req = urllib.request.Request(
-        url,
-        headers={
-            "User-Agent": "A4C-carburantscorse2/2.0",
-            "Accept": "application/vnd.github+json",
-        },
-    )
+    req = urllib.request.Request(url, headers=_request_headers(url))
     with urllib.request.urlopen(req, timeout=timeout) as response:
         return response.read()
 
