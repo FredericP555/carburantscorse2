@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 import csv
+from datetime import datetime
 import gzip
 import hashlib
 import io
 import unittest
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
 from a4c_common.shared_release import SCHEMA, _decode_snapshot
 from carburantscorse2.publication import build_gap_series, build_publication_state
-from scripts.build_append_candidate import official_year_window
+from scripts.build_append_candidate import default_requested_end, official_year_window
 
 
 FIELDS = [
@@ -128,6 +130,15 @@ class YearBoundaryEndToEndTests(unittest.TestCase):
         self.assertEqual(official_year_window(pd.Timestamp("2026-12-31")), (2025, 2026))
         self.assertEqual(official_year_window(pd.Timestamp("2027-01-01")), (2026, 2027))
         self.assertEqual(official_year_window(pd.Timestamp("2027-01-03")), (2026, 2027))
+
+    def test_real_january_first_clock_matches_c1_snapshot_window(self):
+        run = datetime(2027, 1, 1, 7, 40, tzinfo=ZoneInfo("Europe/Paris"))
+        requested_end = default_requested_end(run)
+        self.assertEqual(requested_end, pd.Timestamp("2026-12-31"))
+        self.assertEqual(
+            official_year_window(requested_end, run_day=pd.Timestamp(run.date())),
+            (2026, 2027),
+        )
 
     def test_shared_snapshot_carries_december_state_into_january(self):
         payload, meta = snapshot_payload()

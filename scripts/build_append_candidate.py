@@ -95,9 +95,23 @@ def default_requested_end(now: datetime | None = None) -> pd.Timestamp:
     return pd.Timestamp(paris_now.date() - timedelta(days=1))
 
 
-def official_year_window(requested_end: pd.Timestamp) -> tuple[int, int]:
-    """Return N-1/N so a January run can carry late-December station state forward."""
+def official_year_window(
+    requested_end: pd.Timestamp,
+    *,
+    run_day: pd.Timestamp | None = None,
+) -> tuple[int, int]:
+    """Return the two annual slices needed for publication around a year boundary.
+
+    Normally this is requested-end N-1/N. On 1 January the scheduled run publishes through
+    31 December of the previous year while c1 already exposes previous/current run years;
+    use those two years so the shared snapshot remains compatible without downloading a
+    third national archive.
+    """
     day = pd.Timestamp(requested_end).normalize()
+    if run_day is not None:
+        run = pd.Timestamp(run_day).normalize()
+        if run.year == day.year + 1 and run.month == 1 and run.day == 1:
+            return day.year, run.year
     return day.year - 1, day.year
 
 
@@ -109,10 +123,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--official-source",
         choices=("auto", "shared", "direct"),
-        default="auto",
+        default="shared",
         help=(
-            "Official-price ingestion source. auto tries the shared c1 GitHub Release then "
-            "falls back to the government ZIPs; shared fails closed if the release is missing."
+            "Official-price ingestion source. shared is the production default and fails closed; "
+            "auto/direct are retained only for explicit diagnostic use."
         ),
     )
     return parser.parse_args()
@@ -153,13 +167,19 @@ def load_official_observations(years: tuple[int, int], mode: str) -> tuple[list[
 
 def main() -> None:
     args = parse_args()
-    requested_end = pd.Timestamp(args.end).normalize() if args.end else default_requested_end()
+    if args.end:
+        requested_end = pd.Timestamp(args.end).normalize()
+        run_day = None
+    else:
+        paris_now = datetime.now(PARIS_TZ)
+        requested_end = default_requested_end(paris_now)
+        run_day = pd.Timestamp(paris_now.date())
 
     candidate_data, candidate_margins, baseline_meta, baseline_source = load_baseline()
     previous_daily_cutoff = max_date(candidate_data["gazole"]["sp95"]["daily"]["all"])
     initial_legacy_cutoff = baseline_meta.get("legacy_daily_cutoff", INITIAL_LEGACY_DAILY_CUTOFF)
 
-    years = official_year_window(requested_end)
+    years = official_year_window(requested_end, run_day=run_day)
     observations, official_source = load_official_observations(years, args.official_source)
     obs = pd.DataFrame(observations)
     if obs.empty:

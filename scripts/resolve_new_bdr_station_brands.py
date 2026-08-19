@@ -9,8 +9,8 @@ prix-carburants.gouv.fr station page.
 New-ID A4C rule:
 - GMS and low-cost major formats -> gms_lowcost;
 - TotalEnergies Access and Esso Express -> gms_lowcost / lowcost_major;
-- classic major/network formats -> traditionnel;
-- missing brand -> inconnu, left out of the network-only comparison until resolved.
+- explicitly recognized classic major/network formats -> traditionnel;
+- missing or unrecognized brand -> inconnu, left out of the network-only comparison until resolved.
 
 Resolved and unresolved IDs are retained forever in the incremental registry, so disappeared
 stations remain classifiable historically. Unresolved IDs are retried on later updates.
@@ -103,7 +103,9 @@ def classify_brand(brand: str | None) -> tuple[str, str]:
         return "gms_lowcost", "gms"
     if any(_norm(candidate) in normalized for candidate in MAJORS):
         return "traditionnel", "major_tradi"
-    return "traditionnel", "marque_tradi"
+    # Fail closed: a fetched but unknown brand must not silently enter the traditional
+    # network comparison. It stays unknown until an explicit brand/ID correction exists.
+    return "inconnu", "inconnu"
 
 
 def segment_to_legacy_category(segment: str) -> str | None:
@@ -134,7 +136,7 @@ def load_registry(path: Path = DEFAULT_REGISTRY) -> dict:
             "schema": "a4c-bdr-station-brands-v1",
             "policy": {
                 "legacy": "IDs already present in bdr_categories_published_2026-06-06.csv keep their published category",
-                "new_ids": "official brand -> A4C segment/detail; Esso Express and TotalEnergies Access are gms_lowcost",
+                "new_ids": "official brand -> explicit A4C segment/detail; unrecognized brands remain inconnu; Esso Express and TotalEnergies Access are gms_lowcost",
             },
             "stations": {},
         }
