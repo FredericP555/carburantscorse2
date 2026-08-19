@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - scripts/apply_dynamic_editorial.py
+      - .github/workflows/apply-editorial-ui-once.yml
 
 permissions:
   contents: write
