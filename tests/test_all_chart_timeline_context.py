@@ -20,12 +20,17 @@ class TimelineAllChartsTests(unittest.TestCase):
         for marker in [
             "date:'2022-02-24',label:'Invasion Ukraine'",
             "date:'2025-11-17',label:'Sanctions Autorité'",
-            "date:'2026-02-28',label:\"Guerre d'Iran\"",
+            "date:'2026-02-28',label:'Début guerre Iran'",
+            "date:'2026-06-17',label:'Accord / cessez-le-feu Iran'",
+            "date:'2026-07-07',label:'Reprise frappes Iran'",
         ]:
             self.assertIn(marker, HTML)
         self.assertIn("ctx.translate(xp+3,top+20);ctx.rotate(Math.PI/2)", HTML)
         self.assertIn("const isMobile=window.innerWidth<700", HTML)
         self.assertIn('id="legende-events-mobile"', HTML)
+        self.assertIn('Début guerre Iran (28 fév. 2026)', HTML)
+        self.assertIn('Accord / cessez-le-feu Iran (17 juin 2026)', HTML)
+        self.assertIn('Reprise frappes Iran (7 juil. 2026)', HTML)
 
     def test_timeline_plugin_is_shared_by_all_chart_builds(self):
         self.assertIn('plugins:[makePlugin(minTs,maxTs,ck),crosshairPlugin]', HTML)
