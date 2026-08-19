@@ -1,0 +1,8 @@
+{
+  "schema": "a4c-bdr-station-brands-v1",
+  "policy": {
+    "legacy": "IDs already present in bdr_categories_published_2026-06-06.csv keep their published category",
+    "new_ids": "official brand -> A4C segment/detail; Esso Express and TotalEnergies Access are gms_lowcost"
+  },
+  "stations": {}
+}
