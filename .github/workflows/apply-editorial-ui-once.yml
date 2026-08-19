@@ -28,6 +28,19 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: pip install -r requirements.txt
+      - name: Fix editorial patch idempotence
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/apply_dynamic_editorial.py')
+          text=p.read_text(encoding='utf-8')
+          old='''    if helper_marker in text:\n        start = text.index(helper_marker)\n        end = text.index(marker, start)\n        text = text[:start] + HELPERS + "\\n" + text[end:]\n    else:\n        text = text.replace(marker, HELPERS + "\\n" + marker, 1)'''
+          new='''    helper_block = HELPERS.strip("\\n")\n    if helper_marker in text:\n        marker_start = text.index(helper_marker)\n        start = len(text[:marker_start].rstrip("\\n"))\n        end = text.index(marker, marker_start)\n        prefix = text[:start].rstrip("\\n")\n        suffix = text[end:].lstrip("\\n")\n        text = prefix + "\\n\\n" + helper_block + "\\n\\n" + suffix\n    else:\n        text = text.replace(marker, helper_block + "\\n\\n" + marker, 1)'''
+          if old not in text:
+              raise SystemExit('Expected idempotence block not found')
+          p.write_text(text.replace(old,new,1),encoding='utf-8')
+          PY
       - name: Apply editorial patch
         run: python scripts/apply_dynamic_editorial.py
       - name: Unit tests
@@ -51,13 +64,13 @@ jobs:
         id: commit
         shell: bash
         run: |
-          if git diff --quiet -- index.html; then
+          if git diff --quiet -- index.html scripts/apply_dynamic_editorial.py; then
             echo 'changed=false' >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add index.html
+          git add index.html scripts/apply_dynamic_editorial.py
           git commit -m 'Update Gazole record editorial text'
           git push origin HEAD:main
           echo 'changed=true' >> "$GITHUB_OUTPUT"
