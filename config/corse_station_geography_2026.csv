@@ -1,0 +1,125 @@
+station_id,ville_source,adresse_source,localite,commune,confiance
+20000002,Ajaccio,Route du Bord de Mer,Ajaccio,Ajaccio,C
+20000006,Ajaccio,Aspretto,Aspretto,Ajaccio,A
+20000007,Ajaccio,65 COURS LUCIEN BONAPARTE,Ajaccio,Ajaccio,C
+20090001,Ajaccio,Boulevard Louis Campi,Ajaccio,Ajaccio,C
+20090002,Ajaccio,Quartier St Joseph,Ajaccio,Ajaccio,C
+20090004,Ajaccio,avenue napoleon III,Ajaccio,Ajaccio,C
+20090007,Ajaccio,Route Campo Dell'Oro Col d'Aspretto,Aspretto,Ajaccio,A
+20090011,Ajaccio,BODICCIONE,Ajaccio,Ajaccio,C
+20090014,Ajaccio,109 Cours Napoleon,Ajaccio,Ajaccio,C
+20090015,Ajaccio,Avenue du Président Kennedy - HLM Bat P,Ajaccio,Ajaccio,C
+20100001,Sartène,Place Saint Damien,Sartène,Sartène,C
+20100003,Sartène,ZI RIZZANESE,Sartène,Sartène,C
+20100005,Sartène,Ld bellagamba,Sartène,Sartène,C
+20110003,Propriano,San Giuseppu,Propriano,Propriano,C
+20110006,Propriano,4 Quartier Saint Joseph,Propriano,Propriano,C
+20111001,Casaglione,Tiuccia,Tiuccia,Casaglione,A
+20113001,Olmeto,Marinca - RD 157,Olmeto,Olmeto,C
+20113002,Olmeto,1 ROUTE DE BARACCI,Olmeto,Olmeto,C
+20115001,Piana,Hotel des Calanches - L'ARBAGGIO SARL,Piana,Piana,C
+20118001,Vico,Résidence de la Plage - RD 81,Sagone,Vico,A
+20129001,Bastelicaccia,SUARALTA,Bastelicaccia,Bastelicaccia,C
+20130002,Cargèse,Rue de la République,Cargèse,Cargèse,C
+20131001,Pianottoli-Caldarello,RTE N 196 LANCCIATO PADULELLI,Pianottoli-Caldarello,Pianottoli-Caldarello,C
+20131002,Pianottoli-Caldarello,Station TOTAL - RN 196,Pianottoli-Caldarello,Pianottoli-Caldarello,C
+20137004,Porto-Vecchio,Station TOTAL La Trinité - RN 198 - Pitrera,La Trinité,Porto-Vecchio,A
+20137005,Porto-Vecchio,Route de Bonifacio,Porto-Vecchio,Porto-Vecchio,C
+20137006,Porto-Vecchio,route de bastia,Porto-Vecchio,Porto-Vecchio,C
+20137007,Porto-Vecchio,Station TOTAL - Quartier La Poretta,Porto-Vecchio,Porto-Vecchio,C
+20137008,Lecci,358 San Cipriano,San Ciprianu,Lecci,A
+20137009,Porto-Vecchio,Les 4 Chemins BP115,Porto-Vecchio,Porto-Vecchio,C
+20137010,Porto-Vecchio,Route de bonifacio BP115,Porto-Vecchio,Porto-Vecchio,C
+20140001,Petreto-Bicchisano,RTE N 196,Petreto-Bicchisano,Petreto-Bicchisano,C
+20144002,Zonza,LIEUDIT CAVO ZONZA,Sainte-Lucie-de-Porto-Vecchio,Zonza,B
+20144003,Zonza,LIEU DIT MOLENDINU,Sainte-Lucie-de-Porto-Vecchio,Zonza,B
+20145001,Sari-Solenzara,RN 198 - Solenzara,Solenzara,Sari-Solenzara,A
+20145004,Sari-Solenzara,RN T 10,Solenzara,Sari-Solenzara,B
+20147001,Serriera,1 Trajinu,Serriera,Serriera,C
+20148001,Cozzano,Noce,Cozzano,Cozzano,C
+20153003,Guitera-les-Bains,RD 87,Guitera-les-Bains,Guitera-les-Bains,C
+20156001,Serra-di-Ferro,PORTO POLLO,Porto-Pollo,Serra-di-Ferro,A
+20160001,Vico,Cours Joseph Colonna,Vico,Vico,C
+20166002,Pietrosella,Station TOTAL - Relais du Rupione,Ruppione,Pietrosella,A
+20166004,Grosseto-Prugna,CTRE COMMERCIAL BENISTA,Porticcio,Grosseto-Prugna,A
+20166005,Grosseto-Prugna,Veta Porticcio,Porticcio,Grosseto-Prugna,A
+20166006,Grosseto-Prugna,Les Marines de Porticcio - Commune de Grosseto-Prugna,Porticcio,Grosseto-Prugna,A
+20167003,Ajaccio,mezzavia centre rn 194,Mezzavia,Ajaccio,A
+20167004,Alata,Route de Sagone,Alata,Alata,C
+20167005,Ajaccio,RD 31 lieu dit Manicola Vecchia,Mezzavia,Ajaccio,B
+20167008,Sarrola-Carcopino,Gare de Mezzana - Lieu-dit 'Saint Pierre, T20,Mezzana,Sarrola-Carcopino,A
+20167010,Ajaccio,N194 Route de Mezzavia,Mezzavia,Ajaccio,A
+20167012,Sarrola-Carcopino,RT 20,Baléone,Sarrola-Carcopino,A
+20167013,Tavaco,PARC D'ACTIVITE DE LA GRAVONA,Tavaco,Tavaco,C
+20169002,Bonifacio,sennola,Sennola,Bonifacio,A
+20169003,Bonifacio,Cala Longa,Cala Longa,Bonifacio,A
+20170002,Levie,Allée des chênes,Levie,Levie,C
+20189001,Ajaccio,La Rocade Finosello,Ajaccio,Ajaccio,C
+20189002,Ajaccio,VIGNETTA ROUTE DE CAMPO DELL ORO BP580,Ajaccio,Ajaccio,C
+20190002,Santa-Maria-Siché,D 83,Santa-Maria-Siché,Santa-Maria-Siché,C
+20200006,San-Martino-di-Lota,37 ROUTE DU CAP,Pietranera,San-Martino-di-Lota,A
+20200008,Bastia,21 Rue Commandant Lucé de Casabianca,Bastia,Bastia,C
+20200014,Ville-di-Pietrabugno,9 ROUTE DU CAP,Ville-di-Pietrabugno,Ville-di-Pietrabugno,C
+20200016,Bastia,rond point du fango avenue jean zuccarelli,Bastia,Bastia,C
+20213004,Penta-di-Casinca,Rt10,Folelli,Penta-di-Casinca,B
+20213005,Sorbo-Ocagnano,Lieu-dit Querciolo,Querciolo,Sorbo-Ocagnano,A
+20213007,Penta-di-Casinca,FOLELLI,Folelli,Penta-di-Casinca,A
+20215001,Vescovato,ARENA,Arena,Vescovato,A
+20217001,Saint-Florent,Route Calvi,Saint-Florent,Saint-Florent,C
+20217004,Saint-Florent,36, rue principale,Saint-Florent,Saint-Florent,C
+20217005,Saint-Florent,Route de Patrimonio,Saint-Florent,Saint-Florent,C
+20218001,Morosaglia,RT 20,Ponte-Leccia,Morosaglia,A
+20218004,Morosaglia,R.T 30,Ponte-Leccia,Morosaglia,A
+20218007,Morosaglia,RT20,Ponte-Leccia,Morosaglia,A
+20218008,Morosaglia,rond point de ponte leccia,Ponte-Leccia,Morosaglia,A
+20218009,Morosaglia,RT 20,Ponte-Leccia,Morosaglia,A
+20219003,Vivario,RT 20,Tattone,Vivario,A
+20220001,L'Île-Rousse,36 Avenue Paul Doumer,L'Île-Rousse,L'Île-Rousse,C
+20220002,L'Île-Rousse,29, Ave Pdt Paul Doumer,L'Île-Rousse,L'Île-Rousse,C
+20220003,L'Île-Rousse,8 Avenue Paul DOUMER,L'Île-Rousse,L'Île-Rousse,C
+20220006,Aregno,RN 197,Aregno,Aregno,C
+20221001,Cervione,T 10,Prunete,Cervione,A
+20222001,Brando,CAMPINCA,Lavasina,Brando,A
+20224001,Calacuccia,Station TOTAL,Calacuccia,Calacuccia,C
+20228005,Luri,Marine de Santa Severa,Santa-Severa,Luri,A
+20230003,Poggio-Mezzana,STATION LUISI,Ponticchio Sottano,Poggio-Mezzana,A
+20230006,San-Nicolao,RN 198,Moriani,San-Nicolao,A
+20230008,Sant'Andréa-di-Cotone,Rn 198 Alistro,Alistro,Sant'Andréa-di-Cotone,A
+20230011,San-Giuliano,ALISTRO,Alistro,San-Giuliano,A
+20235001,Castello-di-Rostino,Ponte Novu,Ponte-Novu,Castello-di-Rostino,A
+20240001,Ghisonaccia,520 Avenue du 9 Septembre,Ghisonaccia,Ghisonaccia,C
+20240002,Ghisonaccia,Station TOTAL - BP 35 - RN 198,Ghisonaccia,Ghisonaccia,C
+20240003,Ventiseri,TRAVO,Travo,Ventiseri,A
+20240004,Ghisonaccia,1680 avenue du 9 Septembre - Lotissement Feminiccia - RN 198,Ghisonaccia,Ghisonaccia,C
+20240005,Ghisonaccia,RN 198,Ghisonaccia,Ghisonaccia,C
+20243001,Prunelli-di-Fiumorbo,Lieu-Dit Migliacciaro,Migliacciaro,Prunelli-di-Fiumorbo,A
+20245002,Galéria,ACHIARELLO ROUTE DE PORTO,Galéria,Galéria,C
+20248001,Rogliano,MACINAGGIO,Macinaggio,Rogliano,A
+20250001,Corte,RT 20,Corte,Corte,C
+20250002,Corte,Avenue de la République,Corte,Corte,C
+20250003,Corte,RN 193 - lieu dit Pentone,Corte,Corte,C
+20250009,Corte,10 faubourg saint Antoine,Corte,Corte,C
+20260001,Calvi,RN 197 LIEU-DIT LES PADULES,Calvi,Calvi,C
+20260002,Calvi,Station TOTAL - relais de la balagne,Calvi,Calvi,C
+20260003,Calvi,Lieu dit Alzeta,Calvi,Calvi,C
+20270001,Aléria,ROUTE N 198,Cateraggio,Aléria,B
+20270003,Aléria,Rn 198 Cateragghju,Cateraggio,Aléria,A
+20290002,Lucciana,Casamozza - RN 193,Casamozza,Lucciana,A
+20290003,Borgo,Lieu-dit Revinco - RN 193,Revinco,Borgo,A
+20290008,Lucciana,Rond-point de Casamozza, T20,Casamozza,Lucciana,A
+20290009,Lucciana,RN:193/T10 Crucetta,Crucetta,Lucciana,A
+20290010,Lucciana,RN 193 PISCINA,Piscina,Lucciana,A
+20538001,Porto-Vecchio,RTE N 198,Porto-Vecchio,Porto-Vecchio,C
+20600002,Bastia,556 Avenue de la Libération,Bastia,Bastia,C
+20600003,Furiani,RN 193,Furiani,Furiani,C
+20600004,Furiani,Rond Point de Furiani,Furiani,Furiani,C
+20600006,Bastia,L'Arinella - RN 193,Bastia,Bastia,C
+20600007,Bastia,AVENUE SAPIERO CORSU,Bastia,Bastia,C
+20600009,Bastia,AVENUE DE LA LIBERATION,Bastia,Bastia,C
+20600010,Furiani,RN 193,Furiani,Furiani,C
+20600011,Furiani,RN 193,Furiani,Furiani,C
+20600014,Bastia,Avenue de la Libération. Immeuble Santa Maria,Bastia,Bastia,C
+20600015,Bastia,193 Av. Sampiero Corso,Bastia,Bastia,C
+20620002,Biguglia,Route de Rutali,Biguglia,Biguglia,C
+20620004,Biguglia,Lot Arbuceta Rond Point Ceppe,Ceppe,Biguglia,A
+20620005,Biguglia,RN 193,Biguglia,Biguglia,C
