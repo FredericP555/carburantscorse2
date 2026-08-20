@@ -78,6 +78,10 @@
     }
     return typeof resolution!=='undefined'&&resolution==='w';
   }
+  function hasCurrentC2Metadata(){
+    const meta=(typeof window!=='undefined'&&window.A4C_DATA_META)||{};
+    return !!(meta.official_source_max_date||meta.daily_target_end);
+  }
 
   function enableC2PeriodSliderEverywhere(){
     const slider=document.getElementById('periode-slider');
@@ -198,6 +202,27 @@
     badge.className=age==null?'warn':age<=3?'fresh':age<=7?'warn':'stale';
   }
 
+  // La vue marge est nécessairement hebdomadaire. Mémoriser la granularité
+  // choisie pour la vue prix afin de la restaurer quand on quitte la marge.
+  let lastPriceGran=(typeof currentGran!=='undefined'&&currentGran==='weekly')?'weekly':'daily';
+  document.addEventListener('click',function(e){
+    const t=e.target&&e.target.closest&&e.target.closest('#btn-daily,#btn-weekly,#btn-prix,#btn-marge,#btn-sp');
+    if(!t)return;
+    if(t.id==='btn-marge'){
+      if(typeof currentVue==='undefined'||currentVue!=='marge'){
+        if(typeof currentGran!=='undefined')lastPriceGran=currentGran;
+      }
+      return;
+    }
+    if((t.id==='btn-prix'||t.id==='btn-sp')&&typeof currentVue!=='undefined'&&currentVue==='marge'){
+      if(typeof currentGran!=='undefined')currentGran=lastPriceGran;
+      return;
+    }
+    if((t.id==='btn-daily'||t.id==='btn-weekly')&&!(typeof currentVue!=='undefined'&&currentVue==='marge')){
+      lastPriceGran=t.id==='btn-weekly'?'weekly':'daily';
+    }
+  },true);
+
   enableC2PeriodSliderEverywhere();
   installC2AdaptiveAxis();
   window.A4C_updateFreshnessBadge=updateFreshnessBadge;
@@ -212,7 +237,9 @@
     const timer=setInterval(function(){
       tries++;
       updateFreshnessBadge();
-      if(sourceMaxDate()||tries>30)clearInterval(timer);
+      // Les séries historiques embarquées peuvent s'arrêter au 6 juin 2026.
+      // Attendre les métadonnées de data.json avant de considérer le badge à jour.
+      if(hasCurrentC2Metadata()||tries>300)clearInterval(timer);
     },100);
   });
 })();
