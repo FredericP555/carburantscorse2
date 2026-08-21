@@ -7,102 +7,86 @@
 - 45 jours par station × carburant.
 - J0 à J+44 inclus ; J+45 sort de la règle normale sans nouvelle déclaration.
 - Une redéclaration au même prix remet le compteur à zéro.
-- Prix non fini, date future, rupture/fermeture ou preuve indépendante d'inactivité : exclusion prioritaire.
+- Rupture, fermeture/inactivité indépendante, prix invalide/non fini ou date future : exclusion prioritaire.
 
-## 2. Bouclier effectif et fiabilité d'un vieux prix
+## 2. Bouclier effectif et R2
 
-Le statut **bouclier effectif** est produit par C1 selon la règle A4C et consommé par C2. R2 n'intervient jamais dans cette détection et ne définit jamais la fin du bouclier effectif.
+Le statut **bouclier effectif** est indépendant de R2. R2 ne démarre ni ne termine jamais le bouclier.
 
-R2 intervient seulement ensuite pour décider si de vieux prix Gazole/SP95 d'une station peuvent encore être retenus dans la moyenne dans le cas du double plafond.
+R2 sert uniquement à décider si un vieux prix Gazole/SP95 peut encore être retenu dans le cas du double plafond.
 
 ## 3. Un seul carburant principal au plafond
 
 ### Corse
 
-Si le prix cible Gazole/SP95 a dépassé 45 jours mais reste au plafond pendant un bouclier effectif, une nouvelle déclaration de **l'autre carburant principal** datant de moins de 45 jours prouve la vivacité de la station.
-
-Cette déclaration crée une **nouvelle fenêtre glissante de 45 jours** pour le vieux prix cible. Sans nouvelle déclaration admissible pendant 45 jours, le vieux prix sort de la moyenne.
+Après J+44, une déclaration récente de **l'autre carburant principal** peut renouveler une fenêtre glissante de 45 jours. E10 ne prouve pas la vivacité en Corse.
 
 ### Bouches-du-Rhône
 
-Même logique, mais la vivacité peut être prouvée par **n'importe quel autre carburant déclaré** par la station.
+Après J+44, une déclaration récente de **n'importe quel autre carburant** peut renouveler une fenêtre glissante de 45 jours. Il n'existe aucun J+90 absolu dans C2/BdR.
 
-Chaque nouvelle déclaration admissible d'un autre carburant crée une nouvelle fenêtre glissante de 45 jours. Il n'existe **aucun arrêt arbitraire à J+90 dans C2/BdR**.
-
-## 4. Gazole et SP95 simultanément au plafond
+## 4. Double plafond Gazole + SP95
 
 ### Corse
 
-La vivacité croisée Gazole ↔ SP95 ne suffit plus puisque les deux peuvent rester figés au plafond.
-
-- Rotterdam Gazole **>= R2 Corse** : les vieux prix Gazole/SP95 peuvent rester admissibles sous réserve des autres garde-fous ;
-- Rotterdam Gazole **< R2 Corse** : les vieux prix Gazole/SP95 sont exclus de la moyenne.
+La vivacité croisée Gazole/SP95 ne suffit plus. Le vieux prix est contrôlé par Rotterdam et le R2 de la phase courante.
 
 ### Bouches-du-Rhône
 
-Deux conditions sont requises ensemble :
+Deux conditions sont nécessaires : vivacité récente sur un carburant autre que Gazole/SP95 **et** absence de verrou R2.
 
-1. une déclaration datant de moins de 45 jours sur un **autre carburant que Gazole/SP95** prouve que la station est toujours vivante ;
-2. le vieux prix ne doit pas avoir été verrouillé par R2.
+Dans les deux territoires, après expiration normale du carburant cible, un premier passage de Rotterdam sous le R2 applicable verrouille ce vieux prix jusqu'à une nouvelle déclaration du carburant cible, même si Rotterdam remonte ensuite.
 
-Le verrou R2 fonctionne de la même façon en Corse et dans les BdR : après l'expiration normale des 45 jours du carburant cible, si Rotterdam passe une seule fois **sous R2** du territoire, ce vieux prix reste exclu même si Rotterdam remonte ensuite. Il ne peut revenir qu'après une **nouvelle déclaration du carburant cible**, qui crée un nouveau J0.
+### R1/R2 recalculés à chaque nouvelle phase effective
 
-Dans les BdR, la vivacité sur un autre carburant reste en plus obligatoire pendant le double plafond. Dans aucun cas R2 ne met fin au bouclier effectif.
+Les cotations des **3, 6 et 7 avril 2026** servent uniquement à calibrer les coefficients historiques : `k_corse ≈ 0,733` et `k_bdr ≈ 0,824`. Elles ne définissent pas R1 pour toujours.
 
-Calibration candidate 2026 : `k_corse ≈ 0,733` et `k_bdr ≈ 0,824`, à partir de la même série Rotterdam observée produite une seule fois par C1.
+Pour toute nouvelle phase de bouclier effectif :
 
-## 5. Phases de plafond et garde-fou de non-résurrection
+1. prendre les **3 dernières cotations Rotterdam réellement observées avant le début de la phase** ;
+2. calculer leur moyenne : `R1_phase` ;
+3. conserver le coefficient territorial `k` calibré sur l'épisode de référence 2026 ;
+4. calculer `R2_phase = k_territoire × R1_phase`.
 
-C1 publie des **phases de plafond explicites** dans les métadonnées partagées. Une phase est une portion continue de bouclier effectif avec un même montant de plafond.
+Donc si les prix passent sous le plafond, le bouclier cesse d'être effectif, puis les prix reviennent plus tard au plafond et une nouvelle période effective commence, cette nouvelle période reçoit **un nouveau R1 et un nouveau R2**, même si le plafond nominal est identique.
 
-Un changement de plafond crée automatiquement une nouvelle phase. C2 lit directement la date de début et le plafond de cette phase depuis la release C1.
+## 5. Phases et non-résurrection
 
-Le moteur ne fait plus confiance à un booléen manuel `eligible_at_cap_entry`. Il calcule lui-même :
+Une phase est une portion continue de bouclier effectif avec un même plafond. Une nouvelle phase commence si :
 
-- déclaration encore âgée de moins de 45 jours au début de la phase → admissible aux exceptions prévues ;
-- déclaration déjà périmée au début de la phase → aucune résurrection ;
-- nouvelle déclaration du carburant cible pendant la phase → nouveau J0, donc preuve fraîche normale.
+- le plafond change ;
+- le bouclier effectif s'interrompt puis recommence, même au même plafond.
 
-## 6. Identité des stations pour les calculs par enseigne
+La date de début de phase sert à la fois au garde-fou de non-résurrection et au calcul du nouveau R1/R2.
 
-Trois états sont utilisés : `TOTAL`, `NON_TOTAL_CONFIRMED`, `UNKNOWN`. Un ID `UNKNOWN` est exclu des calculs sensibles à l'enseigne jusqu'à résolution. L'absence d'un ID dans une liste Total n'est jamais une preuve de non-Total.
+Un prix déjà périmé à l'entrée de phase n'est jamais ressuscité. Une nouvelle déclaration cible pendant la phase crée un nouveau J0.
 
-Le registre Corse canonique est publié par C1 dans la même release que le snapshot et Rotterdam ; C2 le télécharge depuis cette release et vérifie son SHA-256. Les nouveaux IDs BdR non résolus restent `inconnu` et exclus des comparaisons réseau/par enseigne.
+## 6. Identité des stations
 
-## 7. Source unique C1 → C2
+Trois états : `TOTAL`, `NON_TOTAL_CONFIRMED`, `UNKNOWN`. Un ID `UNKNOWN` n'entre pas dans les calculs sensibles à l'enseigne.
 
-La chaîne préparée est **UFIP → C1 → C2**.
+## 7. Source C1 → C2
 
-C1 publie dans une seule release validée :
+Architecture préparée : **UFIP → C1 → C2**. C1 publie une release validée contenant snapshot 13/20, métadonnées de bouclier/phases, deux séries Rotterdam et registre Corse. C2 épingle une seule release et ne contacte pas UFIP dans le chemin hebdomadaire normal.
 
-- `official_13_20.csv.gz` ;
-- `official_13_20.meta.json` avec bouclier et phases de plafond ;
-- `rotterdam_gazole_observed.csv` ;
-- `rotterdam_gazole_daily.csv` ;
-- `corse_station_brands.json`.
-
-C2 choisit une seule release C1 et épingle toutes les lectures sur son tag. Le chemin hebdomadaire C2 ne contacte plus UFIP directement.
-
-## 8. Garde-fous prioritaires
-
-Dans tous les cas :
+## 8. Garde-fous
 
 - rupture active → exclusion ;
-- fermeture / preuve indépendante d'inactivité → exclusion ;
-- prix absent, non fini ou invalide → exclusion ;
+- fermeture / inactivité indépendante → exclusion ;
+- prix absent, invalide ou non fini → exclusion ;
 - date future → exclusion ;
-- prix déjà périmé lors de l'entrée dans la phase de plafond → aucune résurrection ;
-- changement de plafond → nouvelle phase et nouvelle vérification automatique.
+- prix périmé à l'entrée d'une phase → aucune résurrection ;
+- changement de plafond → nouvelle phase et nouvelle vérification.
 
 ## 9. Échec fermé
 
-La préparation bloque notamment si : release C1/asset requis absent, SHA-256 incohérent, registre invalide, série Rotterdam quotidienne incomplète, calibration Corse absente, dates BdR de calibration absentes, ou phase de plafond requise absente/invalide.
+La préparation bloque notamment en cas de release/asset manquant, SHA incohérent, registre invalide, série Rotterdam incomplète, calibration de `k` invalide, moins de trois cotations observées avant une nouvelle phase, ou phase requise absente/invalide.
 
 ## Procédure après lundi
 
 1. Contrôler la publication habituelle C1 puis C2.
 2. Figer le résultat comme référence.
-3. Tester le moteur préparé uniquement en calcul candidat.
+3. Tester la politique préparée uniquement en candidat.
 4. Comparer actuel / prospectif / rétroactif.
-5. Mesurer les écarts et les stations affectées.
-6. Décider explicitement de toute migration ; aucune réécriture silencieuse de l'historique.
+5. Mesurer les écarts et stations affectées.
+6. Décider explicitement de toute migration.
