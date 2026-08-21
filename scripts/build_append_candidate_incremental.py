@@ -60,8 +60,13 @@ def _recent_bdr_observations(observations):
     return [row for row in bdr if row["date"] >= cutoff]
 
 
-def _load_official_and_resolve(years, mode):
-    observations, source = _original_load_official(years, mode)
+def _load_official_and_resolve(years, mode, *, release_tag=None):
+    """Preserve the single C1 release selected at workflow start."""
+    observations, source = _original_load_official(
+        years,
+        mode,
+        release_tag=release_tag,
+    )
     legacy = _original_load_categories(LEGACY_CATEGORIES)
     recent = _recent_bdr_observations(observations)
     summary = resolve_from_observations(
