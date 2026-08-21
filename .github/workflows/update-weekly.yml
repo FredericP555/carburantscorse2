@@ -43,9 +43,6 @@ jobs:
                   scheduled_hour = int(parts[1])
               except Exception:
                   scheduled_hour = -1
-              # The two cron entries carry the minute. The gate only chooses which UTC
-              # hour corresponds to 07:xx Europe/Paris, so changing the common cron minute
-              # cannot silently disable production.
               run = scheduled_hour == expected_utc_hour
 
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
@@ -76,9 +73,11 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         run: python scripts/migrate_index_data_source.py index.html --check
 
-      - name: Fetch UFIP Rotterdam Gazole for prepared calibration
+      - name: Fetch shared Rotterdam Gazole assets already produced by C1
         if: steps.gate.outputs.run == 'true'
-        run: python scripts/fetch_ufip.py --output-dir outputs/ufip
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/fetch_shared_ufip_from_c1.py --output-dir outputs/ufip
 
       - name: Fetch C1 Corsica station-brand registry for prepared identity guard
         if: steps.gate.outputs.run == 'true'
@@ -114,6 +113,7 @@ jobs:
             outputs/candidate-summary.json
             outputs/ufip/rotterdam_gazole_observed.csv
             outputs/ufip/rotterdam_gazole_daily.csv
+            outputs/ufip/c1_shared_meta.json
             outputs/c1/corse_station_brands.json
             config/bdr_station_brands.json
           retention-days: 30
