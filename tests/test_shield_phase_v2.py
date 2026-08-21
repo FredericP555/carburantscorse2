@@ -59,6 +59,20 @@ class ShieldPhaseT(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             s.validated_phases(duplicate, 'Gazole')
 
+    def test_double_cap_period_starts_when_second_fuel_becomes_effective(self):
+        meta = {
+            'Gazole': {'phases': [
+                {'d1': '2026-10-10', 'd2': '2026-11-30', 'cap': 2.25, 'phase_id': 'g-new'}
+            ]},
+            'SP95': {'phases': [
+                {'d1': '2026-09-20', 'd2': '2026-12-15', 'cap': 1.99, 'phase_id': 's-old'}
+            ]},
+        }
+        period = s.double_cap_period_for_day(meta, date(2026, 10, 20))
+        self.assertIsNotNone(period)
+        self.assertEqual(period.started_on, date(2026, 10, 10))
+        self.assertEqual(period.ended_on, date(2026, 11, 30))
+
 
 if __name__ == '__main__':
     unittest.main()
