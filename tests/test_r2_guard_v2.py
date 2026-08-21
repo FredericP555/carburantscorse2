@@ -18,12 +18,13 @@ class R2GuardT(unittest.TestCase):
             ]},
         }
 
-    def observed_file(self):
+    def observed_file(self, extra_rows=()):
         f = tempfile.NamedTemporaryFile('w', encoding='utf-8', newline='', delete=False, suffix='.csv')
         f.write('date,rotterdam_eur_l\n')
         for d, v in [
             ('2026-04-03', 1.037), ('2026-04-06', 1.048), ('2026-04-07', 1.061),
             ('2026-05-20', 0.868), ('2026-05-21', 0.865), ('2026-05-22', 0.859),
+            *extra_rows,
         ]:
             f.write(f'{d},{v}\n')
         f.close()
@@ -77,6 +78,29 @@ class R2GuardT(unittest.TestCase):
         self.assertTrue(guard.stale_price_admissible(
             new_declared, date(2026, 8, 19), 'bdr', bouclier_metadata=self.bouclier_meta(),
             observed_file=self.observed_file(), daily_file=self.daily_file([]),
+            shared_meta_file=self.meta_file(),
+        ))
+
+    def test_new_double_cap_period_uses_new_r2_not_april_r2(self):
+        # New double-cap period starts 1 Oct because Gazole returns to the cap
+        # then; SP95 was already effective. The last 3 observed quotes before
+        # 1 Oct average 0.930, so BDR R2 is ~0.766, not the April 0.864.
+        meta = {
+            'Gazole': {'phases': [
+                {'d1': '2026-10-01', 'd2': '2026-12-31', 'cap': 2.25, 'phase_id': 'g2'}
+            ]},
+            'SP95': {'phases': [
+                {'d1': '2026-09-01', 'd2': '2026-12-31', 'cap': 1.99, 'phase_id': 's2'}
+            ]},
+        }
+        observed = self.observed_file(extra_rows=(
+            ('2026-09-28', 0.900), ('2026-09-29', 0.930), ('2026-09-30', 0.960),
+        ))
+        declared = datetime(2026, 9, 15, 8)  # fresh at 1 Oct; stale from 30 Oct
+        day = date(2026, 10, 30)
+        self.assertTrue(guard.stale_price_admissible(
+            declared, day, 'bdr', bouclier_metadata=meta,
+            observed_file=observed, daily_file=self.daily_file([(day, 0.770)]),
             shared_meta_file=self.meta_file(),
         ))
 
