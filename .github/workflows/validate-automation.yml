@@ -34,6 +34,10 @@ jobs:
           pathlib.Path('/tmp/carburantscorse2-inline.js').write_text('\n'.join(blocks), encoding='utf-8')
           PY
           node --check /tmp/carburantscorse2-inline.js
+      - name: Fetch and pin validated shared C1 bundle
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/fetch_shared_ufip_from_c1.py --output-dir outputs/ufip
       - name: Build live append-only candidate with incremental BDR resolver
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -48,5 +52,8 @@ jobs:
           path: |
             outputs/candidate-data.json
             outputs/candidate-summary.json
+            outputs/ufip/c1_shared_meta.json
+            outputs/c1/corse_station_brands.json
+            outputs/c1/shared_release_tag.txt
             config/bdr_station_brands.json
           retention-days: 14
