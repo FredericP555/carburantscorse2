@@ -82,6 +82,10 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: python scripts/fetch_shared_ufip_from_c1.py --output-dir outputs/ufip
 
+      - name: Validate pinned C1 business contract
+        if: steps.gate.outputs.run == 'true'
+        run: python -m scripts.validate_pinned_c1_bundle
+
       - name: Build append-only candidate and resolve only new BDR IDs
         if: steps.gate.outputs.run == 'true'
         env:
