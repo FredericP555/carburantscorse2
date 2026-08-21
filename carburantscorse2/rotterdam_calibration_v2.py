@@ -2,14 +2,12 @@
 """Prepared Rotterdam calibration helper for C2.
 
 C2 never queries UFIP in the prepared architecture. It downloads the Rotterdam
-assets already published by C1. The Corsica calibration is consumed directly
-from C1 shared metadata; only the BDR-specific candidate k is derived locally
-from the shared observed CSV.
+assets already published by C1.
 
-R2 is an admissibility threshold for stale station prices in the double-cap
-case. It never defines whether the TotalEnergies shield itself is effective.
-Once Rotterdam falls below R2 after a target price has become stale, that old
-target price stays excluded until the target fuel is declared again.
+The 2026 reference episode calibrates the territorial coefficients ``k`` only.
+For every effective-shield cap phase, R1 is recomputed from the three last
+actually observed Rotterdam quotations before that phase starts, then
+``R2 = k * R1``. R2 never starts or ends the TotalEnergies shield.
 """
 from __future__ import annotations
 
@@ -28,11 +26,18 @@ DEFAULT_SHARED_META_FILE = Path("outputs/ufip/c1_shared_meta.json")
 VALUE_COLUMN = "rotterdam_eur_l"
 DATE_COLUMN = "date"
 
-CALIBRATION_ENTRY_DATE_2026 = date(2026, 4, 8)
-R1_SOURCE_DATES_2026 = (date(2026, 4, 3), date(2026, 4, 6), date(2026, 4, 7))
-BDR_EXIT_DATES_2026 = (date(2026, 5, 20), date(2026, 5, 21), date(2026, 5, 22))
-CORSE_EXIT_DATES_2026 = (date(2026, 5, 29), date(2026, 6, 1), date(2026, 6, 2))
+BASELINE_ENTRY_DATE_2026 = date(2026, 4, 8)
+BASELINE_R1_SOURCE_DATES_2026 = (date(2026, 4, 3), date(2026, 4, 6), date(2026, 4, 7))
+BDR_BASELINE_EXIT_DATES_2026 = (date(2026, 5, 20), date(2026, 5, 21), date(2026, 5, 22))
+CORSE_BASELINE_EXIT_DATES_2026 = (date(2026, 5, 29), date(2026, 6, 1), date(2026, 6, 2))
+R1_OBSERVATION_COUNT = 3
 CALIBRATION_ABS_TOLERANCE = 1e-9
+
+# Backward-compatible names.
+CALIBRATION_ENTRY_DATE_2026 = BASELINE_ENTRY_DATE_2026
+R1_SOURCE_DATES_2026 = BASELINE_R1_SOURCE_DATES_2026
+BDR_EXIT_DATES_2026 = BDR_BASELINE_EXIT_DATES_2026
+CORSE_EXIT_DATES_2026 = CORSE_BASELINE_EXIT_DATES_2026
 
 
 @dataclass(frozen=True)
@@ -86,24 +91,42 @@ def mean_on_dates(observations: Mapping[date, float], dates: Iterable[date]) -> 
     return mean(_finite_float(observations[d], context=f"calibration {d}") for d in requested), requested
 
 
+def last_observed_before(
+    observations: Mapping[date, float],
+    entry_date: date,
+    count: int = R1_OBSERVATION_COUNT,
+) -> tuple[tuple[date, float], ...]:
+    if count <= 0:
+        raise ValueError("count must be > 0")
+    rows = sorted(
+        (d, _finite_float(v, context=f"observed {d}"))
+        for d, v in observations.items()
+        if d < entry_date
+    )
+    if len(rows) < count:
+        raise ValueError(f"Need {count} observed UFIP quotations before {entry_date}, found {len(rows)}")
+    return tuple(rows[-count:])
+
+
 def _validate_corsica_calibration(calibration: dict) -> RotterdamCalibration:
+    """Validate C1's historical calibration of the Corsica coefficient k."""
     if calibration.get("territory") != "corsica":
         raise ValueError("C1 shared Rotterdam calibration territory is not corsica")
     try:
         entry_date = date.fromisoformat(str(calibration["entry_date"]))
-        r1 = _finite_float(calibration["r1"], context="shared Corsica r1")
+        r1 = _finite_float(calibration["r1"], context="shared Corsica baseline r1")
         k = _finite_float(calibration["k"], context="shared Corsica k")
-        r2 = _finite_float(calibration["r2"], context="shared Corsica r2")
+        r2 = _finite_float(calibration["r2"], context="shared Corsica baseline r2")
         r1_dates = tuple(date.fromisoformat(str(d)) for d in calibration["r1_source_dates"])
         exit_dates = tuple(date.fromisoformat(str(d)) for d in calibration["exit_source_dates"])
     except (KeyError, TypeError, ValueError) as exc:
         raise ValueError("Invalid C1 shared Corsica Rotterdam calibration") from exc
-    if entry_date != CALIBRATION_ENTRY_DATE_2026:
-        raise ValueError("Unexpected C1 Corsica calibration entry date")
-    if r1_dates != R1_SOURCE_DATES_2026:
-        raise ValueError("Unexpected C1 Corsica R1 source dates")
-    if exit_dates != CORSE_EXIT_DATES_2026:
-        raise ValueError("Unexpected C1 Corsica exit source dates")
+    if entry_date != BASELINE_ENTRY_DATE_2026:
+        raise ValueError("Unexpected C1 Corsica baseline calibration entry date")
+    if r1_dates != BASELINE_R1_SOURCE_DATES_2026:
+        raise ValueError("Unexpected C1 Corsica baseline R1 source dates")
+    if exit_dates != CORSE_BASELINE_EXIT_DATES_2026:
+        raise ValueError("Unexpected C1 Corsica baseline exit source dates")
     if r1 <= 0 or k <= 0 or r2 <= 0:
         raise ValueError("C1 Corsica calibration values must be positive")
     if not math.isclose(r1 * k, r2, rel_tol=0.0, abs_tol=CALIBRATION_ABS_TOLERANCE):
@@ -125,23 +148,47 @@ def calibrate_2026(
     observed_file: str | Path = DEFAULT_OBSERVED_FILE,
     shared_meta_file: str | Path = DEFAULT_SHARED_META_FILE,
 ) -> RotterdamCalibration:
+    """Historical 2026 calibration of k; not the permanent runtime R2."""
     if territory == "corsica":
         return corsica_from_shared_metadata(shared_meta_file)
     if territory != "bdr":
         raise ValueError("territory must be 'corsica' or 'bdr'")
 
     observations = read_observed_csv(observed_file)
-    r1, r1_dates = mean_on_dates(observations, R1_SOURCE_DATES_2026)
-    exit_mean, exit_dates = mean_on_dates(observations, BDR_EXIT_DATES_2026)
+    r1, r1_dates = mean_on_dates(observations, BASELINE_R1_SOURCE_DATES_2026)
+    exit_mean, exit_dates = mean_on_dates(observations, BDR_BASELINE_EXIT_DATES_2026)
     k = exit_mean / r1
     return RotterdamCalibration(
         territory="bdr",
-        entry_date=CALIBRATION_ENTRY_DATE_2026,
+        entry_date=BASELINE_ENTRY_DATE_2026,
         r1=r1,
         k=k,
         r2=exit_mean,
         r1_source_dates=r1_dates,
         exit_source_dates=exit_dates,
+    )
+
+
+def calibrate_phase(
+    territory: str,
+    phase_started_on: date,
+    observed_file: str | Path = DEFAULT_OBSERVED_FILE,
+    shared_meta_file: str | Path = DEFAULT_SHARED_META_FILE,
+) -> RotterdamCalibration:
+    """Compute the R1/R2 applicable to one effective-shield cap phase."""
+    baseline = calibrate_2026(territory, observed_file, shared_meta_file)
+    observations = read_observed_csv(observed_file)
+    r1_rows = last_observed_before(observations, phase_started_on)
+    r1 = mean(v for _, v in r1_rows)
+    return RotterdamCalibration(
+        territory=territory,
+        entry_date=phase_started_on,
+        r1=r1,
+        k=baseline.k,
+        r2=baseline.k * r1,
+        r1_source_dates=tuple(d for d, _ in r1_rows),
+        # These dates document the historical episode from which k was calibrated.
+        exit_source_dates=baseline.exit_source_dates,
     )
 
 
@@ -164,10 +211,11 @@ def read_daily_values(path: str | Path = DEFAULT_DAILY_FILE) -> dict[date, float
 
 def threshold_for(
     territory: str,
+    phase_started_on: date,
     observed_file: str | Path = DEFAULT_OBSERVED_FILE,
     shared_meta_file: str | Path = DEFAULT_SHARED_META_FILE,
 ) -> float:
-    return calibrate_2026(territory, observed_file, shared_meta_file).r2
+    return calibrate_phase(territory, phase_started_on, observed_file, shared_meta_file).r2
 
 
 def admissible_since(
@@ -175,23 +223,20 @@ def admissible_since(
     end_day: date,
     territory: str,
     *,
+    phase_started_on: date,
     observed_file: str | Path = DEFAULT_OBSERVED_FILE,
     daily_file: str | Path = DEFAULT_DAILY_FILE,
     shared_meta_file: str | Path = DEFAULT_SHARED_META_FILE,
 ) -> bool:
-    """Persistent R2 guard from J+45 until the target fuel is declared again.
-
-    The caller passes the first stale day, i.e. target declaration date + 45 days.
-    Any Rotterdam day below territory R2 between start_day and end_day latches
-    that old target price out. A new target declaration creates a new J0 and
-    therefore a new J+45 start_day.
-    """
+    """Persistent R2 guard using the threshold of the current shield phase."""
     if territory not in {"corsica", "bdr"}:
         raise ValueError("territory must be 'corsica' or 'bdr'")
     if end_day < start_day:
         raise ValueError("end_day must be >= start_day")
+    if phase_started_on > start_day:
+        raise ValueError("stale-price window starts before current shield phase")
     values = read_daily_values(daily_file)
-    r2 = threshold_for(territory, observed_file, shared_meta_file)
+    r2 = threshold_for(territory, phase_started_on, observed_file, shared_meta_file)
     d = start_day
     while d <= end_day:
         if d not in values:
