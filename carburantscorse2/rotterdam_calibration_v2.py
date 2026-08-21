@@ -8,13 +8,15 @@ from the shared observed CSV.
 
 R2 is an admissibility threshold for stale station prices in the double-cap
 case. It never defines whether the TotalEnergies shield itself is effective.
+Once Rotterdam falls below R2 after a target price has become stale, that old
+target price stays excluded until the target fuel is declared again.
 """
 from __future__ import annotations
 
 import csv
 import json
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from statistics import mean
 from typing import Iterable, Mapping
@@ -42,7 +44,6 @@ class RotterdamCalibration:
 
 
 def read_observed_csv(path: str | Path = DEFAULT_OBSERVED_FILE) -> dict[date, float]:
-    """Read observed UFIP quotations only; carried calendar values are not accepted here."""
     values: dict[date, float] = {}
     with Path(path).open("r", encoding="utf-8-sig", newline="") as fh:
         reader = csv.DictReader(fh)
@@ -53,44 +54,31 @@ def read_observed_csv(path: str | Path = DEFAULT_OBSERVED_FILE) -> dict[date, fl
         for row in reader:
             raw_date = (row.get(DATE_COLUMN) or "").strip()
             raw_value = (row.get(VALUE_COLUMN) or "").strip()
-            if not raw_date or not raw_value:
-                continue
-            values[date.fromisoformat(raw_date[:10])] = float(raw_value)
+            if raw_date and raw_value:
+                values[date.fromisoformat(raw_date[:10])] = float(raw_value)
     if not values:
         raise ValueError("UFIP observed CSV contains no usable Rotterdam Gazole value")
     return dict(sorted(values.items()))
 
 
-def last_observed_before(
-    observations: Mapping[date, float],
-    entry_date: date,
-    count: int = R1_OBSERVATION_COUNT,
-) -> tuple[tuple[date, float], ...]:
+def last_observed_before(observations: Mapping[date, float], entry_date: date, count: int = R1_OBSERVATION_COUNT) -> tuple[tuple[date, float], ...]:
     if count <= 0:
         raise ValueError("count must be > 0")
     candidates = [(d, float(v)) for d, v in observations.items() if d < entry_date]
     candidates.sort(key=lambda item: item[0])
     if len(candidates) < count:
         raise ValueError(
-            f"Need {count} observed UFIP quotations before {entry_date.isoformat()}, "
-            f"found {len(candidates)}"
+            f"Need {count} observed UFIP quotations before {entry_date.isoformat()}, found {len(candidates)}"
         )
     return tuple(candidates[-count:])
 
 
-def compute_r1(
-    observations: Mapping[date, float],
-    entry_date: date,
-    count: int = R1_OBSERVATION_COUNT,
-) -> tuple[float, tuple[date, ...]]:
+def compute_r1(observations: Mapping[date, float], entry_date: date, count: int = R1_OBSERVATION_COUNT) -> tuple[float, tuple[date, ...]]:
     selected = last_observed_before(observations, entry_date, count)
     return mean(v for _, v in selected), tuple(d for d, _ in selected)
 
 
-def mean_on_dates(
-    observations: Mapping[date, float],
-    dates: Iterable[date],
-) -> tuple[float, tuple[date, ...]]:
+def mean_on_dates(observations: Mapping[date, float], dates: Iterable[date]) -> tuple[float, tuple[date, ...]]:
     requested = tuple(dates)
     missing = tuple(d for d in requested if d not in observations)
     if missing:
@@ -101,10 +89,7 @@ def mean_on_dates(
     return mean(float(observations[d]) for d in requested), requested
 
 
-def corsica_from_shared_metadata(
-    meta_file: str | Path = DEFAULT_SHARED_META_FILE,
-) -> RotterdamCalibration:
-    """Consume the canonical Corsica calibration already produced by C1."""
+def corsica_from_shared_metadata(meta_file: str | Path = DEFAULT_SHARED_META_FILE) -> RotterdamCalibration:
     payload = json.loads(Path(meta_file).read_text(encoding="utf-8"))
     rotterdam = payload.get("rotterdam")
     calibration = rotterdam.get("corsica_calibration") if isinstance(rotterdam, dict) else None
@@ -131,7 +116,6 @@ def calibrate_2026(
     observed_file: str | Path = DEFAULT_OBSERVED_FILE,
     shared_meta_file: str | Path = DEFAULT_SHARED_META_FILE,
 ) -> RotterdamCalibration:
-    """Return C1's canonical Corse calibration or derive the BDR-specific candidate."""
     if territory == "corsica":
         return corsica_from_shared_metadata(shared_meta_file)
     if territory != "bdr":
@@ -152,11 +136,8 @@ def calibrate_2026(
     )
 
 
-def read_daily_value(
-    day: date,
-    path: str | Path = DEFAULT_DAILY_FILE,
-) -> float | None:
-    """Read one day from the C1-published forward-filled Rotterdam daily file."""
+def read_daily_values(path: str | Path = DEFAULT_DAILY_FILE) -> dict[date, float]:
+    values: dict[date, float] = {}
     with Path(path).open("r", encoding="utf-8-sig", newline="") as fh:
         reader = csv.DictReader(fh)
         required = {DATE_COLUMN, VALUE_COLUMN}
@@ -165,10 +146,14 @@ def read_daily_value(
             raise ValueError(f"UFIP daily CSV missing columns: {sorted(missing)}")
         for row in reader:
             raw_date = (row.get(DATE_COLUMN) or "").strip()
-            if raw_date and date.fromisoformat(raw_date[:10]) == day:
-                raw_value = (row.get(VALUE_COLUMN) or "").strip()
-                return None if not raw_value else float(raw_value)
-    return None
+            raw_value = (row.get(VALUE_COLUMN) or "").strip()
+            if raw_date and raw_value:
+                values[date.fromisoformat(raw_date[:10])] = float(raw_value)
+    return values
+
+
+def read_daily_value(day: date, path: str | Path = DEFAULT_DAILY_FILE) -> float | None:
+    return read_daily_values(path).get(day)
 
 
 def threshold_for(
@@ -176,7 +161,6 @@ def threshold_for(
     observed_file: str | Path = DEFAULT_OBSERVED_FILE,
     shared_meta_file: str | Path = DEFAULT_SHARED_META_FILE,
 ) -> float:
-    """Return R2 using C1 metadata for Corse and the shared CSV for BDR."""
     return calibrate_2026(territory, observed_file, shared_meta_file).r2
 
 
@@ -188,13 +172,6 @@ def constraining_on(
     daily_file: str | Path = DEFAULT_DAILY_FILE,
     shared_meta_file: str | Path = DEFAULT_SHARED_META_FILE,
 ) -> bool:
-    """Return whether Rotterdam is on the admissible side of territory R2.
-
-    Agreed runtime rule: Rotterdam >= R2 means the stale double-cap price may
-    remain admissible subject to the other guards; Rotterdam < R2 excludes it.
-    Missing data fails closed by raising. This does not alter shield-effective
-    status, which is determined independently by C1's shield detector.
-    """
     if territory not in {"corsica", "bdr"}:
         raise ValueError("territory must be 'corsica' or 'bdr'")
     value = read_daily_value(day, daily_file)
@@ -202,3 +179,35 @@ def constraining_on(
         raise ValueError(f"Missing Rotterdam daily value for {day.isoformat()}")
     r2 = threshold_for(territory, observed_file, shared_meta_file)
     return float(value) >= float(r2)
+
+
+def admissible_since(
+    start_day: date,
+    end_day: date,
+    territory: str,
+    *,
+    observed_file: str | Path = DEFAULT_OBSERVED_FILE,
+    daily_file: str | Path = DEFAULT_DAILY_FILE,
+    shared_meta_file: str | Path = DEFAULT_SHARED_META_FILE,
+) -> bool:
+    """Persistent R2 guard until the target fuel is declared again.
+
+    The caller passes the first day after the target's normal 45-day window.
+    Any Rotterdam day below territory R2 between start_day and end_day latches
+    that old target price out. A new target declaration changes the start_day
+    and therefore resets the guard naturally.
+    """
+    if territory not in {"corsica", "bdr"}:
+        raise ValueError("territory must be 'corsica' or 'bdr'")
+    if end_day < start_day:
+        raise ValueError("end_day must be >= start_day")
+    values = read_daily_values(daily_file)
+    r2 = threshold_for(territory, observed_file, shared_meta_file)
+    d = start_day
+    while d <= end_day:
+        if d not in values:
+            raise ValueError(f"Missing Rotterdam daily value for {d.isoformat()}")
+        if float(values[d]) < float(r2):
+            return False
+        d += timedelta(days=1)
+    return True
