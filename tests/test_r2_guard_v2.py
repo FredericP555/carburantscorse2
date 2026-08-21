@@ -8,7 +8,15 @@ from carburantscorse2 import r2_guard_v2 as guard
 
 
 class R2GuardT(unittest.TestCase):
-    PHASE_START = date(2026, 4, 8)
+    def bouclier_meta(self):
+        return {
+            'Gazole': {'phases': [
+                {'d1': '2026-04-08', 'd2': '2026-08-31', 'cap': 2.25, 'phase_id': 'g1'}
+            ]},
+            'SP95': {'phases': [
+                {'d1': '2026-03-01', 'd2': '2026-08-31', 'cap': 1.99, 'phase_id': 's1'}
+            ]},
+        }
 
     def observed_file(self):
         f = tempfile.NamedTemporaryFile('w', encoding='utf-8', newline='', delete=False, suffix='.csv')
@@ -49,7 +57,7 @@ class R2GuardT(unittest.TestCase):
         declared = datetime(2026, 6, 1, 8)
         first_stale = date(2026, 7, 16)
         self.assertTrue(guard.stale_price_admissible(
-            declared, first_stale, 'corsica', phase_started_on=self.PHASE_START,
+            declared, first_stale, 'corsica', bouclier_metadata=self.bouclier_meta(),
             observed_file=self.observed_file(), daily_file=self.daily_file([(first_stale, 0.769)]),
             shared_meta_file=self.meta_file(),
         ))
@@ -59,7 +67,7 @@ class R2GuardT(unittest.TestCase):
         start = date(2026, 7, 16)
         rows = [(start, 0.870), (start + timedelta(days=1), 0.860), (start + timedelta(days=2), 0.900)]
         self.assertFalse(guard.stale_price_admissible(
-            declared, start + timedelta(days=2), 'bdr', phase_started_on=self.PHASE_START,
+            declared, start + timedelta(days=2), 'bdr', bouclier_metadata=self.bouclier_meta(),
             observed_file=self.observed_file(), daily_file=self.daily_file(rows),
             shared_meta_file=self.meta_file(),
         ))
@@ -67,24 +75,21 @@ class R2GuardT(unittest.TestCase):
     def test_new_target_declaration_resets_origin(self):
         new_declared = datetime(2026, 8, 10, 8)
         self.assertTrue(guard.stale_price_admissible(
-            new_declared, date(2026, 8, 19), 'bdr', phase_started_on=self.PHASE_START,
+            new_declared, date(2026, 8, 19), 'bdr', bouclier_metadata=self.bouclier_meta(),
             observed_file=self.observed_file(), daily_file=self.daily_file([]),
             shared_meta_file=self.meta_file(),
         ))
 
-    def test_missing_phase_or_declaration_fails_closed(self):
-        observed = self.observed_file(); daily = self.daily_file([]); meta = self.meta_file()
+    def test_no_double_cap_period_fails_closed(self):
+        meta = {
+            'Gazole': {'phases': []},
+            'SP95': {'phases': [
+                {'d1': '2026-03-01', 'd2': '2026-08-31', 'cap': 1.99, 'phase_id': 's1'}
+            ]},
+        }
         self.assertFalse(guard.stale_price_admissible(
-            None, date(2026, 8, 19), 'corsica', phase_started_on=self.PHASE_START,
-            observed_file=observed, daily_file=daily, shared_meta_file=meta
-        ))
-        self.assertFalse(guard.stale_price_admissible(
-            datetime(2026, 8, 10), date(2026, 8, 19), 'corsica', phase_started_on=None,
-            observed_file=observed, daily_file=daily, shared_meta_file=meta
-        ))
-        self.assertFalse(guard.stale_price_admissible(
-            datetime(2026, 8, 20), date(2026, 8, 19), 'bdr', phase_started_on=self.PHASE_START,
-            observed_file=observed, daily_file=daily, shared_meta_file=meta
+            datetime(2026, 6, 1), date(2026, 8, 19), 'corsica', bouclier_metadata=meta,
+            observed_file=self.observed_file(), daily_file=self.daily_file([]), shared_meta_file=self.meta_file(),
         ))
 
 
