@@ -16,6 +16,22 @@
 - Rotterdam ne constitue pas un indice SP95 ; il justifie seulement l'hypothèse de silence explicable lorsque les deux carburants sont plafonnés.
 - Rupture ou preuve indépendante d'inactivité : exclusion prioritaire.
 
+## Identité des stations pour les calculs par enseigne — préparée, inactive
+Les calculs sensibles à l'enseigne ne doivent jamais déduire « non-Total » de la seule absence d'un ID dans une liste Total.
+
+Trois états sont utilisés :
+- `TOTAL` : enseigne TotalEnergies confirmée ;
+- `NON_TOTAL_CONFIRMED` : autre enseigne confirmée ;
+- `UNKNOWN` : ID absent du registre, enseigne manquante ou résolution incomplète.
+
+Un ID `UNKNOWN` est exclu des calculs par enseigne jusqu'à résolution. Il ne peut donc polluer ni le groupe Total ni le groupe hors Total.
+
+### Corse
+C2 ne maintient pas de second référentiel Corse. `scripts/fetch_c1_corse_station_brands.py` lit en lecture seule le registre de référence de C1 (`config/corse_station_brands.json`) et écrit seulement une copie de travail dans `outputs/c1/corse_station_brands.json`. Le module `carburantscorse2/corse_station_identity_v2.py` utilise cette copie pour classer les IDs. Le fichier de sortie est un artefact d'audit et n'est pas ajouté au commit de publication.
+
+### Bouches-du-Rhône
+Le résolveur incrémental existant conserve déjà les nouveaux IDs non résolus en `inconnu`. Ils restent exclus des comparaisons réseau/par enseigne jusqu'à résolution et ne sont jamais classés silencieusement comme réseau traditionnel.
+
 ## Calibration Rotterdam C2 — préparée, inactive
 Le calibrage est **spécifique à C2**. Il ne doit pas être utilisé pour C1 pour isoler des Total continentales : C1 ne dispose pas du rattachement d'enseigne nécessaire pour ce test.
 
