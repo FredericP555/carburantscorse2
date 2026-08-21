@@ -37,6 +37,14 @@ class T(unittest.TestCase):
         self.assertTrue(self.ev(last_declared_at=datetime(2026, 7, 6)).eligible)
         self.assertFalse(self.ev(last_declared_at=datetime(2026, 7, 5)).eligible)
 
+    def test_cap_tolerance_exact_millieuro_boundaries(self):
+        self.assertTrue(p.at_cap(1.988, 1.99))
+        self.assertTrue(p.at_cap(1.991, 1.99))
+        self.assertFalse(p.at_cap(1.987, 1.99))
+        self.assertFalse(p.at_cap(1.992, 1.99))
+        self.assertTrue(p.at_cap(2.091, 2.09))
+        self.assertTrue(p.at_cap(2.251, 2.25))
+
     def test_corse_single_cap_cross_liveness_renews_45_days(self):
         d = self.ev(**self.shield_args(activity_by_fuel={'Gazole': datetime(2026, 8, 10)}))
         self.assertTrue(d.eligible)
@@ -55,9 +63,11 @@ class T(unittest.TestCase):
         self.assertEqual(d.reason, 'bouclier_vivacite_45j_renouvelee')
 
     def test_bdr_single_cap_has_no_arbitrary_90_day_stop(self):
+        # Fresh at phase entry (10 days old) but 162 days old on D: absence of
+        # J+90 must be tested without violating the no-resurrection guard.
         d = self.ev(
             region_kind='mainland',
-            last_declared_at=datetime(2026, 1, 1),
+            last_declared_at=datetime(2026, 3, 10),
             **self.shield_args(activity_by_fuel={'E10': datetime(2026, 8, 18)}),
         )
         self.assertTrue(d.eligible)
@@ -140,6 +150,11 @@ class T(unittest.TestCase):
             datetime(2026, 5, 10), date(2026, 5, 1)
         ))
 
+    def test_rupture_has_priority_over_independent_inactivity(self):
+        d = self.ev(target_rupture_active=True, independently_inactive=True)
+        self.assertFalse(d.eligible)
+        self.assertEqual(d.reason, 'rupture_active')
+
     def test_inactive_overrides(self):
         d = self.ev(**self.shield_args(
             independently_inactive=True,
@@ -163,10 +178,11 @@ class T(unittest.TestCase):
 
 
 class RotterdamCalibrationT(unittest.TestCase):
-    def observed_file(self):
+    def observed_file(self, extra_rows=()):
         rows = [
             ('2026-04-03', 1.037), ('2026-04-06', 1.048), ('2026-04-07', 1.061),
             ('2026-05-20', 0.868), ('2026-05-21', 0.865), ('2026-05-22', 0.859),
+            *extra_rows,
         ]
         tmp = tempfile.NamedTemporaryFile('w', encoding='utf-8', newline='', delete=False, suffix='.csv')
         tmp.write('date,rotterdam_eur_l\n')
@@ -185,21 +201,19 @@ class RotterdamCalibrationT(unittest.TestCase):
         self.addCleanup(lambda: Path(tmp.name).unlink(missing_ok=True))
         return tmp.name
 
-    def meta_file(self):
-        payload = {
-            'rotterdam': {
-                'corsica_calibration': {
-                    'territory': 'corsica',
-                    'entry_date': '2026-04-08',
-                    'r1_observation_count': 3,
-                    'r1': 1.0486666666666666,
-                    'k': 0.7329942783728567,
-                    'r2': 0.7686666666666667,
-                    'r1_source_dates': ['2026-04-03', '2026-04-06', '2026-04-07'],
-                    'exit_source_dates': ['2026-05-29', '2026-06-01', '2026-06-02'],
-                }
-            }
+    def meta_file(self, **overrides):
+        calibration = {
+            'territory': 'corsica',
+            'entry_date': '2026-04-08',
+            'r1_observation_count': 3,
+            'r1': 1.0486666666666666,
+            'k': 0.7329942783728567,
+            'r2': 0.7686666666666667,
+            'r1_source_dates': ['2026-04-03', '2026-04-06', '2026-04-07'],
+            'exit_source_dates': ['2026-05-29', '2026-06-01', '2026-06-02'],
         }
+        calibration.update(overrides)
+        payload = {'rotterdam': {'corsica_calibration': calibration}}
         tmp = tempfile.NamedTemporaryFile('w', encoding='utf-8', delete=False, suffix='.json')
         json.dump(payload, tmp)
         tmp.close()
@@ -216,17 +230,27 @@ class RotterdamCalibrationT(unittest.TestCase):
         bdr = rc.calibrate_2026('bdr', self.observed_file(), self.meta_file())
         self.assertAlmostEqual(bdr.r1, 1.0486666667, places=9)
         self.assertAlmostEqual(bdr.k, 0.8239033694, places=9)
+        self.assertAlmostEqual(bdr.r2, 0.864, places=12)
 
-    def test_r2_comparator_is_greater_or_equal(self):
+    def test_r1_dates_are_frozen_against_retroactive_quote(self):
+        bdr = rc.calibrate_2026(
+            'bdr',
+            self.observed_file(extra_rows=(('2026-04-04', 9.999),)),
+            self.meta_file(),
+        )
+        self.assertAlmostEqual(bdr.r1, 1.0486666667, places=9)
+
+    def test_r2_boundary_is_greater_or_equal(self):
         observed = self.observed_file()
         meta = self.meta_file()
-        self.assertTrue(rc.constraining_on(
-            D, 'corsica', observed_file=observed,
-            daily_file=self.daily_file([(D, 0.769)]), shared_meta_file=meta
+        day = date(2026, 8, 19)
+        self.assertTrue(rc.admissible_since(
+            day, day, 'corsica', observed_file=observed,
+            daily_file=self.daily_file([(day, 0.7686666666666667)]), shared_meta_file=meta
         ))
-        self.assertFalse(rc.constraining_on(
-            D, 'corsica', observed_file=observed,
-            daily_file=self.daily_file([(D, 0.760)]), shared_meta_file=meta
+        self.assertFalse(rc.admissible_since(
+            day, day, 'corsica', observed_file=observed,
+            daily_file=self.daily_file([(day, 0.760)]), shared_meta_file=meta
         ))
 
     def test_r2_breach_stays_locked_even_if_rotterdam_recovers(self):
@@ -242,6 +266,20 @@ class RotterdamCalibrationT(unittest.TestCase):
         self.assertFalse(rc.admissible_since(
             start, D, 'corsica', observed_file=observed, daily_file=daily, shared_meta_file=meta
         ))
+
+    def test_nonfinite_observed_is_rejected(self):
+        with self.assertRaises(ValueError):
+            rc.read_observed_csv(self.observed_file(extra_rows=(('2026-04-04', 'nan'),)))
+
+    def test_nonfinite_daily_is_rejected(self):
+        with self.assertRaises(ValueError):
+            rc.read_daily_values(self.daily_file([(D, 'inf')]))
+
+    def test_invalid_shared_calibration_is_rejected(self):
+        with self.assertRaises(ValueError):
+            rc.calibrate_2026('corsica', self.observed_file(), self.meta_file(r2=float('nan')))
+        with self.assertRaises(ValueError):
+            rc.calibrate_2026('corsica', self.observed_file(), self.meta_file(r1_source_dates=['2026-04-04']))
 
     def test_missing_c1_corse_metadata_fails_closed(self):
         tmp = tempfile.NamedTemporaryFile('w', encoding='utf-8', delete=False, suffix='.json')
