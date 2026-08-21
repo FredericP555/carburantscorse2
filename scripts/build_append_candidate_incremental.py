@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 import json
+import math
 from pathlib import Path
 
 from carburantscorse2.publication import unknown_recent_bdr_stations as detect_unknown
@@ -34,13 +35,12 @@ BDR_ACTIVE_WINDOW_DAYS = 30
 
 _original_load_official = base.load_official_observations
 _original_load_categories = base.load_bdr_categories
+_original_load_rotterdam = base.load_shared_rotterdam
 
 
 def _merged_categories(path):
     legacy = _original_load_categories(path)
     incremental = resolved_categories(load_registry(DEFAULT_REGISTRY))
-    # Frozen published category always wins for pre-existing IDs. Incremental rules only apply
-    # to IDs first encountered after that legacy registry was frozen.
     for station_id, category in incremental.items():
         legacy.setdefault(station_id, category)
     return legacy
@@ -80,6 +80,17 @@ def _load_official_and_resolve(years, mode, *, release_tag=None):
     return observations, source
 
 
+def _load_shared_rotterdam_finite(start, end):
+    """Fail closed if a shared Rotterdam frame contains NaN or +/-Inf."""
+    daily, observed = _original_load_rotterdam(start, end)
+    for name, frame in (("daily", daily), ("observed", observed)):
+        values = frame["rotterdam_eur_l"]
+        ok = values.map(lambda value: math.isfinite(float(value))).all()
+        if not bool(ok):
+            raise RuntimeError(f"Shared Rotterdam {name} CSV contains a non-finite value")
+    return daily, observed
+
+
 def _non_blocking_unknown(state, *, since):
     unknown = detect_unknown(state, since=since)
     if unknown:
@@ -87,13 +98,12 @@ def _non_blocking_unknown(state, *, since):
             "WARNING: unresolved recent BDR station IDs are excluded from the network-only "
             f"comparison until resolved: {', '.join(unknown)}"
         )
-    # The unresolved IDs remain category=unknown in state. Returning [] here only disables the
-    # old publication blocker; it does not silently classify them as network or GMS.
     return []
 
 
 base.load_official_observations = _load_official_and_resolve
 base.load_bdr_categories = _merged_categories
+base.load_shared_rotterdam = _load_shared_rotterdam_finite
 base.unknown_recent_bdr_stations = _non_blocking_unknown
 
 
