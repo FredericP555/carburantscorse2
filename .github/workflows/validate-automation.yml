@@ -1,6 +1,8 @@
 name: Validate c2 automation core
 
 on:
+  push:
+    branches: [prep/45d-shield-policy]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -38,6 +40,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: python scripts/fetch_shared_ufip_from_c1.py --output-dir outputs/ufip
+      - name: Validate pinned C1 business contract
+        run: python -m scripts.validate_pinned_c1_bundle
       - name: Build live append-only candidate with incremental BDR resolver
         env:
           GITHUB_TOKEN: ${{ github.token }}
