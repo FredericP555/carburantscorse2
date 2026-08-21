@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      c1_release_tag:
+        description: "Optional immutable C1 shared release tag for live prep integration"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -36,20 +41,31 @@ jobs:
           pathlib.Path('/tmp/carburantscorse2-inline.js').write_text('\n'.join(blocks), encoding='utf-8')
           PY
           node --check /tmp/carburantscorse2-inline.js
-      - name: Fetch and pin validated shared C1 bundle
+
+      # Live cross-repository integration is deliberately opt-in.  The prep branch
+      # does not publish C1 releases before the post-Monday test, so ordinary pushes
+      # must not accidentally validate against an older production C1 contract.
+      - name: Fetch explicitly pinned C1 bundle for live integration
+        if: github.event_name == 'workflow_dispatch' && inputs.c1_release_tag != ''
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: python scripts/fetch_shared_ufip_from_c1.py --output-dir outputs/ufip
+        run: >-
+          python scripts/fetch_shared_ufip_from_c1.py
+          --output-dir outputs/ufip
+          --release-tag "${{ inputs.c1_release_tag }}"
       - name: Validate pinned C1 business contract
+        if: github.event_name == 'workflow_dispatch' && inputs.c1_release_tag != ''
         run: python -m scripts.validate_pinned_c1_bundle
       - name: Build live append-only candidate with incremental BDR resolver
+        if: github.event_name == 'workflow_dispatch' && inputs.c1_release_tag != ''
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: python -m scripts.build_append_candidate_incremental --official-source shared
       - name: Exercise append-only promotion guard
+        if: github.event_name == 'workflow_dispatch' && inputs.c1_release_tag != ''
         run: python -m scripts.promote_candidate
       - name: Upload candidate and audit summary
-        if: always()
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.c1_release_tag != ''
         uses: actions/upload-artifact@v4
         with:
           name: carburantscorse2-candidate
