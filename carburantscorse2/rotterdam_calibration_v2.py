@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Prepared Rotterdam calibration helper for C2.
 
-This module never fetches UFIP directly. It only reads CSV files produced by
-scripts/fetch_ufip.py. It is inactive until explicitly wired into publication.
+C2 never queries UFIP in the prepared architecture. It downloads the Rotterdam
+assets already published by C1. The Corsica calibration is consumed directly
+from C1 shared metadata; only the BDR-specific candidate k is derived locally
+from the shared observed CSV.
 """
 from __future__ import annotations
 
 import csv
+import json
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -15,20 +18,14 @@ from typing import Iterable, Mapping
 
 DEFAULT_OBSERVED_FILE = Path("outputs/ufip/rotterdam_gazole_observed.csv")
 DEFAULT_DAILY_FILE = Path("outputs/ufip/rotterdam_gazole_daily.csv")
+DEFAULT_SHARED_META_FILE = Path("outputs/ufip/c1_shared_meta.json")
 VALUE_COLUMN = "rotterdam_eur_l"
 DATE_COLUMN = "date"
 
 CALIBRATION_ENTRY_DATE_2026 = date(2026, 4, 8)
 R1_OBSERVATION_COUNT = 3
+BDR_EXIT_DATES_2026 = (date(2026, 5, 20), date(2026, 5, 21), date(2026, 5, 22))
 
-# Empirical C2 candidate calibrations, deliberately territory-specific.
-# They are derived from the same UFIP Rotterdam Gazole series:
-# - Corse: exit observations 2026-05-29, 2026-06-01, 2026-06-02.
-# - BDR Total classique: 2026-05-20, 2026-05-21, 2026-05-22.
-CALIBRATION_EXIT_DATES_2026 = {
-    "corsica": (date(2026, 5, 29), date(2026, 6, 1), date(2026, 6, 2)),
-    "bdr": (date(2026, 5, 20), date(2026, 5, 21), date(2026, 5, 22)),
-}
 
 @dataclass(frozen=True)
 class RotterdamCalibration:
@@ -101,21 +98,48 @@ def mean_on_dates(
     return mean(float(observations[d]) for d in requested), requested
 
 
+def corsica_from_shared_metadata(
+    meta_file: str | Path = DEFAULT_SHARED_META_FILE,
+) -> RotterdamCalibration:
+    """Consume the canonical Corsica calibration already produced by C1."""
+    payload = json.loads(Path(meta_file).read_text(encoding="utf-8"))
+    rotterdam = payload.get("rotterdam")
+    calibration = rotterdam.get("corsica_calibration") if isinstance(rotterdam, dict) else None
+    if not isinstance(calibration, dict):
+        raise ValueError("C1 shared metadata has no Corsica Rotterdam calibration")
+    if calibration.get("territory") != "corsica":
+        raise ValueError("C1 shared Rotterdam calibration territory is not corsica")
+    try:
+        return RotterdamCalibration(
+            territory="corsica",
+            entry_date=date.fromisoformat(str(calibration["entry_date"])),
+            r1=float(calibration["r1"]),
+            k=float(calibration["k"]),
+            r2=float(calibration["r2"]),
+            r1_source_dates=tuple(date.fromisoformat(str(d)) for d in calibration["r1_source_dates"]),
+            exit_source_dates=tuple(date.fromisoformat(str(d)) for d in calibration["exit_source_dates"]),
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("Invalid C1 shared Corsica Rotterdam calibration") from exc
+
+
 def calibrate_2026(
     territory: str,
     observed_file: str | Path = DEFAULT_OBSERVED_FILE,
+    shared_meta_file: str | Path = DEFAULT_SHARED_META_FILE,
 ) -> RotterdamCalibration:
-    """Recompute the C2 candidate k from the UFIP automation output."""
-    if territory not in CALIBRATION_EXIT_DATES_2026:
+    """Return C1's canonical Corse calibration or derive the BDR-specific candidate."""
+    if territory == "corsica":
+        return corsica_from_shared_metadata(shared_meta_file)
+    if territory != "bdr":
         raise ValueError("territory must be 'corsica' or 'bdr'")
+
     observations = read_observed_csv(observed_file)
     r1, r1_dates = compute_r1(observations, CALIBRATION_ENTRY_DATE_2026)
-    exit_mean, exit_dates = mean_on_dates(
-        observations, CALIBRATION_EXIT_DATES_2026[territory]
-    )
+    exit_mean, exit_dates = mean_on_dates(observations, BDR_EXIT_DATES_2026)
     k = exit_mean / r1
     return RotterdamCalibration(
-        territory=territory,
+        territory="bdr",
         entry_date=CALIBRATION_ENTRY_DATE_2026,
         r1=r1,
         k=k,
@@ -129,7 +153,7 @@ def read_daily_value(
     day: date,
     path: str | Path = DEFAULT_DAILY_FILE,
 ) -> float | None:
-    """Read one day from the forward-filled UFIP daily file produced by automation."""
+    """Read one day from the C1-published forward-filled Rotterdam daily file."""
     with Path(path).open("r", encoding="utf-8-sig", newline="") as fh:
         reader = csv.DictReader(fh)
         required = {DATE_COLUMN, VALUE_COLUMN}
@@ -147,6 +171,7 @@ def read_daily_value(
 def threshold_for(
     territory: str,
     observed_file: str | Path = DEFAULT_OBSERVED_FILE,
+    shared_meta_file: str | Path = DEFAULT_SHARED_META_FILE,
 ) -> float:
-    """Return R2 for the requested C2 territory from the UFIP-produced observed file."""
-    return calibrate_2026(territory, observed_file).r2
+    """Return R2 using C1 metadata for Corse and the shared CSV for BDR."""
+    return calibrate_2026(territory, observed_file, shared_meta_file).r2
