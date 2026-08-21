@@ -43,17 +43,19 @@ La vivacité croisée Gazole ↔ SP95 ne suffit plus puisque les deux peuvent re
 Deux conditions sont requises ensemble :
 
 1. une déclaration datant de moins de 45 jours sur un **autre carburant que Gazole/SP95** prouve que la station est toujours vivante ;
-2. Rotterdam Gazole doit rester **>= R2 BdR**.
+2. le vieux prix ne doit pas avoir été verrouillé par R2.
 
-Si la vivacité sur un autre carburant manque, les vieux prix Gazole/SP95 sont exclus. Si Rotterdam passe **< R2 BdR**, ils sont également exclus. Dans aucun de ces cas R2 ne met fin au bouclier effectif.
+Le verrou R2 fonctionne de la même façon en Corse et dans les BdR : après l'expiration normale des 45 jours du carburant cible, si Rotterdam passe une seule fois **sous R2** du territoire, ce vieux prix reste exclu même si Rotterdam remonte ensuite. Il ne peut revenir qu'après une **nouvelle déclaration du carburant cible**, qui crée un nouveau J0.
+
+Dans les BdR, la vivacité sur un autre carburant reste en plus obligatoire pendant le double plafond. Dans aucun cas R2 ne met fin au bouclier effectif.
 
 Calibration candidate 2026 : `k_corse ≈ 0,733` et `k_bdr ≈ 0,824`, à partir de la même série Rotterdam observée produite une seule fois par C1.
 
 ## 5. Phases de plafond et garde-fou de non-résurrection
 
-C1 publie désormais des **phases de plafond explicites** dans les métadonnées partagées. Une phase est une portion continue de bouclier effectif avec un même montant de plafond.
+C1 publie des **phases de plafond explicites** dans les métadonnées partagées. Une phase est une portion continue de bouclier effectif avec un même montant de plafond.
 
-Un changement de plafond crée donc automatiquement une nouvelle phase. C2 lit directement la date de début et le plafond de cette phase depuis la release C1.
+Un changement de plafond crée automatiquement une nouvelle phase. C2 lit directement la date de début et le plafond de cette phase depuis la release C1.
 
 Le moteur ne fait plus confiance à un booléen manuel `eligible_at_cap_entry`. Il calcule lui-même :
 
