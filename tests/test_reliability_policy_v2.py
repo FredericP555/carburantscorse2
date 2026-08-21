@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 import json
 import math
@@ -78,10 +78,10 @@ class T(unittest.TestCase):
             gazole_cap=2.25,
             sp95_price=1.99,
             sp95_cap=1.99,
-            rotterdam_gazole_constraining=False,
+            rotterdam_stale_price_admissible=False,
         ))
         self.assertFalse(d.eligible)
-        self.assertEqual(d.reason, 'double_plafond_rotterdam_sous_r2')
+        self.assertEqual(d.reason, 'double_plafond_rotterdam_verrouille')
 
     def test_corse_double_cap_r2_admissible(self):
         d = self.ev(**self.shield_args(
@@ -89,7 +89,7 @@ class T(unittest.TestCase):
             gazole_cap=2.25,
             sp95_price=1.99,
             sp95_cap=1.99,
-            rotterdam_gazole_constraining=True,
+            rotterdam_stale_price_admissible=True,
         ))
         self.assertTrue(d.eligible)
         self.assertEqual(d.reason, 'double_plafond_rotterdam_admissible')
@@ -103,7 +103,7 @@ class T(unittest.TestCase):
                 gazole_cap=2.25,
                 sp95_price=1.99,
                 sp95_cap=1.99,
-                rotterdam_gazole_constraining=True,
+                rotterdam_stale_price_admissible=True,
             ),
         )
         self.assertFalse(d.eligible)
@@ -120,10 +120,10 @@ class T(unittest.TestCase):
                 sp95_cap=1.99,
             ),
         )
-        low = self.ev(**common, rotterdam_gazole_constraining=False)
+        low = self.ev(**common, rotterdam_stale_price_admissible=False)
         self.assertFalse(low.eligible)
-        self.assertEqual(low.reason, 'double_plafond_rotterdam_sous_r2')
-        high = self.ev(**common, rotterdam_gazole_constraining=True)
+        self.assertEqual(low.reason, 'double_plafond_rotterdam_verrouille')
+        high = self.ev(**common, rotterdam_stale_price_admissible=True)
         self.assertTrue(high.eligible)
         self.assertEqual(high.reason, 'double_plafond_bdr_vivacite_et_rotterdam')
 
@@ -147,7 +147,7 @@ class T(unittest.TestCase):
             gazole_cap=2.25,
             sp95_price=1.99,
             sp95_cap=1.99,
-            rotterdam_gazole_constraining=True,
+            rotterdam_stale_price_admissible=True,
         ))
         self.assertFalse(d.eligible)
 
@@ -176,10 +176,11 @@ class RotterdamCalibrationT(unittest.TestCase):
         self.addCleanup(lambda: Path(tmp.name).unlink(missing_ok=True))
         return tmp.name
 
-    def daily_file(self, value):
+    def daily_file(self, rows):
         tmp = tempfile.NamedTemporaryFile('w', encoding='utf-8', newline='', delete=False, suffix='.csv')
         tmp.write('date,rotterdam_eur_l,rotterdam_observed,rotterdam_carried\n')
-        tmp.write(f'2026-08-19,{value},True,False\n')
+        for d, value in rows:
+            tmp.write(f'{d.isoformat()},{value},True,False\n')
         tmp.close()
         self.addCleanup(lambda: Path(tmp.name).unlink(missing_ok=True))
         return tmp.name
@@ -220,10 +221,26 @@ class RotterdamCalibrationT(unittest.TestCase):
         observed = self.observed_file()
         meta = self.meta_file()
         self.assertTrue(rc.constraining_on(
-            D, 'corsica', observed_file=observed, daily_file=self.daily_file(0.769), shared_meta_file=meta
+            D, 'corsica', observed_file=observed,
+            daily_file=self.daily_file([(D, 0.769)]), shared_meta_file=meta
         ))
         self.assertFalse(rc.constraining_on(
-            D, 'corsica', observed_file=observed, daily_file=self.daily_file(0.760), shared_meta_file=meta
+            D, 'corsica', observed_file=observed,
+            daily_file=self.daily_file([(D, 0.760)]), shared_meta_file=meta
+        ))
+
+    def test_r2_breach_stays_locked_even_if_rotterdam_recovers(self):
+        observed = self.observed_file()
+        meta = self.meta_file()
+        start = date(2026, 8, 17)
+        rows = [
+            (start, 0.780),
+            (start + timedelta(days=1), 0.760),
+            (start + timedelta(days=2), 0.790),
+        ]
+        daily = self.daily_file(rows)
+        self.assertFalse(rc.admissible_since(
+            start, D, 'corsica', observed_file=observed, daily_file=daily, shared_meta_file=meta
         ))
 
     def test_missing_c1_corse_metadata_fails_closed(self):
