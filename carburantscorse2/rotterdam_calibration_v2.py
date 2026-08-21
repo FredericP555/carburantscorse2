@@ -5,6 +5,9 @@ C2 never queries UFIP in the prepared architecture. It downloads the Rotterdam
 assets already published by C1. The Corsica calibration is consumed directly
 from C1 shared metadata; only the BDR-specific candidate k is derived locally
 from the shared observed CSV.
+
+R2 is an admissibility threshold for stale station prices in the double-cap
+case. It never defines whether the TotalEnergies shield itself is effective.
 """
 from __future__ import annotations
 
@@ -175,3 +178,27 @@ def threshold_for(
 ) -> float:
     """Return R2 using C1 metadata for Corse and the shared CSV for BDR."""
     return calibrate_2026(territory, observed_file, shared_meta_file).r2
+
+
+def constraining_on(
+    day: date,
+    territory: str,
+    *,
+    observed_file: str | Path = DEFAULT_OBSERVED_FILE,
+    daily_file: str | Path = DEFAULT_DAILY_FILE,
+    shared_meta_file: str | Path = DEFAULT_SHARED_META_FILE,
+) -> bool:
+    """Return whether Rotterdam is on the admissible side of territory R2.
+
+    Agreed runtime rule: Rotterdam >= R2 means the stale double-cap price may
+    remain admissible subject to the other guards; Rotterdam < R2 excludes it.
+    Missing data fails closed by raising. This does not alter shield-effective
+    status, which is determined independently by C1's shield detector.
+    """
+    if territory not in {"corsica", "bdr"}:
+        raise ValueError("territory must be 'corsica' or 'bdr'")
+    value = read_daily_value(day, daily_file)
+    if value is None:
+        raise ValueError(f"Missing Rotterdam daily value for {day.isoformat()}")
+    r2 = threshold_for(territory, observed_file, shared_meta_file)
+    return float(value) >= float(r2)
