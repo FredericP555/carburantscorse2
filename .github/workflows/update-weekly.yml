@@ -76,6 +76,10 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         run: python scripts/migrate_index_data_source.py index.html --check
 
+      - name: Fetch UFIP Rotterdam Gazole for prepared calibration
+        if: steps.gate.outputs.run == 'true'
+        run: python scripts/fetch_ufip.py --output-dir outputs/ufip
+
       - name: Build append-only candidate and resolve only new BDR IDs
         if: steps.gate.outputs.run == 'true'
         env:
@@ -104,6 +108,8 @@ jobs:
           path: |
             outputs/candidate-data.json
             outputs/candidate-summary.json
+            outputs/ufip/rotterdam_gazole_observed.csv
+            outputs/ufip/rotterdam_gazole_daily.csv
             config/bdr_station_brands.json
           retention-days: 30
 
