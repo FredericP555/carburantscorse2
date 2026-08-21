@@ -4,6 +4,9 @@
 C2 does not redetect the shield and does not derive phases from Rotterdam. It
 consumes the phase list produced upstream by C1 from the independent shield rule
 and TotalEnergies cap schedule. Invalid or legacy manifests fail explicitly.
+
+For R2, the relevant anchor is the start of the overlapping Gazole+SP95
+effective period, not an arbitrary historical fuel phase.
 """
 from __future__ import annotations
 
@@ -20,6 +23,14 @@ class ShieldPhase:
     ended_on: date
     cap: float
     phase_id: str
+
+
+@dataclass(frozen=True)
+class DoubleCapPeriod:
+    started_on: date
+    ended_on: date
+    gazole_cap: float
+    sp95_cap: float
 
 
 def validated_phases(bouclier_metadata: Mapping, fuel: str) -> tuple[ShieldPhase, ...]:
@@ -67,3 +78,16 @@ def phase_for_day(bouclier_metadata: Mapping, fuel: str, day: date) -> ShieldPha
         if phase.started_on <= day <= phase.ended_on:
             return phase
     return None
+
+
+def double_cap_period_for_day(bouclier_metadata: Mapping, day: date) -> DoubleCapPeriod | None:
+    """Return the overlapping Gazole+SP95 effective period containing ``day``."""
+    gazole = phase_for_day(bouclier_metadata, "Gazole", day)
+    sp95 = phase_for_day(bouclier_metadata, "SP95", day)
+    if gazole is None or sp95 is None:
+        return None
+    start = max(gazole.started_on, sp95.started_on)
+    end = min(gazole.ended_on, sp95.ended_on)
+    if not (start <= day <= end):
+        return None
+    return DoubleCapPeriod(start, end, gazole.cap, sp95.cap)
