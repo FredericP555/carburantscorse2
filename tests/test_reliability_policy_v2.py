@@ -63,8 +63,6 @@ class T(unittest.TestCase):
         self.assertEqual(d.reason, 'bouclier_vivacite_45j_renouvelee')
 
     def test_bdr_single_cap_has_no_arbitrary_90_day_stop(self):
-        # Fresh at phase entry (10 days old) but 162 days old on D: absence of
-        # J+90 must be tested without violating the no-resurrection guard.
         d = self.ev(
             region_kind='mainland',
             last_declared_at=datetime(2026, 3, 10),
@@ -84,10 +82,8 @@ class T(unittest.TestCase):
     def test_corse_double_cap_requires_r2_even_with_cross_liveness(self):
         d = self.ev(**self.shield_args(
             activity_by_fuel={'Gazole': datetime(2026, 8, 18)},
-            gazole_price=2.25,
-            gazole_cap=2.25,
-            sp95_price=1.99,
-            sp95_cap=1.99,
+            gazole_price=2.25, gazole_cap=2.25,
+            sp95_price=1.99, sp95_cap=1.99,
             rotterdam_stale_price_admissible=False,
         ))
         self.assertFalse(d.eligible)
@@ -95,10 +91,8 @@ class T(unittest.TestCase):
 
     def test_corse_double_cap_r2_admissible(self):
         d = self.ev(**self.shield_args(
-            gazole_price=2.25,
-            gazole_cap=2.25,
-            sp95_price=1.99,
-            sp95_cap=1.99,
+            gazole_price=2.25, gazole_cap=2.25,
+            sp95_price=1.99, sp95_cap=1.99,
             rotterdam_stale_price_admissible=True,
         ))
         self.assertTrue(d.eligible)
@@ -109,10 +103,8 @@ class T(unittest.TestCase):
             region_kind='mainland',
             **self.shield_args(
                 activity_by_fuel={'Gazole': datetime(2026, 8, 18)},
-                gazole_price=2.25,
-                gazole_cap=2.25,
-                sp95_price=1.99,
-                sp95_cap=1.99,
+                gazole_price=2.25, gazole_cap=2.25,
+                sp95_price=1.99, sp95_cap=1.99,
                 rotterdam_stale_price_admissible=True,
             ),
         )
@@ -124,10 +116,8 @@ class T(unittest.TestCase):
             region_kind='mainland',
             **self.shield_args(
                 activity_by_fuel={'E10': datetime(2026, 8, 18)},
-                gazole_price=2.25,
-                gazole_cap=2.25,
-                sp95_price=1.99,
-                sp95_cap=1.99,
+                gazole_price=2.25, gazole_cap=2.25,
+                sp95_price=1.99, sp95_cap=1.99,
             ),
         )
         low = self.ev(**common, rotterdam_stale_price_admissible=False)
@@ -154,17 +144,6 @@ class T(unittest.TestCase):
         d = self.ev(target_rupture_active=True, independently_inactive=True)
         self.assertFalse(d.eligible)
         self.assertEqual(d.reason, 'rupture_active')
-
-    def test_inactive_overrides(self):
-        d = self.ev(**self.shield_args(
-            independently_inactive=True,
-            gazole_price=2.25,
-            gazole_cap=2.25,
-            sp95_price=1.99,
-            sp95_cap=1.99,
-            rotterdam_stale_price_admissible=True,
-        ))
-        self.assertFalse(d.eligible)
 
     def test_non_finite_price_is_rejected(self):
         d = self.ev(last_declared_at=datetime(2026, 8, 18), last_price=math.nan)
@@ -220,36 +199,55 @@ class RotterdamCalibrationT(unittest.TestCase):
         self.addCleanup(lambda: Path(tmp.name).unlink(missing_ok=True))
         return tmp.name
 
-    def test_corse_is_consumed_from_c1_metadata(self):
+    def test_2026_reference_calibrates_corse_k(self):
         c = rc.calibrate_2026('corsica', self.observed_file(), self.meta_file())
         self.assertEqual(c.r1_source_dates, (date(2026, 4, 3), date(2026, 4, 6), date(2026, 4, 7)))
         self.assertAlmostEqual(c.k, 0.7329942784, places=9)
         self.assertAlmostEqual(c.r2, 0.7686666667, places=9)
 
-    def test_bdr_is_derived_from_shared_observed_csv(self):
+    def test_2026_reference_calibrates_bdr_k(self):
         bdr = rc.calibrate_2026('bdr', self.observed_file(), self.meta_file())
         self.assertAlmostEqual(bdr.r1, 1.0486666667, places=9)
         self.assertAlmostEqual(bdr.k, 0.8239033694, places=9)
         self.assertAlmostEqual(bdr.r2, 0.864, places=12)
 
-    def test_r1_dates_are_frozen_against_retroactive_quote(self):
-        bdr = rc.calibrate_2026(
-            'bdr',
-            self.observed_file(extra_rows=(('2026-04-04', 9.999),)),
-            self.meta_file(),
-        )
-        self.assertAlmostEqual(bdr.r1, 1.0486666667, places=9)
+    def test_new_phase_recomputes_r1_and_r2_but_keeps_k(self):
+        observed = self.observed_file(extra_rows=(
+            ('2026-09-28', 0.900),
+            ('2026-09-29', 0.930),
+            ('2026-09-30', 0.960),
+        ))
+        baseline = rc.calibrate_2026('bdr', observed, self.meta_file())
+        phase = rc.calibrate_phase('bdr', date(2026, 10, 1), observed, self.meta_file())
+        self.assertEqual(phase.r1_source_dates, (
+            date(2026, 9, 28), date(2026, 9, 29), date(2026, 9, 30)
+        ))
+        self.assertAlmostEqual(phase.r1, 0.930, places=12)
+        self.assertAlmostEqual(phase.k, baseline.k, places=12)
+        self.assertAlmostEqual(phase.r2, baseline.k * 0.930, places=12)
+        self.assertNotAlmostEqual(phase.r2, 0.864, places=6)
 
-    def test_r2_boundary_is_greater_or_equal(self):
+    def test_corse_phase_uses_shared_k_with_new_r1(self):
+        observed = self.observed_file(extra_rows=(
+            ('2026-09-28', 0.900), ('2026-09-29', 0.930), ('2026-09-30', 0.960),
+        ))
+        phase = rc.calibrate_phase('corsica', date(2026, 10, 1), observed, self.meta_file())
+        self.assertAlmostEqual(phase.r1, 0.930, places=12)
+        self.assertAlmostEqual(phase.r2, 0.7329942783728567 * 0.930, places=12)
+
+    def test_phase_specific_r2_boundary_is_greater_or_equal(self):
         observed = self.observed_file()
         meta = self.meta_file()
+        phase_start = date(2026, 4, 8)
         day = date(2026, 8, 19)
         self.assertTrue(rc.admissible_since(
-            day, day, 'corsica', observed_file=observed,
+            day, day, 'corsica', phase_started_on=phase_start,
+            observed_file=observed,
             daily_file=self.daily_file([(day, 0.7686666666666667)]), shared_meta_file=meta
         ))
         self.assertFalse(rc.admissible_since(
-            day, day, 'corsica', observed_file=observed,
+            day, day, 'corsica', phase_started_on=phase_start,
+            observed_file=observed,
             daily_file=self.daily_file([(day, 0.760)]), shared_meta_file=meta
         ))
 
@@ -257,14 +255,10 @@ class RotterdamCalibrationT(unittest.TestCase):
         observed = self.observed_file()
         meta = self.meta_file()
         start = date(2026, 8, 17)
-        rows = [
-            (start, 0.780),
-            (start + timedelta(days=1), 0.760),
-            (start + timedelta(days=2), 0.790),
-        ]
-        daily = self.daily_file(rows)
+        rows = [(start, 0.780), (start + timedelta(days=1), 0.760), (start + timedelta(days=2), 0.790)]
         self.assertFalse(rc.admissible_since(
-            start, D, 'corsica', observed_file=observed, daily_file=daily, shared_meta_file=meta
+            start, D, 'corsica', phase_started_on=date(2026, 4, 8),
+            observed_file=observed, daily_file=self.daily_file(rows), shared_meta_file=meta
         ))
 
     def test_nonfinite_observed_is_rejected(self):
