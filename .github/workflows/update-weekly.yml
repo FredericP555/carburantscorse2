@@ -73,15 +73,14 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         run: python scripts/migrate_index_data_source.py index.html --check
 
-      - name: Fetch shared Rotterdam Gazole assets already produced by C1
+      # This single step chooses one validated C1 release and writes its tag locally.
+      # Snapshot, Rotterdam files and Corsica registry used later in the run are all pinned
+      # to that same immutable tag. C2 never contacts UFIP in the weekly path.
+      - name: Fetch and pin validated shared C1 bundle
         if: steps.gate.outputs.run == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: python scripts/fetch_shared_ufip_from_c1.py --output-dir outputs/ufip
-
-      - name: Fetch C1 Corsica station-brand registry for prepared identity guard
-        if: steps.gate.outputs.run == 'true'
-        run: python scripts/fetch_c1_corse_station_brands.py --output outputs/c1/corse_station_brands.json
 
       - name: Build append-only candidate and resolve only new BDR IDs
         if: steps.gate.outputs.run == 'true'
@@ -89,7 +88,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: python -m scripts.build_append_candidate_incremental --official-source shared
 
-      - name: Verify fresh c1 release and official stock
+      - name: Verify fresh C1 release and official stock
         if: steps.gate.outputs.run == 'true'
         run: >-
           python -m scripts.check_shared_freshness
@@ -115,6 +114,7 @@ jobs:
             outputs/ufip/rotterdam_gazole_daily.csv
             outputs/ufip/c1_shared_meta.json
             outputs/c1/corse_station_brands.json
+            outputs/c1/shared_release_tag.txt
             config/bdr_station_brands.json
           retention-days: 30
 
