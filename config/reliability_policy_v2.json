@@ -47,8 +47,8 @@
         }
       }
     },
-    "corsica_runtime_rule": "when Gazole and SP95 are both at cap, Rotterdam >= R2 keeps stale prices potentially admissible and Rotterdam < R2 excludes them",
-    "bdr_runtime_rule": "when Gazole and SP95 are both at cap, fresh activity on a non-principal fuel AND Rotterdam >= R2 are both required; Rotterdam < R2 excludes the stale principal-fuel prices",
+    "corsica_runtime_rule": "after target 45-day expiry, any Rotterdam day below R2 Corse locks that stale target price out until target redeclaration",
+    "bdr_runtime_rule": "double cap requires fresh non-principal-fuel liveness and no R2 BdR breach since target 45-day expiry; any breach locks the stale target price out until target redeclaration",
     "shield_status_independent_from_r2": true,
     "fail_closed_if_missing": true
   },
