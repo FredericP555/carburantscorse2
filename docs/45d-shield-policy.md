@@ -1,60 +1,94 @@
 # Politique préparée — seuil 45 jours et bouclier
 
-> **PRÉPARÉE, NON ACTIVÉE.** `publication.py` continue d'utiliser la méthode actuelle tant qu'une bascule explicite n'est pas décidée après la mise à jour du lundi.
+> **PRÉPARÉE, NON ACTIVÉE.** `publication.py` continue d'utiliser la méthode actuelle. Rien de cette politique n'est actif dans `main` avant décision explicite après la mise à jour du lundi.
 
-## Règle cible
-- 45 jours par station × carburant, Corse et BdR.
-- J0 à J+44 inclus ; J+45 exclu sans nouvelle déclaration.
+## 1. Règle normale
+
+- 45 jours par station × carburant.
+- J0 à J+44 inclus ; J+45 sort de la règle normale sans nouvelle déclaration.
 - Une redéclaration au même prix remet le compteur à zéro.
+- Prix non fini, date future, rupture/fermeture ou preuve indépendante d'inactivité : exclusion prioritaire.
 
-## Bouclier TotalEnergies
+## 2. Bouclier TotalEnergies
+
 - Exception uniquement après détection du bouclier avec des données normalement fraîches.
 - Prix ancien obligatoirement au plafond et admissible à l'entrée de la phase de plafond.
+- Les exceptions de vieillissement concernent uniquement **Gazole et SP95** ; E10 ne peut pas en bénéficier.
 - Corse : vivacité par l'autre carburant principal.
-- Continent/BdR : vivacité par toute autre déclaration de carburant disponible dans le snapshot partagé.
-- Double plafond Gazole + SP95 : maintien possible au-delà de 45 jours si Rotterdam Gazole confirme que le plafond Gazole reste économiquement contraignant.
-- Rotterdam ne constitue pas un indice SP95 ; il justifie seulement l'hypothèse de silence explicable lorsque les deux carburants sont plafonnés.
+- BdR : vivacité par toute autre déclaration de carburant admise par la règle C2.
+- Double plafond Gazole + SP95 : Rotterdam Gazole peut intervenir dans le cas particulier prévu ; Rotterdam n'est pas un indice SP95.
 - Rupture ou preuve indépendante d'inactivité : exclusion prioritaire.
 
-## Identité des stations pour les calculs par enseigne — préparée, inactive
-Les calculs sensibles à l'enseigne ne doivent jamais déduire « non-Total » de la seule absence d'un ID dans une liste Total.
+**Aucun seuil absolu J+90 n'est ajouté à C2 par cette préparation.** Le garde-fou J+90 décidé pour le continent dans C1 est une règle distincte et ne doit pas être transposé automatiquement aux BdR.
+
+## 3. Identité des stations pour les calculs par enseigne
 
 Trois états sont utilisés :
+
 - `TOTAL` : enseigne TotalEnergies confirmée ;
 - `NON_TOTAL_CONFIRMED` : autre enseigne confirmée ;
 - `UNKNOWN` : ID absent du registre, enseigne manquante ou résolution incomplète.
 
-Un ID `UNKNOWN` est exclu des calculs par enseigne jusqu'à résolution. Il ne peut donc polluer ni le groupe Total ni le groupe hors Total.
+Un ID `UNKNOWN` est exclu des calculs sensibles à l'enseigne jusqu'à résolution. L'absence d'un ID dans une liste Total n'est jamais une preuve de non-Total.
 
 ### Corse
-C2 ne maintient pas de second référentiel Corse. `scripts/fetch_c1_corse_station_brands.py` lit en lecture seule le registre de référence de C1 (`config/corse_station_brands.json`) et écrit seulement une copie de travail dans `outputs/c1/corse_station_brands.json`. Le module `carburantscorse2/corse_station_identity_v2.py` utilise cette copie pour classer les IDs. Le fichier de sortie est un artefact d'audit et n'est pas ajouté au commit de publication.
+
+C2 ne maintient pas de second référentiel Corse. Le registre canonique C1 est désormais publié dans **la même release validée** que le snapshot et Rotterdam. C2 le télécharge depuis cette release, vérifie son SHA-256 et l'écrit seulement dans `outputs/c1/corse_station_brands.json` pour le calcul/audit local.
 
 ### Bouches-du-Rhône
-Le résolveur incrémental existant conserve déjà les nouveaux IDs non résolus en `inconnu`. Ils restent exclus des comparaisons réseau/par enseigne jusqu'à résolution et ne sont jamais classés silencieusement comme réseau traditionnel.
 
-## Rotterdam — source unique C1 → C2, préparée et inactive
-La chaîne préparée est désormais **UFIP → C1 → C2**.
+Le résolveur incrémental conserve les nouveaux IDs non résolus en `inconnu`. Ils restent exclus des comparaisons réseau/par enseigne jusqu'à résolution et ne sont jamais transformés silencieusement en réseau traditionnel.
 
-- C1 effectue l'unique téléchargement UFIP.
-- C1 publie `rotterdam_gazole_observed.csv` et `rotterdam_gazole_daily.csv` dans la même release que le snapshot officiel partagé.
-- Les SHA-256 et le calibrage Corse candidat sont inscrits dans `official_13_20.meta.json`.
-- C2 exécute `scripts/fetch_shared_ufip_from_c1.py` : il télécharge ces assets depuis la release C1 et **ne contacte jamais UFIP** dans l'automatisation préparée.
-- `outputs/ufip/c1_shared_meta.json` conserve la copie des métadonnées C1 utilisée pour l'audit.
+## 4. Source unique C1 → C2
+
+La chaîne préparée est **UFIP → C1 → C2**.
+
+C1 publie dans une seule release validée :
+
+- `official_13_20.csv.gz` ;
+- `official_13_20.meta.json` ;
+- `rotterdam_gazole_observed.csv` ;
+- `rotterdam_gazole_daily.csv` ;
+- `corse_station_brands.json`.
+
+C2 choisit **une seule release C1 au début du cycle** et écrit son tag dans `outputs/c1/shared_release_tag.txt`. Toutes les lectures C1 du cycle sont ensuite épinglées sur ce tag. Les SHA-256 du snapshot, des deux fichiers Rotterdam et du registre Corse sont vérifiés avant utilisation.
+
+Le chemin hebdomadaire C2 **ne contacte plus UFIP** : le générateur de marges lit les CSV locaux déjà fournis par C1. Le téléchargement direct UFIP peut rester un outil diagnostique séparé, mais il n'est plus utilisé par le workflow préparé.
+
+## 5. Calibration Rotterdam
 
 ### Corse
-Le calibrage Corse n'est plus recalculé par C2. `carburantscorse2/rotterdam_calibration_v2.py` lit directement `rotterdam.corsica_calibration` dans les métadonnées C1.
+
+Le calibrage Corse n'est pas recalculé par C2. C2 lit directement `rotterdam.corsica_calibration` dans les métadonnées de la release C1 épinglée.
 
 Pour l'épisode entrant le 8 avril 2026 : R1 provient des observations du 3 avril (1,037), 6 avril (1,048) et 7 avril (1,061), soit `R1 ≈ 1,048667 EUR/L`. Les sorties de référence sont les 29 mai, 1er juin et 2 juin ; `k_corse ≈ 0,733` et `R2 = k × R1`.
 
 ### Bouches-du-Rhône
-C2 conserve uniquement le calcul qui lui est propre : `TOTAL_CLASSIQUE`, avec sorties de référence 20, 21 et 22 mai 2026 et `k_bdr ≈ 0,824`. Ce calcul utilise le **même CSV observé téléchargé une seule fois par C1**, pas une seconde récupération UFIP.
 
-En cas de release C1 sans assets Rotterdam, de SHA-256 incohérent, de métadonnées Corse absentes ou de dates BdR manquantes, la préparation échoue fermée.
+C2 conserve son calcul propre `TOTAL_CLASSIQUE`, avec sorties 20, 21 et 22 mai 2026 et `k_bdr ≈ 0,824`, à partir du **même CSV observé produit une seule fois par C1**.
+
+### Franchissement de R2
+
+**La règle exacte de franchissement de R2 n'est pas définie ici.** Le moteur préparé reçoit seulement un booléen `rotterdam_gazole_constraining`. Aucun mécanisme supplémentaire de seuil, confirmation ou verrouillage n'est inventé avant décision méthodologique explicite.
+
+## 6. Échec fermé
+
+La préparation bloque notamment si :
+
+- release C1 ou asset requis absent ;
+- SHA-256 incohérent ;
+- tag épinglé et tag du snapshot différents ;
+- registre Corse invalide ;
+- série Rotterdam quotidienne incomplète sur la fenêtre nécessaire ;
+- métadonnées Corse de calibration absentes ;
+- dates BdR nécessaires au calibrage absentes.
 
 ## Procédure après lundi
+
 1. Contrôler la publication habituelle C1 puis C2.
-2. Figer le snapshot publié comme référence.
-3. Brancher le moteur préparé uniquement dans un calcul candidat.
-4. Comparer actuel / 45-45 prospectif / 45-45 rétroactif.
-5. Mesurer jours modifiés, stations gagnées/perdues, moyennes, écarts Corse-BdR et épisodes de bouclier.
-6. Décider explicitement de la migration ; pas de réécriture silencieuse de l'historique.
+2. Figer le résultat comme référence.
+3. Tester le moteur préparé uniquement en calcul candidat.
+4. Comparer actuel / prospectif / rétroactif.
+5. Mesurer les écarts et les stations affectées.
+6. Définir séparément la règle exacte de franchissement R2, puis seulement la coder et la tester.
+7. Décider explicitement de toute migration ; aucune réécriture silencieuse de l'historique.
