@@ -31,30 +31,36 @@
     },
     "calibration": {
       "status": "candidate_2026_inactive",
-      "entry_date": "2026-04-08",
-      "r1_observation_count": 3,
+      "baseline_entry_date": "2026-04-08",
+      "baseline_r1_observation_dates": ["2026-04-03", "2026-04-06", "2026-04-07"],
+      "r1_observation_count_per_phase": 3,
+      "k_policy": "territorial_k_calibrated_from_2026_reference_episode_then_constant",
+      "phase_r1_policy": "mean_last_3_actual_observed_quotes_before_each_effective_shield_cap_phase",
+      "phase_r2_formula": "R2 = territorial_k * phase_R1",
       "territories": {
         "corsica": {
           "source": "c1_shared_metadata",
           "k_candidate": 0.733,
-          "exit_observation_dates": ["2026-05-29", "2026-06-01", "2026-06-02"]
+          "baseline_exit_observation_dates": ["2026-05-29", "2026-06-01", "2026-06-02"]
         },
         "bdr": {
           "source": "c1_shared_observed_csv",
           "scope": "TOTAL_CLASSIQUE_only",
           "k_candidate": 0.824,
-          "exit_observation_dates": ["2026-05-20", "2026-05-21", "2026-05-22"]
+          "baseline_exit_observation_dates": ["2026-05-20", "2026-05-21", "2026-05-22"]
         }
       }
     },
-    "corsica_runtime_rule": "after target 45-day expiry, any Rotterdam day below R2 Corse locks that stale target price out until target redeclaration",
-    "bdr_runtime_rule": "double cap requires fresh non-principal-fuel liveness and no R2 BdR breach since target 45-day expiry; any breach locks the stale target price out until target redeclaration",
+    "corsica_runtime_rule": "after target 45-day expiry, any Rotterdam day below the R2 of the current effective-shield cap phase locks that stale target price out until target redeclaration",
+    "bdr_runtime_rule": "double cap requires fresh non-principal-fuel liveness and no breach of the R2 calculated for the current effective-shield cap phase since target 45-day expiry; any breach locks the stale target price out until target redeclaration",
     "shield_status_independent_from_r2": true,
     "fail_closed_if_missing": true
   },
   "cap_phase": {
     "source": "c1_shared_bouclier_metadata",
     "change_of_cap_starts_new_phase": true,
+    "shield_end_then_later_restart_starts_new_phase_even_if_cap_is_unchanged": true,
+    "new_phase_recomputes_rotterdam_r1_r2": true,
     "eligibility_at_phase_entry_is_computed_from_declaration_timestamp": true
   },
   "guards": {
