@@ -3,8 +3,19 @@
   "normal_age_days": 45,
   "cap_tolerance_below_eur": 0.002,
   "cap_tolerance_above_eur": 0.001,
-  "corsica_liveness": "other_principal_fuel",
-  "mainland_liveness": "any_other_declared_fuel",
+  "single_cap_liveness": {
+    "corsica": {
+      "mode": "other_principal_fuel",
+      "liveness_max_age_days": 45,
+      "effect": "starts_a_new_rolling_45_day_support_window"
+    },
+    "bdr": {
+      "mode": "any_other_declared_fuel",
+      "liveness_max_age_days": 45,
+      "effect": "starts_a_new_rolling_45_day_support_window",
+      "absolute_target_max_age_days": null
+    }
+  },
   "double_cap": {
     "enabled": true,
     "external_index": "rotterdam_gazole",
@@ -36,12 +47,21 @@
         }
       }
     },
+    "corsica_runtime_rule": "when Gazole and SP95 are both at cap, Rotterdam >= R2 keeps stale prices potentially admissible and Rotterdam < R2 excludes them",
+    "bdr_runtime_rule": "when Gazole and SP95 are both at cap, fresh activity on a non-principal fuel AND Rotterdam >= R2 are both required; Rotterdam < R2 excludes the stale principal-fuel prices",
+    "shield_status_independent_from_r2": true,
     "fail_closed_if_missing": true
+  },
+  "cap_phase": {
+    "source": "c1_shared_bouclier_metadata",
+    "change_of_cap_starts_new_phase": true,
+    "eligibility_at_phase_entry_is_computed_from_declaration_timestamp": true
   },
   "guards": {
     "independent_inactivity_overrides": true,
     "rupture_overrides": true,
-    "no_resurrection_at_cap_entry": true,
+    "invalid_or_non_finite_price_overrides": true,
+    "no_resurrection_if_stale_at_cap_phase_entry": true,
     "shield_detection_uses_normal_fresh_data_only": true
   }
 }
