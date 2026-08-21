@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""Build an append-only carburantscorse2 candidate from the live public sources.
+"""Build an append-only carburantscorse2 candidate from the shared C1 inputs.
 
 Historical values already published are immutable. If ``data.json`` exists it is the
 baseline; otherwise the first migration bootstraps from the DATA/MARGES_GZ constants in
 ``index.html``. Current annual government files may contain retrospective corrections,
 but those corrections are never allowed to rewrite a date already present in the baseline.
+
+In the normal shared path, C2 never contacts UFIP. It consumes the Rotterdam files already
+downloaded once by C1 and pins all C1 inputs to the release tag selected at workflow start.
 """
 from __future__ import annotations
 
@@ -20,7 +23,6 @@ import pandas as pd
 
 from a4c_common.official_prices import download_annual_zip, iter_observations_from_zip
 from a4c_common.shared_release import load_shared_observations
-from a4c_common.ufip import expand_daily, fetch_rotterdam_gazole
 from carburantscorse2.publication import (
     build_gap_series,
     build_publication_state,
@@ -32,11 +34,12 @@ from carburantscorse2.publication_margin import build_margin_series
 ROOT = Path(__file__).resolve().parents[1]
 INITIAL_LEGACY_DAILY_CUTOFF = "2026-06-06"
 PARIS_TZ = ZoneInfo("Europe/Paris")
+SHARED_TAG_FILE = ROOT / "outputs" / "c1" / "shared_release_tag.txt"
+SHARED_ROTTERDAM_OBSERVED = ROOT / "outputs" / "ufip" / "rotterdam_gazole_observed.csv"
+SHARED_ROTTERDAM_DAILY = ROOT / "outputs" / "ufip" / "rotterdam_gazole_daily.csv"
 
 
 def parse_js_object(name: str, html: str) -> dict:
-    # ``index.html`` used const historically and now uses let so it can be replaced by
-    # data.json at runtime. Accept both to keep the bootstrap path recoverable.
     match = re.search(rf"(?:const|let)\s+{re.escape(name)}=(.*?);\n", html, flags=re.S)
     if not match:
         raise RuntimeError(f"Cannot find {name} in index.html")
@@ -100,13 +103,7 @@ def official_year_window(
     *,
     run_day: pd.Timestamp | None = None,
 ) -> tuple[int, int]:
-    """Return the two annual slices needed for publication around a year boundary.
-
-    Normally this is requested-end N-1/N. On 1 January the scheduled run publishes through
-    31 December of the previous year while c1 already exposes previous/current run years;
-    use those two years so the shared snapshot remains compatible without downloading a
-    third national archive.
-    """
+    """Return the two annual slices needed for publication around a year boundary."""
     day = pd.Timestamp(requested_end).normalize()
     if run_day is not None:
         run = pd.Timestamp(run_day).normalize()
@@ -132,11 +129,32 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_official_observations(years: tuple[int, int], mode: str) -> tuple[list[dict], dict]:
-    """Load official observations without changing any c2 reliability/publication rule."""
+def pinned_shared_tag(*, required: bool) -> str | None:
+    if not SHARED_TAG_FILE.exists():
+        if required:
+            raise RuntimeError(
+                f"Pinned C1 release tag missing: {SHARED_TAG_FILE}. "
+                "Fetch the validated C1 shared bundle before building the C2 candidate."
+            )
+        return None
+    tag = SHARED_TAG_FILE.read_text(encoding="utf-8").strip()
+    if not tag:
+        if required:
+            raise RuntimeError("Pinned C1 release tag file is empty")
+        return None
+    return tag
+
+
+def load_official_observations(
+    years: tuple[int, int],
+    mode: str,
+    *,
+    release_tag: str | None = None,
+) -> tuple[list[dict], dict]:
+    """Load official observations without changing any C2 reliability/publication rule."""
     if mode in ("auto", "shared"):
         try:
-            rows, source = load_shared_observations(years)
+            rows, source = load_shared_observations(years, release_tag=release_tag)
             print(
                 "Using shared official snapshot "
                 f"{source.get('release_tag')} ({source.get('shared_rows')} source rows; "
@@ -165,6 +183,40 @@ def load_official_observations(years: tuple[int, int], mode: str) -> tuple[list[
     }
 
 
+def load_shared_rotterdam(start, end) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Read the already-downloaded C1 Rotterdam files and fail closed on gaps."""
+    if not SHARED_ROTTERDAM_OBSERVED.exists() or not SHARED_ROTTERDAM_DAILY.exists():
+        raise RuntimeError(
+            "Shared C1 Rotterdam files are missing. C2 must not fetch UFIP directly; "
+            "run the C1 shared-bundle fetch step first."
+        )
+
+    daily = pd.read_csv(SHARED_ROTTERDAM_DAILY)
+    observed = pd.read_csv(SHARED_ROTTERDAM_OBSERVED)
+    for name, frame in (("daily", daily), ("observed", observed)):
+        if "date" not in frame.columns or "rotterdam_eur_l" not in frame.columns:
+            raise RuntimeError(f"Shared Rotterdam {name} CSV has an unexpected schema")
+        frame["date"] = pd.to_datetime(frame["date"]).dt.normalize()
+        frame["rotterdam_eur_l"] = pd.to_numeric(frame["rotterdam_eur_l"], errors="coerce")
+
+    start_ts = pd.Timestamp(start).normalize()
+    end_ts = pd.Timestamp(end).normalize()
+    window = daily[(daily["date"] >= start_ts) & (daily["date"] <= end_ts)].copy()
+    expected = pd.date_range(start_ts, end_ts, freq="D")
+    actual = pd.DatetimeIndex(window["date"].drop_duplicates().sort_values())
+    missing = expected.difference(actual)
+    if len(missing):
+        raise RuntimeError(f"Shared Rotterdam daily CSV misses {len(missing)} calendar day(s); first={missing[0].date()}")
+    if window["rotterdam_eur_l"].isna().any():
+        first = window.loc[window["rotterdam_eur_l"].isna(), "date"].min()
+        raise RuntimeError(f"Shared Rotterdam daily CSV has no usable value from {first.date()}")
+
+    observed_window = observed[observed["date"] <= end_ts].copy()
+    if observed_window.empty:
+        raise RuntimeError("Shared Rotterdam observed CSV contains no quotation through requested period")
+    return window, observed_window
+
+
 def main() -> None:
     args = parse_args()
     if args.end:
@@ -180,13 +232,22 @@ def main() -> None:
     initial_legacy_cutoff = baseline_meta.get("legacy_daily_cutoff", INITIAL_LEGACY_DAILY_CUTOFF)
 
     years = official_year_window(requested_end, run_day=run_day)
-    observations, official_source = load_official_observations(years, args.official_source)
+    release_tag = pinned_shared_tag(required=args.official_source == "shared")
+    observations, official_source = load_official_observations(
+        years,
+        args.official_source,
+        release_tag=release_tag,
+    )
+    if release_tag and official_source.get("kind") == "c1-github-release" and official_source.get("release_tag") != release_tag:
+        raise RuntimeError(
+            f"C1 release mismatch: pinned={release_tag} snapshot={official_source.get('release_tag')}"
+        )
+
     obs = pd.DataFrame(observations)
     if obs.empty:
         raise RuntimeError("No official observations were parsed")
     source_max = pd.to_datetime(obs["date"]).max().normalize()
 
-    # Never manufacture a publication day beyond the freshness of the official stock.
     target_end = min(requested_end, source_max)
     weekly_end = last_complete_sunday(target_end)
     if target_end < previous_daily_cutoff:
@@ -238,10 +299,9 @@ def main() -> None:
     last_margin_period = max(max_date(candidate_margins["all"]), max_date(candidate_margins["reseau"]))
     first_new_margin_week = last_margin_period + pd.Timedelta(7, unit="D")
     if first_new_margin_week <= weekly_end:
-        ufip_fetch_start = (first_new_margin_week - pd.Timedelta(14, unit="D")).date()
-        ufip_fetch_end = weekly_end.date()
-        observed_rotterdam = fetch_rotterdam_gazole(ufip_fetch_start, ufip_fetch_end)
-        rotterdam = expand_daily(observed_rotterdam, ufip_fetch_start, ufip_fetch_end)
+        rotterdam_start = (first_new_margin_week - pd.Timedelta(14, unit="D")).date()
+        rotterdam_end = weekly_end.date()
+        rotterdam, observed_rotterdam = load_shared_rotterdam(rotterdam_start, rotterdam_end)
         margin_state = state[
             (state["date"] >= first_new_margin_week)
             & (state["date"] <= weekly_end)
@@ -251,7 +311,7 @@ def main() -> None:
             combined, count = append_new(candidate_margins[group], generated, complete_through=weekly_end)
             candidate_margins[group] = combined
             additions[f"margins/{group}"] = count
-        ufip_last = None if observed_rotterdam.empty else str(pd.to_datetime(observed_rotterdam["date"]).max().date())
+        ufip_last = str(observed_rotterdam["date"].max().date())
     else:
         additions["margins/all"] = additions["margins/reseau"] = 0
         ufip_last = baseline_meta.get("ufip_last_observed_date")
