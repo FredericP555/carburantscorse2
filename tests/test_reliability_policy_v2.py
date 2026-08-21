@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from pathlib import Path
+import json
 import tempfile
 import unittest
 from carburantscorse2 import reliability_policy_v2 as p
@@ -26,32 +27,27 @@ class T(unittest.TestCase):
 
 class RotterdamCalibrationT(unittest.TestCase):
  def observed_file(self):
-  rows = [
-   ('2026-04-03',1.037),('2026-04-06',1.048),('2026-04-07',1.061),
-   ('2026-05-20',0.868),('2026-05-21',0.865),('2026-05-22',0.859),
-   ('2026-05-29',0.783),('2026-06-01',0.766),('2026-06-02',0.757),
-  ]
+  rows=[('2026-04-03',1.037),('2026-04-06',1.048),('2026-04-07',1.061),('2026-05-20',0.868),('2026-05-21',0.865),('2026-05-22',0.859)]
   tmp=tempfile.NamedTemporaryFile('w',encoding='utf-8',newline='',delete=False,suffix='.csv')
   tmp.write('date,rotterdam_eur_l\n')
   for d,v in rows: tmp.write(f'{d},{v}\n')
-  tmp.close()
-  self.addCleanup(lambda: Path(tmp.name).unlink(missing_ok=True))
-  return tmp.name
- def test_r1_uses_three_observed_before_entry(self):
-  c=rc.calibrate_2026('corsica',self.observed_file())
+  tmp.close(); self.addCleanup(lambda: Path(tmp.name).unlink(missing_ok=True)); return tmp.name
+ def meta_file(self):
+  payload={'rotterdam':{'corsica_calibration':{'territory':'corsica','entry_date':'2026-04-08','r1_observation_count':3,'r1':1.0486666666666666,'k':0.7329942783728567,'r2':0.7686666666666667,'r1_source_dates':['2026-04-03','2026-04-06','2026-04-07'],'exit_source_dates':['2026-05-29','2026-06-01','2026-06-02']}}}
+  tmp=tempfile.NamedTemporaryFile('w',encoding='utf-8',delete=False,suffix='.json')
+  json.dump(payload,tmp); tmp.close(); self.addCleanup(lambda: Path(tmp.name).unlink(missing_ok=True)); return tmp.name
+ def test_corse_is_consumed_from_c1_metadata(self):
+  c=rc.calibrate_2026('corsica',self.observed_file(),self.meta_file())
   self.assertEqual(c.r1_source_dates,(date(2026,4,3),date(2026,4,6),date(2026,4,7)))
-  self.assertAlmostEqual(c.r1,1.0486666667,places=9)
- def test_distinct_k_corse_bdr(self):
-  path=self.observed_file()
-  corse=rc.calibrate_2026('corsica',path)
-  bdr=rc.calibrate_2026('bdr',path)
-  self.assertAlmostEqual(corse.k,0.7329942784,places=9)
+  self.assertAlmostEqual(c.k,0.7329942784,places=9)
+  self.assertAlmostEqual(c.r2,0.7686666667,places=9)
+ def test_bdr_is_derived_from_shared_observed_csv(self):
+  bdr=rc.calibrate_2026('bdr',self.observed_file(),self.meta_file())
+  self.assertAlmostEqual(bdr.r1,1.0486666667,places=9)
   self.assertAlmostEqual(bdr.k,0.8239033694,places=9)
-  self.assertLess(corse.k,bdr.k)
- def test_missing_ufip_calibration_date_fails_closed(self):
-  tmp=tempfile.NamedTemporaryFile('w',encoding='utf-8',newline='',delete=False,suffix='.csv')
-  tmp.write('date,rotterdam_eur_l\n2026-04-03,1.037\n2026-04-06,1.048\n2026-04-07,1.061\n')
-  tmp.close(); self.addCleanup(lambda: Path(tmp.name).unlink(missing_ok=True))
-  with self.assertRaises(ValueError): rc.calibrate_2026('bdr',tmp.name)
+ def test_missing_c1_corse_metadata_fails_closed(self):
+  tmp=tempfile.NamedTemporaryFile('w',encoding='utf-8',delete=False,suffix='.json')
+  json.dump({},tmp); tmp.close(); self.addCleanup(lambda: Path(tmp.name).unlink(missing_ok=True))
+  with self.assertRaises(ValueError): rc.calibrate_2026('corsica',self.observed_file(),tmp.name)
 
 if __name__=='__main__': unittest.main()
