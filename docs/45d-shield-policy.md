@@ -32,29 +32,24 @@ C2 ne maintient pas de second référentiel Corse. `scripts/fetch_c1_corse_stati
 ### Bouches-du-Rhône
 Le résolveur incrémental existant conserve déjà les nouveaux IDs non résolus en `inconnu`. Ils restent exclus des comparaisons réseau/par enseigne jusqu'à résolution et ne sont jamais classés silencieusement comme réseau traditionnel.
 
-## Calibration Rotterdam C2 — préparée, inactive
-Le calibrage est **spécifique à C2**. Il ne doit pas être utilisé pour C1 pour isoler des Total continentales : C1 ne dispose pas du rattachement d'enseigne nécessaire pour ce test.
+## Rotterdam — source unique C1 → C2, préparée et inactive
+La chaîne préparée est désormais **UFIP → C1 → C2**.
 
-La source unique est le fichier produit par l'automatisation UFIP :
-- `scripts/fetch_ufip.py` télécharge la cotation Rotterdam Gazole ;
-- `outputs/ufip/rotterdam_gazole_observed.csv` contient uniquement les cotations réellement observées ;
-- `outputs/ufip/rotterdam_gazole_daily.csv` contient la série calendaire avec report des jours sans cotation.
+- C1 effectue l'unique téléchargement UFIP.
+- C1 publie `rotterdam_gazole_observed.csv` et `rotterdam_gazole_daily.csv` dans la même release que le snapshot officiel partagé.
+- Les SHA-256 et le calibrage Corse candidat sont inscrits dans `official_13_20.meta.json`.
+- C2 exécute `scripts/fetch_shared_ufip_from_c1.py` : il télécharge ces assets depuis la release C1 et **ne contacte jamais UFIP** dans l'automatisation préparée.
+- `outputs/ufip/c1_shared_meta.json` conserve la copie des métadonnées C1 utilisée pour l'audit.
 
-Le module `carburantscorse2/rotterdam_calibration_v2.py` **ne télécharge rien lui-même** : il lit ces fichiers.
+### Corse
+Le calibrage Corse n'est plus recalculé par C2. `carburantscorse2/rotterdam_calibration_v2.py` lit directement `rotterdam.corsica_calibration` dans les métadonnées C1.
 
-### R1
-À l'entrée effective dans la phase de plafond, `R1` est la moyenne des trois dernières cotations Rotterdam Gazole réellement observées avant la date d'entrée. Les valeurs reportées des week-ends/jours fériés ne comptent pas plusieurs fois.
+Pour l'épisode entrant le 8 avril 2026 : R1 provient des observations du 3 avril (1,037), 6 avril (1,048) et 7 avril (1,061), soit `R1 ≈ 1,048667 EUR/L`. Les sorties de référence sont les 29 mai, 1er juin et 2 juin ; `k_corse ≈ 0,733` et `R2 = k × R1`.
 
-Pour l'épisode entrant le 8 avril 2026 : 3 avril 1,037 ; 6 avril 1,048 ; 7 avril 1,061 EUR/L, soit `R1 ≈ 1,048667 EUR/L`.
+### Bouches-du-Rhône
+C2 conserve uniquement le calcul qui lui est propre : `TOTAL_CLASSIQUE`, avec sorties de référence 20, 21 et 22 mai 2026 et `k_bdr ≈ 0,824`. Ce calcul utilise le **même CSV observé téléchargé une seule fois par C1**, pas une seconde récupération UFIP.
 
-### R2 et k par territoire
-`R2 = k × R1`, avec un `k` distinct par territoire dans C2.
-
-Calibration candidate 2026, non activée :
-- Corse : observations de sortie 29 mai, 1er juin, 2 juin ; `k_corse ≈ 0,733`.
-- BdR : uniquement `TOTAL_CLASSIQUE`, observations 20, 21, 22 mai ; `k_bdr ≈ 0,824`.
-
-Ces coefficients sont recomputables depuis le CSV UFIP observé ; ils ne remplacent pas la source. En cas de fichier UFIP manquant, de date de calibration absente ou de valeur invalide, l'exception doit échouer fermée.
+En cas de release C1 sans assets Rotterdam, de SHA-256 incohérent, de métadonnées Corse absentes ou de dates BdR manquantes, la préparation échoue fermée.
 
 ## Procédure après lundi
 1. Contrôler la publication habituelle C1 puis C2.
