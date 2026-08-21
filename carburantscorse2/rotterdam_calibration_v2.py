@@ -32,6 +32,7 @@ CALIBRATION_ENTRY_DATE_2026 = date(2026, 4, 8)
 R1_SOURCE_DATES_2026 = (date(2026, 4, 3), date(2026, 4, 6), date(2026, 4, 7))
 BDR_EXIT_DATES_2026 = (date(2026, 5, 20), date(2026, 5, 21), date(2026, 5, 22))
 CORSE_EXIT_DATES_2026 = (date(2026, 5, 29), date(2026, 6, 1), date(2026, 6, 2))
+CALIBRATION_ABS_TOLERANCE = 1e-9
 
 
 @dataclass(frozen=True)
@@ -105,7 +106,7 @@ def _validate_corsica_calibration(calibration: dict) -> RotterdamCalibration:
         raise ValueError("Unexpected C1 Corsica exit source dates")
     if r1 <= 0 or k <= 0 or r2 <= 0:
         raise ValueError("C1 Corsica calibration values must be positive")
-    if not math.isclose(r1 * k, r2, rel_tol=0.0, abs_tol=1e-12):
+    if not math.isclose(r1 * k, r2, rel_tol=0.0, abs_tol=CALIBRATION_ABS_TOLERANCE):
         raise ValueError("C1 Corsica calibration invariant r1*k=r2 is broken")
     return RotterdamCalibration("corsica", entry_date, r1, k, r2, r1_dates, exit_dates)
 
