@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
@@ -28,8 +29,9 @@ VALUE_COLUMN = "rotterdam_eur_l"
 DATE_COLUMN = "date"
 
 CALIBRATION_ENTRY_DATE_2026 = date(2026, 4, 8)
-R1_OBSERVATION_COUNT = 3
+R1_SOURCE_DATES_2026 = (date(2026, 4, 3), date(2026, 4, 6), date(2026, 4, 7))
 BDR_EXIT_DATES_2026 = (date(2026, 5, 20), date(2026, 5, 21), date(2026, 5, 22))
+CORSE_EXIT_DATES_2026 = (date(2026, 5, 29), date(2026, 6, 1), date(2026, 6, 2))
 
 
 @dataclass(frozen=True)
@@ -41,6 +43,16 @@ class RotterdamCalibration:
     r2: float
     r1_source_dates: tuple[date, ...]
     exit_source_dates: tuple[date, ...]
+
+
+def _finite_float(raw, *, context: str) -> float:
+    try:
+        value = float(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Invalid Rotterdam value in {context}: {raw!r}") from exc
+    if not math.isfinite(value):
+        raise ValueError(f"Non-finite Rotterdam value in {context}: {raw!r}")
+    return value
 
 
 def read_observed_csv(path: str | Path = DEFAULT_OBSERVED_FILE) -> dict[date, float]:
@@ -55,27 +67,11 @@ def read_observed_csv(path: str | Path = DEFAULT_OBSERVED_FILE) -> dict[date, fl
             raw_date = (row.get(DATE_COLUMN) or "").strip()
             raw_value = (row.get(VALUE_COLUMN) or "").strip()
             if raw_date and raw_value:
-                values[date.fromisoformat(raw_date[:10])] = float(raw_value)
+                day = date.fromisoformat(raw_date[:10])
+                values[day] = _finite_float(raw_value, context=f"observed {day}")
     if not values:
         raise ValueError("UFIP observed CSV contains no usable Rotterdam Gazole value")
     return dict(sorted(values.items()))
-
-
-def last_observed_before(observations: Mapping[date, float], entry_date: date, count: int = R1_OBSERVATION_COUNT) -> tuple[tuple[date, float], ...]:
-    if count <= 0:
-        raise ValueError("count must be > 0")
-    candidates = [(d, float(v)) for d, v in observations.items() if d < entry_date]
-    candidates.sort(key=lambda item: item[0])
-    if len(candidates) < count:
-        raise ValueError(
-            f"Need {count} observed UFIP quotations before {entry_date.isoformat()}, found {len(candidates)}"
-        )
-    return tuple(candidates[-count:])
-
-
-def compute_r1(observations: Mapping[date, float], entry_date: date, count: int = R1_OBSERVATION_COUNT) -> tuple[float, tuple[date, ...]]:
-    selected = last_observed_before(observations, entry_date, count)
-    return mean(v for _, v in selected), tuple(d for d, _ in selected)
 
 
 def mean_on_dates(observations: Mapping[date, float], dates: Iterable[date]) -> tuple[float, tuple[date, ...]]:
@@ -86,7 +82,32 @@ def mean_on_dates(observations: Mapping[date, float], dates: Iterable[date]) -> 
             "Missing observed UFIP quotations for calibration dates: "
             + ", ".join(d.isoformat() for d in missing)
         )
-    return mean(float(observations[d]) for d in requested), requested
+    return mean(_finite_float(observations[d], context=f"calibration {d}") for d in requested), requested
+
+
+def _validate_corsica_calibration(calibration: dict) -> RotterdamCalibration:
+    if calibration.get("territory") != "corsica":
+        raise ValueError("C1 shared Rotterdam calibration territory is not corsica")
+    try:
+        entry_date = date.fromisoformat(str(calibration["entry_date"]))
+        r1 = _finite_float(calibration["r1"], context="shared Corsica r1")
+        k = _finite_float(calibration["k"], context="shared Corsica k")
+        r2 = _finite_float(calibration["r2"], context="shared Corsica r2")
+        r1_dates = tuple(date.fromisoformat(str(d)) for d in calibration["r1_source_dates"])
+        exit_dates = tuple(date.fromisoformat(str(d)) for d in calibration["exit_source_dates"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("Invalid C1 shared Corsica Rotterdam calibration") from exc
+    if entry_date != CALIBRATION_ENTRY_DATE_2026:
+        raise ValueError("Unexpected C1 Corsica calibration entry date")
+    if r1_dates != R1_SOURCE_DATES_2026:
+        raise ValueError("Unexpected C1 Corsica R1 source dates")
+    if exit_dates != CORSE_EXIT_DATES_2026:
+        raise ValueError("Unexpected C1 Corsica exit source dates")
+    if r1 <= 0 or k <= 0 or r2 <= 0:
+        raise ValueError("C1 Corsica calibration values must be positive")
+    if not math.isclose(r1 * k, r2, rel_tol=0.0, abs_tol=1e-12):
+        raise ValueError("C1 Corsica calibration invariant r1*k=r2 is broken")
+    return RotterdamCalibration("corsica", entry_date, r1, k, r2, r1_dates, exit_dates)
 
 
 def corsica_from_shared_metadata(meta_file: str | Path = DEFAULT_SHARED_META_FILE) -> RotterdamCalibration:
@@ -95,20 +116,7 @@ def corsica_from_shared_metadata(meta_file: str | Path = DEFAULT_SHARED_META_FIL
     calibration = rotterdam.get("corsica_calibration") if isinstance(rotterdam, dict) else None
     if not isinstance(calibration, dict):
         raise ValueError("C1 shared metadata has no Corsica Rotterdam calibration")
-    if calibration.get("territory") != "corsica":
-        raise ValueError("C1 shared Rotterdam calibration territory is not corsica")
-    try:
-        return RotterdamCalibration(
-            territory="corsica",
-            entry_date=date.fromisoformat(str(calibration["entry_date"])),
-            r1=float(calibration["r1"]),
-            k=float(calibration["k"]),
-            r2=float(calibration["r2"]),
-            r1_source_dates=tuple(date.fromisoformat(str(d)) for d in calibration["r1_source_dates"]),
-            exit_source_dates=tuple(date.fromisoformat(str(d)) for d in calibration["exit_source_dates"]),
-        )
-    except (KeyError, TypeError, ValueError) as exc:
-        raise ValueError("Invalid C1 shared Corsica Rotterdam calibration") from exc
+    return _validate_corsica_calibration(calibration)
 
 
 def calibrate_2026(
@@ -122,7 +130,7 @@ def calibrate_2026(
         raise ValueError("territory must be 'corsica' or 'bdr'")
 
     observations = read_observed_csv(observed_file)
-    r1, r1_dates = compute_r1(observations, CALIBRATION_ENTRY_DATE_2026)
+    r1, r1_dates = mean_on_dates(observations, R1_SOURCE_DATES_2026)
     exit_mean, exit_dates = mean_on_dates(observations, BDR_EXIT_DATES_2026)
     k = exit_mean / r1
     return RotterdamCalibration(
@@ -130,7 +138,7 @@ def calibrate_2026(
         entry_date=CALIBRATION_ENTRY_DATE_2026,
         r1=r1,
         k=k,
-        r2=k * r1,
+        r2=exit_mean,
         r1_source_dates=r1_dates,
         exit_source_dates=exit_dates,
     )
@@ -148,12 +156,9 @@ def read_daily_values(path: str | Path = DEFAULT_DAILY_FILE) -> dict[date, float
             raw_date = (row.get(DATE_COLUMN) or "").strip()
             raw_value = (row.get(VALUE_COLUMN) or "").strip()
             if raw_date and raw_value:
-                values[date.fromisoformat(raw_date[:10])] = float(raw_value)
+                day = date.fromisoformat(raw_date[:10])
+                values[day] = _finite_float(raw_value, context=f"daily {day}")
     return values
-
-
-def read_daily_value(day: date, path: str | Path = DEFAULT_DAILY_FILE) -> float | None:
-    return read_daily_values(path).get(day)
 
 
 def threshold_for(
@@ -162,23 +167,6 @@ def threshold_for(
     shared_meta_file: str | Path = DEFAULT_SHARED_META_FILE,
 ) -> float:
     return calibrate_2026(territory, observed_file, shared_meta_file).r2
-
-
-def constraining_on(
-    day: date,
-    territory: str,
-    *,
-    observed_file: str | Path = DEFAULT_OBSERVED_FILE,
-    daily_file: str | Path = DEFAULT_DAILY_FILE,
-    shared_meta_file: str | Path = DEFAULT_SHARED_META_FILE,
-) -> bool:
-    if territory not in {"corsica", "bdr"}:
-        raise ValueError("territory must be 'corsica' or 'bdr'")
-    value = read_daily_value(day, daily_file)
-    if value is None:
-        raise ValueError(f"Missing Rotterdam daily value for {day.isoformat()}")
-    r2 = threshold_for(territory, observed_file, shared_meta_file)
-    return float(value) >= float(r2)
 
 
 def admissible_since(
@@ -190,12 +178,12 @@ def admissible_since(
     daily_file: str | Path = DEFAULT_DAILY_FILE,
     shared_meta_file: str | Path = DEFAULT_SHARED_META_FILE,
 ) -> bool:
-    """Persistent R2 guard until the target fuel is declared again.
+    """Persistent R2 guard from J+45 until the target fuel is declared again.
 
-    The caller passes the first day after the target's normal 45-day window.
+    The caller passes the first stale day, i.e. target declaration date + 45 days.
     Any Rotterdam day below territory R2 between start_day and end_day latches
-    that old target price out. A new target declaration changes the start_day
-    and therefore resets the guard naturally.
+    that old target price out. A new target declaration creates a new J0 and
+    therefore a new J+45 start_day.
     """
     if territory not in {"corsica", "bdr"}:
         raise ValueError("territory must be 'corsica' or 'bdr'")
@@ -207,7 +195,7 @@ def admissible_since(
     while d <= end_day:
         if d not in values:
             raise ValueError(f"Missing Rotterdam daily value for {d.isoformat()}")
-        if float(values[d]) < float(r2):
+        if values[d] < r2:
             return False
         d += timedelta(days=1)
     return True
