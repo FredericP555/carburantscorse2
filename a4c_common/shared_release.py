@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Read the normalized official-price snapshot published by carburantscorse1.
+"""Read the validated shared package published upstream by carburantscorse1.
 
-The producer publishes immutable GitHub Release assets. This consumer validates the manifest
-and SHA-256 before turning the gzip CSV back into the same row types as official_prices.
-The same release also carries the single UFIP Rotterdam Gazole download produced upstream by C1.
+C1 publishes immutable GitHub Release assets. C2 validates the manifest and SHA-256,
+pins one release tag for the whole weekly cycle, and reuses the exact same snapshot,
+Rotterdam series and Corsica station-brand registry from that release.
 """
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from pathlib import Path
 import urllib.request
 from datetime import date, datetime
 from typing import Iterable
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 DEFAULT_REPOSITORY = "FredericP555/carburantscorse1"
 DEFAULT_TAG_PREFIX = "a4c-shared-"
@@ -25,7 +25,9 @@ DATA_ASSET = "official_13_20.csv.gz"
 META_ASSET = "official_13_20.meta.json"
 ROTTERDAM_OBSERVED_ASSET = "rotterdam_gazole_observed.csv"
 ROTTERDAM_DAILY_ASSET = "rotterdam_gazole_daily.csv"
+CORSE_BRANDS_ASSET = "corse_station_brands.json"
 SCHEMA = "a4c-official-13-20-v1"
+CORSE_BRANDS_SCHEMA = "a4c-corsica-station-brands-v2"
 REQUIRED_DEPARTMENTS = {"13", "20"}
 REQUIRED_FUELS = {"Gazole", "SP95", "E10"}
 
@@ -71,16 +73,26 @@ def _asset_url(release: dict, name: str) -> str:
     raise RuntimeError(f"Release {release.get('tag_name')} has no asset {name}")
 
 
-def _latest_release_and_metadata(
+def _release_and_metadata(
     *,
     repository: str = DEFAULT_REPOSITORY,
     tag_prefix: str = DEFAULT_TAG_PREFIX,
+    release_tag: str | None = None,
 ) -> tuple[dict, dict]:
-    releases_url = f"https://api.github.com/repos/{repository}/releases?per_page=30"
-    releases = _request_json(releases_url)
-    if not isinstance(releases, list):
-        raise RuntimeError("GitHub releases API returned an unexpected payload")
-    release = _select_shared_release(releases, tag_prefix=tag_prefix)
+    if release_tag:
+        url = f"https://api.github.com/repos/{repository}/releases/tags/{quote(release_tag, safe='')}"
+        release = _request_json(url)
+        if not isinstance(release, dict) or release.get("draft"):
+            raise RuntimeError(f"Shared C1 release tag is unavailable: {release_tag}")
+        if not str(release.get("tag_name", "")).startswith(tag_prefix):
+            raise RuntimeError(f"Pinned C1 release has unexpected tag: {release.get('tag_name')!r}")
+    else:
+        releases_url = f"https://api.github.com/repos/{repository}/releases?per_page=30"
+        releases = _request_json(releases_url)
+        if not isinstance(releases, list):
+            raise RuntimeError("GitHub releases API returned an unexpected payload")
+        release = _select_shared_release(releases, tag_prefix=tag_prefix)
+
     metadata = json.loads(_request_bytes(_asset_url(release, META_ASSET)).decode("utf-8"))
     if metadata.get("schema") != SCHEMA:
         raise RuntimeError(f"Unexpected shared snapshot schema: {metadata.get('schema')!r}")
@@ -154,10 +166,15 @@ def load_shared_observations(
     *,
     repository: str = DEFAULT_REPOSITORY,
     tag_prefix: str = DEFAULT_TAG_PREFIX,
+    release_tag: str | None = None,
 ) -> tuple[list[dict], dict]:
-    """Download and validate the newest shared release, returning normalized observations."""
+    """Download and validate one shared release, returning normalized observations."""
     years = sorted({int(year) for year in years})
-    release, metadata = _latest_release_and_metadata(repository=repository, tag_prefix=tag_prefix)
+    release, metadata = _release_and_metadata(
+        repository=repository,
+        tag_prefix=tag_prefix,
+        release_tag=release_tag,
+    )
     data_bytes = _request_bytes(_asset_url(release, DATA_ASSET), timeout=240)
     rows = _decode_snapshot(data_bytes, metadata, years)
 
@@ -172,6 +189,7 @@ def load_shared_observations(
         "shared_rows": metadata.get("rows"),
         "bouclier": metadata.get("bouclier"),
         "rotterdam": metadata.get("rotterdam"),
+        "corse_station_brands": metadata.get("corse_station_brands"),
     }
     return rows, source
 
@@ -181,9 +199,20 @@ def download_shared_rotterdam_assets(
     *,
     repository: str = DEFAULT_REPOSITORY,
     tag_prefix: str = DEFAULT_TAG_PREFIX,
+    release_tag: str | None = None,
+    registry_output: str | Path = "outputs/c1/corse_station_brands.json",
+    tag_output: str | Path = "outputs/c1/shared_release_tag.txt",
 ) -> dict:
-    """Download C1's shared Rotterdam assets; never query UFIP from C2."""
-    release, metadata = _latest_release_and_metadata(repository=repository, tag_prefix=tag_prefix)
+    """Download the complete C1 shared inputs needed by C2; never query UFIP from C2."""
+    release, metadata = _release_and_metadata(
+        repository=repository,
+        tag_prefix=tag_prefix,
+        release_tag=release_tag,
+    )
+    selected_tag = str(release.get("tag_name") or "")
+    if not selected_tag:
+        raise RuntimeError("Selected C1 release has no tag")
+
     rotterdam = metadata.get("rotterdam")
     if not isinstance(rotterdam, dict) or not rotterdam.get("single_download"):
         raise RuntimeError("C1 shared release has no canonical Rotterdam metadata")
@@ -202,6 +231,21 @@ def download_shared_rotterdam_assets(
     if not expected_daily_sha or actual_daily_sha != expected_daily_sha:
         raise RuntimeError("Shared Rotterdam daily asset SHA-256 mismatch or missing hash")
 
+    brands_meta = metadata.get("corse_station_brands")
+    if not isinstance(brands_meta, dict):
+        raise RuntimeError("C1 shared release has no canonical Corsica brand-registry metadata")
+    brands_name = str(brands_meta.get("asset") or CORSE_BRANDS_ASSET)
+    brands_bytes = _request_bytes(_asset_url(release, brands_name), timeout=120)
+    expected_brands_sha = str(brands_meta.get("sha256") or "")
+    actual_brands_sha = hashlib.sha256(brands_bytes).hexdigest()
+    if not expected_brands_sha or actual_brands_sha != expected_brands_sha:
+        raise RuntimeError("Shared Corsica brand registry SHA-256 mismatch or missing hash")
+    brands_payload = json.loads(brands_bytes.decode("utf-8"))
+    if brands_payload.get("schema") != CORSE_BRANDS_SCHEMA:
+        raise RuntimeError(f"Unexpected shared Corsica brand registry schema: {brands_payload.get('schema')!r}")
+    if not isinstance(brands_payload.get("stations"), dict) or not brands_payload["stations"]:
+        raise RuntimeError("Shared Corsica brand registry contains no stations")
+
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
     observed_path = out / ROTTERDAM_OBSERVED_ASSET
@@ -211,12 +255,22 @@ def download_shared_rotterdam_assets(
     daily_path.write_bytes(daily_bytes)
     meta_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    registry_path = Path(registry_output)
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    registry_path.write_bytes(brands_bytes)
+
+    tag_path = Path(tag_output)
+    tag_path.parent.mkdir(parents=True, exist_ok=True)
+    tag_path.write_text(selected_tag + "\n", encoding="utf-8")
+
     return {
         "repository": repository,
-        "release_tag": release.get("tag_name"),
+        "release_tag": selected_tag,
         "release_published_at": release.get("published_at"),
         "observed_file": str(observed_path),
         "daily_file": str(daily_path),
         "metadata_file": str(meta_path),
+        "registry_file": str(registry_path),
+        "tag_file": str(tag_path),
         "corsica_calibration": rotterdam.get("corsica_calibration"),
     }
