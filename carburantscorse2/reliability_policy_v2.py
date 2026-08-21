@@ -53,17 +53,10 @@ def at_cap(price: float | None, cap: float | None) -> bool:
 
 
 def recent_liveness(
-    *,
-    region_kind: str,
-    target_fuel: str,
-    activity_by_fuel: Mapping[str, datetime],
-    day: date,
+    *, region_kind: str, target_fuel: str,
+    activity_by_fuel: Mapping[str, datetime], day: date,
 ) -> bool:
-    """Rolling 45-day liveness for the single-cap case.
-
-    Corse: only the other principal fuel can reset the support window.
-    BdR/mainland: any other declared fuel can reset it.
-    """
+    """Rolling 45-day liveness for the single-cap case."""
     if region_kind not in VALID_REGION_KINDS:
         raise ValueError("region_kind")
     for fuel, ts in activity_by_fuel.items():
@@ -77,9 +70,7 @@ def recent_liveness(
 
 
 def recent_nonprincipal_liveness(
-    *,
-    activity_by_fuel: Mapping[str, datetime],
-    day: date,
+    *, activity_by_fuel: Mapping[str, datetime], day: date,
 ) -> bool:
     """BdR double-cap liveness: only fuels other than Gazole/SP95 count."""
     for fuel, ts in activity_by_fuel.items():
@@ -94,13 +85,7 @@ def declaration_eligible_for_phase(
     last_declared_at: datetime | None,
     phase_started_on: date | None,
 ) -> bool:
-    """No-resurrection guard for the current cap phase.
-
-    The target declaration must have been <45 days old at phase entry, unless
-    the target fuel was declared again after the phase began. A cap change is
-    therefore handled by supplying the new phase start date and re-running this
-    check; no caller-provided eligibility boolean is trusted.
-    """
+    """No-resurrection guard for the current cap phase."""
     if last_declared_at is None or phase_started_on is None:
         return False
     declared_on = last_declared_at.date()
@@ -111,25 +96,16 @@ def declaration_eligible_for_phase(
 
 
 def evaluate(
-    *,
-    day: date,
-    region_kind: str,
-    target_fuel: str,
-    last_declared_at: datetime | None,
-    last_price: float | None,
-    latest_price_valid: bool = True,
-    target_rupture_active: bool = False,
-    independently_inactive: bool = False,
-    is_total: bool = False,
-    shield_effective: bool = False,
-    applicable_cap: float | None = None,
+    *, day: date, region_kind: str, target_fuel: str,
+    last_declared_at: datetime | None, last_price: float | None,
+    latest_price_valid: bool = True, target_rupture_active: bool = False,
+    independently_inactive: bool = False, is_total: bool = False,
+    shield_effective: bool = False, applicable_cap: float | None = None,
     phase_started_on: date | None = None,
     activity_by_fuel: Mapping[str, datetime] | None = None,
-    gazole_price: float | None = None,
-    gazole_cap: float | None = None,
-    sp95_price: float | None = None,
-    sp95_cap: float | None = None,
-    rotterdam_gazole_constraining: bool | None = None,
+    gazole_price: float | None = None, gazole_cap: float | None = None,
+    sp95_price: float | None = None, sp95_cap: float | None = None,
+    rotterdam_stale_price_admissible: bool | None = None,
 ) -> Decision:
     if region_kind not in VALID_REGION_KINDS:
         raise ValueError("region_kind")
@@ -140,11 +116,8 @@ def evaluate(
     if target_rupture_active:
         return Decision(False, "rupture_active", age)
     if (
-        last_declared_at is None
-        or age is None
-        or age < 0
-        or not latest_price_valid
-        or not finite_number(last_price)
+        last_declared_at is None or age is None or age < 0
+        or not latest_price_valid or not finite_number(last_price)
     ):
         return Decision(False, "prix_ou_date_absent_invalide", age)
     if normally_fresh(last_declared_at, day):
@@ -165,24 +138,19 @@ def evaluate(
     both_capped = at_cap(gazole_price, gazole_cap) and at_cap(sp95_price, sp95_cap)
 
     if both_capped:
-        # Corse: when Gazole and SP95 are both fixed at their caps, cross-liveness
-        # cannot tell us whether either stale price is still credible. R2 is the
-        # economic admissibility guard; it does not change shield_effective.
         if region_kind == "corsica":
-            if rotterdam_gazole_constraining is True:
+            if rotterdam_stale_price_admissible is True:
                 return Decision(True, "double_plafond_rotterdam_admissible", age)
-            if rotterdam_gazole_constraining is False:
-                return Decision(False, "double_plafond_rotterdam_sous_r2", age)
+            if rotterdam_stale_price_admissible is False:
+                return Decision(False, "double_plafond_rotterdam_verrouille", age)
             return Decision(False, "double_plafond_rotterdam_indisponible", age)
 
-        # BdR: double cap requires BOTH evidence that the station is alive on a
-        # non-principal fuel and Rotterdam still on the admissible side of R2.
         if not recent_nonprincipal_liveness(activity_by_fuel=activity_by_fuel, day=day):
             return Decision(False, "double_plafond_bdr_sans_vivacite_autre_carburant", age)
-        if rotterdam_gazole_constraining is True:
+        if rotterdam_stale_price_admissible is True:
             return Decision(True, "double_plafond_bdr_vivacite_et_rotterdam", age)
-        if rotterdam_gazole_constraining is False:
-            return Decision(False, "double_plafond_rotterdam_sous_r2", age)
+        if rotterdam_stale_price_admissible is False:
+            return Decision(False, "double_plafond_rotterdam_verrouille", age)
         return Decision(False, "double_plafond_rotterdam_indisponible", age)
 
     # Single-cap case: every qualifying declaration starts a fresh rolling 45-day
