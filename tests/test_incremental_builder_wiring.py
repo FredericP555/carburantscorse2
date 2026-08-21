@@ -5,6 +5,14 @@ from scripts import build_append_candidate_incremental as inc
 
 
 class IncrementalBuilderWiringT(unittest.TestCase):
+    @classmethod
+    def tearDownClass(cls):
+        # The wrapper patches the base module at import time by design. Restore
+        # originals so this regression test cannot influence unrelated tests.
+        inc.base.load_official_observations = inc._original_load_official
+        inc.base.load_bdr_categories = inc._original_load_categories
+        inc.base.load_shared_rotterdam = inc._original_load_rotterdam
+
     def test_release_tag_is_forwarded_to_original_loader(self):
         seen = {}
 
