@@ -80,6 +80,10 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         run: python scripts/fetch_ufip.py --output-dir outputs/ufip
 
+      - name: Fetch C1 Corsica station-brand registry for prepared identity guard
+        if: steps.gate.outputs.run == 'true'
+        run: python scripts/fetch_c1_corse_station_brands.py --output outputs/c1/corse_station_brands.json
+
       - name: Build append-only candidate and resolve only new BDR IDs
         if: steps.gate.outputs.run == 'true'
         env:
@@ -110,6 +114,7 @@ jobs:
             outputs/candidate-summary.json
             outputs/ufip/rotterdam_gazole_observed.csv
             outputs/ufip/rotterdam_gazole_daily.csv
+            outputs/c1/corse_station_brands.json
             config/bdr_station_brands.json
           retention-days: 30
 
