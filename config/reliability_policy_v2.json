@@ -1,0 +1,20 @@
+{
+  "active": false,
+  "normal_age_days": 45,
+  "cap_tolerance_below_eur": 0.002,
+  "cap_tolerance_above_eur": 0.001,
+  "corsica_liveness": "other_principal_fuel",
+  "mainland_liveness": "any_other_declared_fuel",
+  "double_cap": {
+    "enabled": true,
+    "external_index": "rotterdam_gazole",
+    "rotterdam_threshold": null,
+    "fail_closed_if_missing": true
+  },
+  "guards": {
+    "independent_inactivity_overrides": true,
+    "rupture_overrides": true,
+    "no_resurrection_at_cap_entry": true,
+    "shield_detection_uses_normal_fresh_data_only": true
+  }
+}
