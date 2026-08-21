@@ -3,6 +3,7 @@
 
 The producer publishes immutable GitHub Release assets. This consumer validates the manifest
 and SHA-256 before turning the gzip CSV back into the same row types as official_prices.
+The same release also carries the single UFIP Rotterdam Gazole download produced upstream by C1.
 """
 from __future__ import annotations
 
@@ -12,6 +13,7 @@ import hashlib
 import io
 import json
 import os
+from pathlib import Path
 import urllib.request
 from datetime import date, datetime
 from typing import Iterable
@@ -21,6 +23,8 @@ DEFAULT_REPOSITORY = "FredericP555/carburantscorse1"
 DEFAULT_TAG_PREFIX = "a4c-shared-"
 DATA_ASSET = "official_13_20.csv.gz"
 META_ASSET = "official_13_20.meta.json"
+ROTTERDAM_OBSERVED_ASSET = "rotterdam_gazole_observed.csv"
+ROTTERDAM_DAILY_ASSET = "rotterdam_gazole_daily.csv"
 SCHEMA = "a4c-official-13-20-v1"
 REQUIRED_DEPARTMENTS = {"13", "20"}
 REQUIRED_FUELS = {"Gazole", "SP95", "E10"}
@@ -31,9 +35,6 @@ def _request_headers(url: str) -> dict[str, str]:
         "User-Agent": "A4C-carburantscorse2/2.0",
         "Accept": "application/vnd.github+json",
     }
-    # GitHub's REST API is rate-limited much more tightly when unauthenticated. The
-    # workflow exposes github.token as GITHUB_TOKEN; keep public asset downloads public
-    # and send the token only to api.github.com.
     token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
     if token and urlparse(url).hostname == "api.github.com":
         headers["Authorization"] = f"Bearer {token}"
@@ -68,6 +69,22 @@ def _asset_url(release: dict, name: str) -> str:
         if asset.get("name") == name and asset.get("browser_download_url"):
             return str(asset["browser_download_url"])
     raise RuntimeError(f"Release {release.get('tag_name')} has no asset {name}")
+
+
+def _latest_release_and_metadata(
+    *,
+    repository: str = DEFAULT_REPOSITORY,
+    tag_prefix: str = DEFAULT_TAG_PREFIX,
+) -> tuple[dict, dict]:
+    releases_url = f"https://api.github.com/repos/{repository}/releases?per_page=30"
+    releases = _request_json(releases_url)
+    if not isinstance(releases, list):
+        raise RuntimeError("GitHub releases API returned an unexpected payload")
+    release = _select_shared_release(releases, tag_prefix=tag_prefix)
+    metadata = json.loads(_request_bytes(_asset_url(release, META_ASSET)).decode("utf-8"))
+    if metadata.get("schema") != SCHEMA:
+        raise RuntimeError(f"Unexpected shared snapshot schema: {metadata.get('schema')!r}")
+    return release, metadata
 
 
 def _as_bool(value: str | bool | None) -> bool:
@@ -140,16 +157,8 @@ def load_shared_observations(
 ) -> tuple[list[dict], dict]:
     """Download and validate the newest shared release, returning normalized observations."""
     years = sorted({int(year) for year in years})
-    releases_url = f"https://api.github.com/repos/{repository}/releases?per_page=30"
-    releases = _request_json(releases_url)
-    if not isinstance(releases, list):
-        raise RuntimeError("GitHub releases API returned an unexpected payload")
-    release = _select_shared_release(releases, tag_prefix=tag_prefix)
-
-    meta_url = _asset_url(release, META_ASSET)
-    data_url = _asset_url(release, DATA_ASSET)
-    metadata = json.loads(_request_bytes(meta_url).decode("utf-8"))
-    data_bytes = _request_bytes(data_url, timeout=240)
+    release, metadata = _latest_release_and_metadata(repository=repository, tag_prefix=tag_prefix)
+    data_bytes = _request_bytes(_asset_url(release, DATA_ASSET), timeout=240)
     rows = _decode_snapshot(data_bytes, metadata, years)
 
     source = {
@@ -162,5 +171,52 @@ def load_shared_observations(
         "shared_source_max_date": metadata.get("max_date"),
         "shared_rows": metadata.get("rows"),
         "bouclier": metadata.get("bouclier"),
+        "rotterdam": metadata.get("rotterdam"),
     }
     return rows, source
+
+
+def download_shared_rotterdam_assets(
+    output_dir: str | Path = "outputs/ufip",
+    *,
+    repository: str = DEFAULT_REPOSITORY,
+    tag_prefix: str = DEFAULT_TAG_PREFIX,
+) -> dict:
+    """Download C1's shared Rotterdam assets; never query UFIP from C2."""
+    release, metadata = _latest_release_and_metadata(repository=repository, tag_prefix=tag_prefix)
+    rotterdam = metadata.get("rotterdam")
+    if not isinstance(rotterdam, dict) or not rotterdam.get("single_download"):
+        raise RuntimeError("C1 shared release has no canonical Rotterdam metadata")
+
+    observed_name = str(rotterdam.get("observed_asset") or ROTTERDAM_OBSERVED_ASSET)
+    daily_name = str(rotterdam.get("daily_asset") or ROTTERDAM_DAILY_ASSET)
+    observed_bytes = _request_bytes(_asset_url(release, observed_name), timeout=120)
+    daily_bytes = _request_bytes(_asset_url(release, daily_name), timeout=120)
+
+    expected_observed_sha = str(rotterdam.get("observed_sha256") or "")
+    expected_daily_sha = str(rotterdam.get("daily_sha256") or "")
+    actual_observed_sha = hashlib.sha256(observed_bytes).hexdigest()
+    actual_daily_sha = hashlib.sha256(daily_bytes).hexdigest()
+    if not expected_observed_sha or actual_observed_sha != expected_observed_sha:
+        raise RuntimeError("Shared Rotterdam observed asset SHA-256 mismatch or missing hash")
+    if not expected_daily_sha or actual_daily_sha != expected_daily_sha:
+        raise RuntimeError("Shared Rotterdam daily asset SHA-256 mismatch or missing hash")
+
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    observed_path = out / ROTTERDAM_OBSERVED_ASSET
+    daily_path = out / ROTTERDAM_DAILY_ASSET
+    meta_path = out / "c1_shared_meta.json"
+    observed_path.write_bytes(observed_bytes)
+    daily_path.write_bytes(daily_bytes)
+    meta_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    return {
+        "repository": repository,
+        "release_tag": release.get("tag_name"),
+        "release_published_at": release.get("published_at"),
+        "observed_file": str(observed_path),
+        "daily_file": str(daily_path),
+        "metadata_file": str(meta_path),
+        "corsica_calibration": rotterdam.get("corsica_calibration"),
+    }
