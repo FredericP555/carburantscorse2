@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 env:
-  EXPECTED_C1_PREP_SHA: 1bb8dc3874db800d5d64eb0893afd7bd1c354d19
+  EXPECTED_C1_PREP_SHA: b4c9c205af2826d1dd32d4f92f0762706d8b4326
   PYTHONPATH: .
   SIMULATED_SWITCH_DATE: 2026-07-23
   ACTIVE_DOUBLE_CAP_START: 2026-07-23
@@ -76,6 +76,57 @@ jobs:
           print('Dry-run-only prospective switch:', os.environ['SIMULATED_SWITCH_DATE'])
           PY
 
+      - name: Wire official rupture and closure guards into isolated dry-run
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('scripts/dry_run_v2_candidate.py')
+          text = p.read_text(encoding='utf-8')
+
+          import_needle = "import pandas as pd\n"
+          if import_needle not in text:
+              raise SystemExit('pandas import not found')
+          text = text.replace(import_needle, import_needle + "\nfrom scripts.v2_event_guards import EventGuards\n", 1)
+
+          tag_needle = "    selected_tag = C1_TAG_FILE.read_text(encoding=\"utf-8\").strip()\n"
+          tag_replacement = tag_needle + "    event_guards = EventGuards.from_release(selected_tag, metadata=_load_json(C1_META))\n"
+          if tag_needle not in text:
+              raise SystemExit('selected-tag statement not found')
+          text = text.replace(tag_needle, tag_replacement, 1)
+
+          if "                target_rupture_active=False,\n" not in text:
+              raise SystemExit('target_rupture_active diagnostic placeholder not found')
+          text = text.replace(
+              "                target_rupture_active=False,\n",
+              "                target_rupture_active=event_guards.rupture_active(sid, fuel, day),\n",
+              1,
+          )
+          if "                independently_inactive=False,\n" not in text:
+              raise SystemExit('independently_inactive diagnostic placeholder not found')
+          text = text.replace(
+              "                independently_inactive=False,\n",
+              "                independently_inactive=event_guards.independently_inactive(sid, day),\n",
+              1,
+          )
+
+          output_needle = "    output_path = ROOT / args.output\n"
+          output_replacement = (
+              "    output['official_event_guards'] = event_guards.audit()\n"
+              "    output['known_reserves'] = [item for item in output.get('known_reserves', []) "
+              "if not str(item).startswith('rupture events') and not str(item).startswith('independent closure')]\n"
+              "    output['known_reserves'].append('official event coverage is limited to rupture/fermeture intervals retained in the government annual XML stock')\n"
+              + output_needle
+          )
+          if output_needle not in text:
+              raise SystemExit('output write statement not found')
+          text = text.replace(output_needle, output_replacement, 1)
+
+          p.write_text(text, encoding='utf-8')
+          print('Official event guards wired into dry-run-only script')
+          PY
+
       - name: Execute real-data V2 candidate dry-run
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -134,6 +185,10 @@ jobs:
           print(f"- Prospective switch: {o.get('window',{}).get('prospective_switch_date')} ({o.get('window',{}).get('prospective_switch_source',{}).get('source')})")
           print(f"- evaluate() station-days: {e.get('evaluate_station_days',0):,}")
           print(f"- R2 calls: {e.get('r2_calls',0):,} (true={e.get('r2_true',0):,}, false={e.get('r2_false',0):,}, unavailable={e.get('r2_unavailable',0):,})")
+          guards=o.get('official_event_guards',{})
+          checks=guards.get('engine_checks',{})
+          print(f"- Official events: {guards.get('event_rows',0):,} rows (rupture={guards.get('rows_by_kind',{}).get('rupture',0):,}, fermeture={guards.get('rows_by_kind',{}).get('fermeture',0):,})")
+          print(f"- Active event guards in evaluated state: rupture={guards.get('unique_active_rupture_station_fuel_days',0):,}, fermeture={guards.get('unique_active_closure_station_days',0):,}; checks={checks}")
           diag=o.get('prospective_diagnostic',{})
           for territory, cal in diag.get('r2_calibration',{}).items():
               print(f"- {territory} active R1={cal.get('r1'):.6f}, k={cal.get('k'):.9f}, R2={cal.get('r2'):.6f}; R1 dates={', '.join(cal.get('r1_source_dates',[]))}")
