@@ -1,0 +1,109 @@
+name: C2 V2 production release preflight
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/_c2-v2-production-release-preflight.yml'
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: .
+  C1_V2_TAG_PREFIX: a4c-v2-shared-
+  C1_RELEASE_TAG: a4c-v2-shared-20260824T232328Z-32788829663
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout C2 main
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Compile V2 production sources
+        run: python -m compileall -q a4c_common carburantscorse2 scripts
+
+      - name: Validate dashboard loader
+        run: python scripts/migrate_index_data_source.py index.html --check
+
+      - name: Build candidate from exact C1 production release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          python scripts/build_v2_production_candidate.py
+          --tag-prefix "$C1_V2_TAG_PREFIX"
+          --release-tag "$C1_RELEASE_TAG"
+
+      - name: Verify fresh exact C1 release and official stock
+        run: >-
+          python -m scripts.check_shared_freshness
+          --candidate outputs/v2-production-candidate.json
+          --baseline data.json
+          --max-release-age-hours 12
+          --max-source-age-days 4
+
+      - name: Verify controlled V2 promotion contract without promotion
+        run: python scripts/promote_v2_candidate.py
+
+      - name: Verify transition dates and 24 August continuity structure
+        run: |
+          python - <<'PY'
+          import json
+          from datetime import date
+          from pathlib import Path
+
+          c=json.loads(Path('outputs/v2-production-candidate.json').read_text(encoding='utf-8'))
+          s=json.loads(Path('outputs/v2-production-summary.json').read_text(encoding='utf-8'))
+          v2=(c.get('meta') or {}).get('v2') or {}
+          assert v2.get('daily_switch_date') == '2026-07-23', v2
+          assert v2.get('weekly_switch_date') == '2026-07-27', v2
+          assert s.get('c1_release_tag') == 'a4c-v2-shared-20260824T232328Z-32788829663', s.get('c1_release_tag')
+
+          missing=[]
+          jumps=[]
+          for key, refs in c['DATA'].items():
+              for ref, grans in refs.items():
+                  for group, rows in grans.get('daily', {}).items():
+                      by={str(r['date']): r for r in rows}
+                      if '2026-08-23' not in by or '2026-08-24' not in by:
+                          missing.append(f'{key}/{ref}/daily/{group}')
+                          continue
+                      a=by['2026-08-23']; b=by['2026-08-24']
+                      if 'ecart' in a and 'ecart' in b:
+                          jumps.append((f'{key}/{ref}/daily/{group}', float(b['ecart'])-float(a['ecart'])))
+          if missing:
+              raise SystemExit('Missing 23/24 August continuity rows: '+', '.join(missing))
+          print('Pinned exact C1 production release:', s.get('c1_release_tag'))
+          print('Daily switch:', v2.get('daily_switch_date'))
+          print('Weekly switch:', v2.get('weekly_switch_date'))
+          print('24 August is present as a continuation day in every public daily series.')
+          for name, delta in jumps:
+              print(f'{name}: Δ(24-23)={delta:+.4f} c/L')
+          PY
+
+      - name: Upload read-only preflight audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: c2-v2-exact-production-release-preflight
+          path: |
+            outputs/v2-production-candidate.json
+            outputs/v2-production-summary.json
+            outputs/ufip/c1_shared_meta.json
+            outputs/c1/shared_release_tag.txt
+            outputs/c1/corse_station_brands.json
+            config/bdr_station_brands.json
+          retention-days: 30
