@@ -176,8 +176,9 @@ def main() -> None:
                     **stats,
                 }
 
+    margin_state = state[state["date"] >= pd.Timestamp(weekly_switch)].copy()
     for scope, group in (("all", "all"), ("network", "reseau")):
-        generated = build_margin_series(state, rotterdam, bdr_scope=scope)
+        generated = build_margin_series(margin_state, rotterdam, bdr_scope=scope)
         existing = baseline["MARGES_GZ"][group]
         replaced, stats = _replace_existing_rows(existing, generated, start_on=weekly_switch)
         protected_rows += _assert_prefix_exact(
