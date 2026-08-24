@@ -1,0 +1,180 @@
+===== pip install =====
+Collecting pandas==2.3.1 (from -r requirements.txt (line 1))
+  Using cached pandas-2.3.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (91 kB)
+Collecting requests<3,>=2.32 (from -r requirements.txt (line 2))
+  Using cached requests-2.34.2-py3-none-any.whl.metadata (4.8 kB)
+Collecting beautifulsoup4<5,>=4.12 (from -r requirements.txt (line 3))
+  Using cached beautifulsoup4-4.15.0-py3-none-any.whl.metadata (3.8 kB)
+Collecting openpyxl<4,>=3.1 (from -r requirements.txt (line 4))
+  Using cached openpyxl-3.1.5-py2.py3-none-any.whl.metadata (2.5 kB)
+Collecting numpy>=1.26.0 (from pandas==2.3.1->-r requirements.txt (line 1))
+  Using cached numpy-2.5.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (6.6 kB)
+Collecting python-dateutil>=2.8.2 (from pandas==2.3.1->-r requirements.txt (line 1))
+  Using cached python_dateutil-2.9.0.post0-py2.py3-none-any.whl.metadata (8.4 kB)
+Collecting pytz>=2020.1 (from pandas==2.3.1->-r requirements.txt (line 1))
+  Using cached pytz-2026.3.post1-py2.py3-none-any.whl.metadata (22 kB)
+Collecting tzdata>=2022.7 (from pandas==2.3.1->-r requirements.txt (line 1))
+  Using cached tzdata-2026.3-py2.py3-none-any.whl.metadata (1.4 kB)
+Collecting charset_normalizer<4,>=2 (from requests<3,>=2.32->-r requirements.txt (line 2))
+  Using cached charset_normalizer-3.5.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (45 kB)
+Collecting idna<4,>=2.5 (from requests<3,>=2.32->-r requirements.txt (line 2))
+  Using cached idna-3.19-py3-none-any.whl.metadata (9.2 kB)
+Collecting urllib3<3,>=1.26 (from requests<3,>=2.32->-r requirements.txt (line 2))
+  Using cached urllib3-2.7.0-py3-none-any.whl.metadata (6.9 kB)
+Collecting certifi>=2023.5.7 (from requests<3,>=2.32->-r requirements.txt (line 2))
+  Using cached certifi-2026.7.22-py3-none-any.whl.metadata (2.5 kB)
+Collecting soupsieve>=1.6.1 (from beautifulsoup4<5,>=4.12->-r requirements.txt (line 3))
+  Using cached soupsieve-2.9.2-py3-none-any.whl.metadata (4.6 kB)
+Collecting typing-extensions>=4.0.0 (from beautifulsoup4<5,>=4.12->-r requirements.txt (line 3))
+  Using cached typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting et-xmlfile (from openpyxl<4,>=3.1->-r requirements.txt (line 4))
+  Using cached et_xmlfile-2.0.0-py3-none-any.whl.metadata (2.7 kB)
+Collecting six>=1.5 (from python-dateutil>=2.8.2->pandas==2.3.1->-r requirements.txt (line 1))
+  Using cached six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+Using cached pandas-2.3.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.0 MB)
+Using cached requests-2.34.2-py3-none-any.whl (73 kB)
+Using cached beautifulsoup4-4.15.0-py3-none-any.whl (109 kB)
+Using cached openpyxl-3.1.5-py2.py3-none-any.whl (250 kB)
+Using cached charset_normalizer-3.5.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (248 kB)
+Using cached idna-3.19-py3-none-any.whl (68 kB)
+Using cached urllib3-2.7.0-py3-none-any.whl (131 kB)
+Using cached certifi-2026.7.22-py3-none-any.whl (136 kB)
+Using cached numpy-2.5.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (16.7 MB)
+Using cached python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+Using cached pytz-2026.3.post1-py2.py3-none-any.whl (508 kB)
+Using cached six-1.17.0-py2.py3-none-any.whl (11 kB)
+Using cached soupsieve-2.9.2-py3-none-any.whl (37 kB)
+Using cached typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+Using cached tzdata-2026.3-py2.py3-none-any.whl (348 kB)
+Using cached et_xmlfile-2.0.0-py3-none-any.whl (18 kB)
+Installing collected packages: pytz, urllib3, tzdata, typing-extensions, soupsieve, six, numpy, idna, et-xmlfile, charset_normalizer, certifi, requests, python-dateutil, openpyxl, beautifulsoup4, pandas
+
+Successfully installed beautifulsoup4-4.15.0 certifi-2026.7.22 charset_normalizer-3.5.1 et-xmlfile-2.0.0 idna-3.19 numpy-2.5.2 openpyxl-3.1.5 pandas-2.3.1 python-dateutil-2.9.0.post0 pytz-2026.3.post1 requests-2.34.2 six-1.17.0 soupsieve-2.9.2 typing-extensions-4.16.0 tzdata-2026.3 urllib3-2.7.0
+EXIT_CODE=0
+
+===== unit tests =====
+test_existing_axis_builder_is_overridden (test_adaptive_time_axis.AdaptiveTimeAxisTests.test_existing_axis_builder_is_overridden) ... ok
+test_short_windows_get_bimonthly_markers (test_adaptive_time_axis.AdaptiveTimeAxisTests.test_short_windows_get_bimonthly_markers) ... ok
+test_active_windows_are_consumed_from_c1_metadata (test_all_chart_timeline_context.TimelineAllChartsTests.test_active_windows_are_consumed_from_c1_metadata) ... ok
+test_events_match_c1_and_use_top_down_labels (test_all_chart_timeline_context.TimelineAllChartsTests.test_events_match_c1_and_use_top_down_labels) ... ok
+test_full_total_policy_information_matches_c1 (test_all_chart_timeline_context.TimelineAllChartsTests.test_full_total_policy_information_matches_c1) ... ok
+test_timeline_plugin_is_shared_by_all_chart_builds (test_all_chart_timeline_context.TimelineAllChartsTests.test_timeline_plugin_is_shared_by_all_chart_builds) ... ok
+test_x_axis_uses_annual_markers_like_c1 (test_all_chart_timeline_context.TimelineAllChartsTests.test_x_axis_uses_annual_markers_like_c1) ... ok
+test_default_end_uses_paris_clock_in_winter_too (test_build_clock.BuildClockTests.test_default_end_uses_paris_clock_in_winter_too) ... ok
+test_default_end_uses_paris_date_after_utc_midnight_boundary (test_build_clock.BuildClockTests.test_default_end_uses_paris_date_after_utc_midnight_boundary) ... ok
+test_annual_url (test_common.CommonTests.test_annual_url) ... ok
+test_c2_thresholds_follow_recovered_executable_profile (test_common.CommonTests.test_c2_thresholds_follow_recovered_executable_profile) ... ok
+test_common_last_declaration_of_day_wins (test_common.CommonTests.test_common_last_declaration_of_day_wins) ... ok
+test_common_parser_can_disable_geographic_filter (test_common.CommonTests.test_common_parser_can_disable_geographic_filter) ... ok
+test_department_from_cp_is_generic_but_keeps_corsica_prefix (test_common.CommonTests.test_department_from_cp_is_generic_but_keeps_corsica_prefix) ... ok
+test_margin_formula (test_common.CommonTests.test_margin_formula) ... ok
+test_reference_band (test_common.CommonTests.test_reference_band) ... ok
+test_ufip_parser_and_forward_fill (test_common.CommonTests.test_ufip_parser_and_forward_fill) ... ok
+test_confirmed_non_total (test_corse_station_identity_v2.TestCorsicaStationIdentityV2.test_confirmed_non_total) ... ok
+test_file_schema_guard (test_corse_station_identity_v2.TestCorsicaStationIdentityV2.test_file_schema_guard) ... ok
+test_new_missing_id_is_unknown (test_corse_station_identity_v2.TestCorsicaStationIdentityV2.test_new_missing_id_is_unknown) ... ok
+test_total (test_corse_station_identity_v2.TestCorsicaStationIdentityV2.test_total) ... ok
+test_total_variants (test_corse_station_identity_v2.TestCorsicaStationIdentityV2.test_total_variants) ... ok
+test_unresolved_variants_are_unknown (test_corse_station_identity_v2.TestCorsicaStationIdentityV2.test_unresolved_variants_are_unknown) ... ok
+test_desktop_slider_has_compact_layout (test_desktop_period_slider.DesktopPeriodSliderTests.test_desktop_slider_has_compact_layout) ... ok
+test_existing_selector_is_enabled_on_desktop (test_desktop_period_slider.DesktopPeriodSliderTests.test_existing_selector_is_enabled_on_desktop) ... ok
+test_same_existing_12_month_default_is_kept (test_desktop_period_slider.DesktopPeriodSliderTests.test_same_existing_12_month_default_is_kept) ... ok
+test_dashboard_uses_c1_ranges_as_the_only_shield_source (test_dynamic_bouclier_meta.DynamicBouclierMetaTests.test_dashboard_uses_c1_ranges_as_the_only_shield_source) ... ok
+test_shared_manifest_metadata_is_carried_into_candidate (test_dynamic_bouclier_meta.DynamicBouclierMetaTests.test_shared_manifest_metadata_is_carried_into_candidate) ... ok
+test_analysis_panel_uses_dynamic_builders (test_dynamic_editorial.DynamicEditorialTests.test_analysis_panel_uses_dynamic_builders) ... ok
+test_bouclier_current_status_comes_from_shared_metadata (test_dynamic_editorial.DynamicEditorialTests.test_bouclier_current_status_comes_from_shared_metadata) ... ok
+test_margin_text_is_dynamic_too (test_dynamic_editorial.DynamicEditorialTests.test_margin_text_is_dynamic_too) ... ok
+test_patch_is_idempotent (test_dynamic_editorial.DynamicEditorialTests.test_patch_is_idempotent) ... ok
+test_period_end_and_year_labels_follow_data (test_dynamic_editorial.DynamicEditorialTests.test_period_end_and_year_labels_follow_data) ... ok
+test_price_text_is_built_from_loaded_series (test_dynamic_editorial.DynamicEditorialTests.test_price_text_is_built_from_loaded_series) ... ok
+test_nonfinite_rotterdam_is_rejected (test_incremental_builder_wiring.IncrementalBuilderWiringT.test_nonfinite_rotterdam_is_rejected) ... ok
+test_release_tag_is_forwarded_to_original_loader (test_incremental_builder_wiring.IncrementalBuilderWiringT.test_release_tag_is_forwarded_to_original_loader) ... ok
+test_production_entrypoint_uses_publication_profile_not_research_profile (test_production_boundary.ProductionBoundaryTests.test_production_entrypoint_uses_publication_profile_not_research_profile) ... ok
+test_research_method_is_explicitly_marked_non_production (test_production_boundary.ProductionBoundaryTests.test_research_method_is_explicitly_marked_non_production) ... ok
+test_noop_when_neither_series_nor_bouclier_changed (test_promote_bouclier_meta.PromoteBouclierMetaTests.test_noop_when_neither_series_nor_bouclier_changed) ... ok
+test_promotes_bouclier_only_when_public_series_are_identical (test_promote_bouclier_meta.PromoteBouclierMetaTests.test_promotes_bouclier_only_when_public_series_are_identical) ... ok
+test_aberrant_latest_declaration_is_not_silently_corrected (test_publication.PublicationProfileTests.test_aberrant_latest_declaration_is_not_silently_corrected) ... ok
+test_bounded_long_gap_marks_the_whole_carried_interval (test_publication.PublicationProfileTests.test_bounded_long_gap_marks_the_whole_carried_interval) ... ok
+test_last_declaration_of_day_wins (test_publication.PublicationProfileTests.test_last_declaration_of_day_wins) ... ok
+test_station_day_ht_is_rounded_before_aggregation (test_publication.PublicationProfileTests.test_station_day_ht_is_rounded_before_aggregation) ... ok
+test_unbounded_tail_becomes_inactive_only_after_threshold (test_publication.PublicationProfileTests.test_unbounded_tail_becomes_inactive_only_after_threshold) ... ok
+test_bdr_breach_and_recovery_stays_locked (test_r2_guard_v2.R2GuardT.test_bdr_breach_and_recovery_stays_locked) ... ok
+test_first_stale_day_is_declaration_plus_45 (test_r2_guard_v2.R2GuardT.test_first_stale_day_is_declaration_plus_45) ... ok
+test_new_double_cap_period_uses_new_r2_not_april_r2 (test_r2_guard_v2.R2GuardT.test_new_double_cap_period_uses_new_r2_not_april_r2) ... ok
+test_new_target_declaration_resets_origin (test_r2_guard_v2.R2GuardT.test_new_target_declaration_resets_origin) ... ok
+test_no_double_cap_period_fails_closed (test_r2_guard_v2.R2GuardT.test_no_double_cap_period_fails_closed) ... ok
+test_2026_reference_calibrates_bdr_k (test_reliability_policy_v2.RotterdamCalibrationT.test_2026_reference_calibrates_bdr_k) ... ok
+test_2026_reference_calibrates_corse_k (test_reliability_policy_v2.RotterdamCalibrationT.test_2026_reference_calibrates_corse_k) ... ok
+test_corse_phase_uses_shared_k_with_new_r1 (test_reliability_policy_v2.RotterdamCalibrationT.test_corse_phase_uses_shared_k_with_new_r1) ... ok
+test_invalid_shared_calibration_is_rejected (test_reliability_policy_v2.RotterdamCalibrationT.test_invalid_shared_calibration_is_rejected) ... ok
+test_missing_c1_corse_metadata_fails_closed (test_reliability_policy_v2.RotterdamCalibrationT.test_missing_c1_corse_metadata_fails_closed) ... ok
+test_new_phase_recomputes_r1_and_r2_but_keeps_k (test_reliability_policy_v2.RotterdamCalibrationT.test_new_phase_recomputes_r1_and_r2_but_keeps_k) ... ok
+test_nonfinite_daily_is_rejected (test_reliability_policy_v2.RotterdamCalibrationT.test_nonfinite_daily_is_rejected) ... ok
+test_nonfinite_observed_is_rejected (test_reliability_policy_v2.RotterdamCalibrationT.test_nonfinite_observed_is_rejected) ... ok
+test_phase_specific_r2_boundary_is_greater_or_equal (test_reliability_policy_v2.RotterdamCalibrationT.test_phase_specific_r2_boundary_is_greater_or_equal) ... ok
+test_r2_breach_stays_locked_even_if_rotterdam_recovers (test_reliability_policy_v2.RotterdamCalibrationT.test_r2_breach_stays_locked_even_if_rotterdam_recovers) ... ok
+test_45 (test_reliability_policy_v2.T.test_45) ... ok
+test_bdr_double_cap_requires_liveness_and_r2 (test_reliability_policy_v2.T.test_bdr_double_cap_requires_liveness_and_r2) ... ok
+test_bdr_double_cap_requires_nonprincipal_liveness (test_reliability_policy_v2.T.test_bdr_double_cap_requires_nonprincipal_liveness) ... ok
+test_bdr_single_cap_any_other_fuel_renews_45_days (test_reliability_policy_v2.T.test_bdr_single_cap_any_other_fuel_renews_45_days) ... ok
+test_bdr_single_cap_has_no_arbitrary_90_day_stop (test_reliability_policy_v2.T.test_bdr_single_cap_has_no_arbitrary_90_day_stop) ... ok
+test_cap_tolerance_exact_millieuro_boundaries (test_reliability_policy_v2.T.test_cap_tolerance_exact_millieuro_boundaries) ... ok
+test_corse_double_cap_r2_admissible (test_reliability_policy_v2.T.test_corse_double_cap_r2_admissible) ... ok
+test_corse_double_cap_requires_r2_even_with_cross_liveness (test_reliability_policy_v2.T.test_corse_double_cap_requires_r2_even_with_cross_liveness) ... ok
+test_corse_single_cap_cross_liveness_renews_45_days (test_reliability_policy_v2.T.test_corse_single_cap_cross_liveness_renews_45_days) ... ok
+test_corse_single_cap_e10_does_not_prove_liveness (test_reliability_policy_v2.T.test_corse_single_cap_e10_does_not_prove_liveness) ... ok
+test_future_target_declaration_is_rejected (test_reliability_policy_v2.T.test_future_target_declaration_is_rejected) ... ok
+test_no_resurrection_when_stale_at_phase_entry (test_reliability_policy_v2.T.test_no_resurrection_when_stale_at_phase_entry) ... ok
+test_non_finite_price_is_rejected (test_reliability_policy_v2.T.test_non_finite_price_is_rejected) ... ok
+test_rupture_has_priority_over_independent_inactivity (test_reliability_policy_v2.T.test_rupture_has_priority_over_independent_inactivity) ... ok
+test_stale_e10_cannot_use_shield_exception (test_reliability_policy_v2.T.test_stale_e10_cannot_use_shield_exception) ... ok
+test_target_redeclaration_inside_phase_restores_phase_eligibility (test_reliability_policy_v2.T.test_target_redeclaration_inside_phase_restores_phase_eligibility) ... ok
+test_fresh_release_and_advanced_stock_pass (test_shared_freshness.SharedFreshnessTests.test_fresh_release_and_advanced_stock_pass) ... ok
+test_fresh_release_with_frozen_official_stock_fails_as_data_staleness (test_shared_freshness.SharedFreshnessTests.test_fresh_release_with_frozen_official_stock_fails_as_data_staleness) ... ok
+test_fresh_release_with_unchanged_but_recent_stock_is_explicit_noop (test_shared_freshness.SharedFreshnessTests.test_fresh_release_with_unchanged_but_recent_stock_is_explicit_noop) ... ok
+test_old_release_fails_even_if_stock_date_is_recent (test_shared_freshness.SharedFreshnessTests.test_old_release_fails_even_if_stock_date_is_recent) ... ok
+test_regressed_stock_fails (test_shared_freshness.SharedFreshnessTests.test_regressed_stock_fails) ... ok
+test_release_timestamp_can_be_recovered_from_current_tag_format (test_shared_freshness.SharedFreshnessTests.test_release_timestamp_can_be_recovered_from_current_tag_format) ... ok
+test_asset_lookup (test_shared_release.SharedReleaseTests.test_asset_lookup) ... ok
+test_decode_validates_checksum_and_restores_types (test_shared_release.SharedReleaseTests.test_decode_validates_checksum_and_restores_types) ... ok
+test_github_token_is_only_sent_to_api_github_com (test_shared_release.SharedReleaseTests.test_github_token_is_only_sent_to_api_github_com) ... ok
+test_selects_newest_matching_published_release (test_shared_release.SharedReleaseTests.test_selects_newest_matching_published_release) ... ok
+test_double_cap_period_starts_when_second_fuel_becomes_effective (test_shield_phase_v2.ShieldPhaseT.test_double_cap_period_starts_when_second_fuel_becomes_effective) ... ok
+test_invalid_phase_fails_closed (test_shield_phase_v2.ShieldPhaseT.test_invalid_phase_fails_closed) ... ok
+test_missing_phases_is_explicit_error (test_shield_phase_v2.ShieldPhaseT.test_missing_phases_is_explicit_error) ... ok
+test_nonfinite_cap_fails_closed (test_shield_phase_v2.ShieldPhaseT.test_nonfinite_cap_fails_closed) ... ok
+test_outside_effective_phase_returns_none (test_shield_phase_v2.ShieldPhaseT.test_outside_effective_phase_returns_none) ... ok
+test_overlap_and_duplicate_id_fail_closed (test_shield_phase_v2.ShieldPhaseT.test_overlap_and_duplicate_id_fail_closed) ... ok
+test_reads_c1_phase_for_day (test_shield_phase_v2.ShieldPhaseT.test_reads_c1_phase_for_day) ... ok
+test_known_ids_do_not_need_lookup (test_station_brand_resolver.StationBrandResolverTests.test_known_ids_do_not_need_lookup) ... ok
+test_low_cost_major_rules (test_station_brand_resolver.StationBrandResolverTests.test_low_cost_major_rules) ... ok
+test_new_esso_express_is_resolved_once_and_kept (test_station_brand_resolver.StationBrandResolverTests.test_new_esso_express_is_resolved_once_and_kept) ... ok
+test_unrecognized_brand_fails_closed (test_station_brand_resolver.StationBrandResolverTests.test_unrecognized_brand_fails_closed) ... ok
+test_unresolved_is_retried_and_not_classified (test_station_brand_resolver.StationBrandResolverTests.test_unresolved_is_retried_and_not_classified) ... ok
+test_event_markers_match_c1 (test_timeline_context.TimelineContextTests.test_event_markers_match_c1) ... ok
+test_gazole_promos_remain_separate_context (test_timeline_context.TimelineContextTests.test_gazole_promos_remain_separate_context) ... ok
+test_legacy_context_is_gone (test_timeline_context.TimelineContextTests.test_legacy_context_is_gone) ... ok
+test_shield_ranges_come_only_from_c1_metadata (test_timeline_context.TimelineContextTests.test_shield_ranges_come_only_from_c1_metadata) ... ok
+test_total_2022_discount_periods_match_c1 (test_timeline_context.TimelineContextTests.test_total_2022_discount_periods_match_c1) ... ok
+test_dst_crons_share_the_same_minute (test_weekly_schedule_gate.WeeklyScheduleGateTests.test_dst_crons_share_the_same_minute) ... ok
+test_gate_selects_only_the_matching_utc_hour (test_weekly_schedule_gate.WeeklyScheduleGateTests.test_gate_selects_only_the_matching_utc_hour) ... ok
+test_january_run_requests_previous_and_current_year (test_year_boundary_e2e.YearBoundaryEndToEndTests.test_january_run_requests_previous_and_current_year) ... ok
+test_missing_previous_year_is_rejected (test_year_boundary_e2e.YearBoundaryEndToEndTests.test_missing_previous_year_is_rejected) ... ok
+test_real_january_first_clock_matches_c1_snapshot_window (test_year_boundary_e2e.YearBoundaryEndToEndTests.test_real_january_first_clock_matches_c1_snapshot_window) ... ok
+test_shared_snapshot_carries_december_state_into_january (test_year_boundary_e2e.YearBoundaryEndToEndTests.test_shared_snapshot_carries_december_state_into_january) ... ok
+
+----------------------------------------------------------------------
+Ran 109 tests in 0.489s
+
+OK
+Incremental BDR station-brand resolution:
+{}
+EXIT_CODE=0
+
+===== compile =====
+EXIT_CODE=0
+
+===== find guarded C1 release =====
+TAG=
+NO_GUARDED_RELEASE
+Diagnostic completed
