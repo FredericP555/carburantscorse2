@@ -14,15 +14,29 @@ from pathlib import Path
 import pandas as pd
 
 from a4c_common.ufip import expand_daily, fetch_rotterdam_gazole
-from carburantscorse2.publication import build_publication_state
+from carburantscorse2.publication import build_publication_state, load_bdr_categories
 from carburantscorse2.publication_margin import build_margin_series, observed_week_is_complete
-from scripts import build_append_candidate_incremental as incremental
+from scripts import build_append_candidate as base
+from scripts.resolve_new_bdr_station_brands import (
+    DEFAULT_REGISTRY as BDR_REGISTRY,
+    load_registry,
+    resolved_categories,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_PATH = ROOT / "data.json"
+LEGACY_CATEGORIES = ROOT / "config" / "bdr_categories_published_2026-06-06.csv"
 WEEK_START = pd.Timestamp("2026-08-17")
 WEEK_END = WEEK_START + pd.Timedelta(6, unit="D")
 EXPECTED_OLD_UFIP_LAST = pd.Timestamp("2026-08-14")
+
+
+def _merged_bdr_categories() -> dict[str, str]:
+    categories = load_bdr_categories(LEGACY_CATEGORIES)
+    incremental = resolved_categories(load_registry(BDR_REGISTRY))
+    for station_id, category in incremental.items():
+        categories.setdefault(str(station_id), category)
+    return categories
 
 
 def _replace_last_week(rows: list[dict], replacement: dict, group: str) -> None:
@@ -49,15 +63,14 @@ def main() -> None:
         if not rows or pd.Timestamp(rows[-1]["date"]).normalize() != WEEK_START:
             raise RuntimeError(f"{group}: baseline final margin week is not 2026-08-17")
 
-    # Importing the incremental wrapper installs the same BDR category resolver used by
-    # production. Use the same pinned shared official-price source as the weekly build.
-    base = incremental.base
+    # Read the same shared official-price source and the already-resolved BDR registry,
+    # but do not perform any station-brand lookup or mutate any registry during this repair.
     observations, source = base.load_official_observations((2025, 2026), "shared")
     source_max = pd.Timestamp(source.get("shared_source_max_date")).normalize()
     if source_max < WEEK_END:
         raise RuntimeError(f"Shared official stock ends at {source_max.date()}, before repair week end")
 
-    categories = base.load_bdr_categories(ROOT / "config" / "bdr_categories_published_2026-06-06.csv")
+    categories = _merged_bdr_categories()
     state = build_publication_state(pd.DataFrame(observations), global_end=WEEK_END, bdr_categories=categories)
     margin_state = state[(state["date"] >= WEEK_START) & (state["date"] <= WEEK_END)].copy()
 
