@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 env:
-  EXPECTED_C1_PREP_SHA: 44be367940b8aecefaf5a6a03ca2ef474527fbc2
+  EXPECTED_C1_PREP_SHA: 6c04e20aebefecc77a463bc442e14dd4a1afd799
   PYTHONPATH: .
 
 jobs:
