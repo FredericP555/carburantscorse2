@@ -5,6 +5,7 @@ on:
     branches: [prep/v2-production-activation]
     paths:
       - .github/workflows/v2-production-activation-preflight.yml
+      - .github/workflows/update-weekly.yml
       - a4c_common/shared_release.py
       - a4c_common/corse_brand.py
       - a4c_common/price_math.py
@@ -15,6 +16,7 @@ on:
       - scripts/v2_event_guards.py
       - scripts/build_v2_production_candidate.py
       - scripts/promote_v2_candidate.py
+      - scripts/check_shared_freshness.py
   workflow_dispatch:
 
 permissions:
@@ -22,7 +24,6 @@ permissions:
 
 env:
   PYTHONPATH: .
-  C1_PREPROD_TAG: a4c-preprod-v2-20260824T222157Z-32784177852
   C1_TAG_PREFIX: a4c-preprod-v2-
 
 jobs:
@@ -43,13 +44,40 @@ jobs:
       - name: Compile production V2 sources
         run: python -m compileall -q a4c_common carburantscorse2 scripts
 
+      - name: Pin latest isolated C1 V2 preproduction bundle
+        id: c1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag=$(gh release list \
+            --repo FredericP555/carburantscorse1 \
+            --limit 50 \
+            --json tagName,publishedAt \
+            --jq '[.[] | select(.tagName | startswith("a4c-preprod-v2-"))] | sort_by(.publishedAt) | reverse | .[0].tagName // ""')
+          if [ -z "$tag" ]; then
+            echo "No C1 V2 preproduction bundle found." >&2
+            exit 1
+          fi
+          echo "release_tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Pinned C1 preproduction release: $tag"
+
       - name: Build production-shaped V2 candidate
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: >-
           python scripts/build_v2_production_candidate.py
           --tag-prefix "$C1_TAG_PREFIX"
-          --release-tag "$C1_PREPROD_TAG"
+          --release-tag "${{ steps.c1.outputs.release_tag }}"
+
+      - name: Verify fresh pinned C1 release and official stock
+        run: >-
+          python -m scripts.check_shared_freshness
+          --candidate outputs/v2-production-candidate.json
+          --baseline data.json
+          --max-release-age-hours 12
+          --max-source-age-days 4
 
       - name: Verify controlled transition and recurring safety contract
         run: python scripts/promote_v2_candidate.py
