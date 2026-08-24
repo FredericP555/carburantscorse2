@@ -1,0 +1,120 @@
+{
+  "status": "prep-only-production-preview",
+  "production_modified": false,
+  "baseline": "outputs/v2/main-data-baseline.json",
+  "candidate": "outputs/v2/production-candidate-preview.json",
+  "daily_switch_date": "2026-07-23",
+  "weekly_switch_date": "2026-07-27",
+  "pre_boundary_exact_match": true,
+  "protected_rows_verified": 11884,
+  "baseline_sha256": "434aa1a2d44deb84e530aa69a717a18262211dc9a2c9cb48208a965b0114b3c2",
+  "candidate_sha256": "06a51ce0a8cdf24953d021917b79d384ac4a2d36b0c24a1dd9d695290e3a0c0b",
+  "series": {
+    "DATA/gazole/sp95/daily/all": {
+      "transition_start": "2026-07-23",
+      "changed_rows": 31,
+      "missing_generated_dates": [],
+      "max_abs_ecart_delta_c_l": 0.13,
+      "mean_signed_ecart_delta_c_l": 0.0129
+    },
+    "DATA/gazole/sp95/weekly/all": {
+      "transition_start": "2026-07-27",
+      "changed_rows": 4,
+      "missing_generated_dates": [],
+      "max_abs_ecart_delta_c_l": 0.07,
+      "mean_signed_ecart_delta_c_l": 0.02
+    },
+    "DATA/gazole/sp95/daily/reseau": {
+      "transition_start": "2026-07-23",
+      "changed_rows": 31,
+      "missing_generated_dates": [],
+      "max_abs_ecart_delta_c_l": 0.27,
+      "mean_signed_ecart_delta_c_l": 0.0168
+    },
+    "DATA/gazole/sp95/weekly/reseau": {
+      "transition_start": "2026-07-27",
+      "changed_rows": 4,
+      "missing_generated_dates": [],
+      "max_abs_ecart_delta_c_l": 0.07,
+      "mean_signed_ecart_delta_c_l": 0.045
+    },
+    "DATA/sp95/sp95/daily/all": {
+      "transition_start": "2026-07-23",
+      "changed_rows": 32,
+      "missing_generated_dates": [],
+      "max_abs_ecart_delta_c_l": 0.91,
+      "mean_signed_ecart_delta_c_l": -0.385
+    },
+    "DATA/sp95/sp95/weekly/all": {
+      "transition_start": "2026-07-27",
+      "changed_rows": 4,
+      "missing_generated_dates": [],
+      "max_abs_ecart_delta_c_l": 0.47,
+      "mean_signed_ecart_delta_c_l": -0.3225
+    },
+    "DATA/sp95/sp95/daily/reseau": {
+      "transition_start": "2026-07-23",
+      "changed_rows": 32,
+      "missing_generated_dates": [],
+      "max_abs_ecart_delta_c_l": 0.92,
+      "mean_signed_ecart_delta_c_l": -0.2063
+    },
+    "DATA/sp95/sp95/weekly/reseau": {
+      "transition_start": "2026-07-27",
+      "changed_rows": 4,
+      "missing_generated_dates": [],
+      "max_abs_ecart_delta_c_l": 0.49,
+      "mean_signed_ecart_delta_c_l": -0.1475
+    },
+    "DATA/sp95/e10/daily/all": {
+      "transition_start": "2026-07-23",
+      "changed_rows": 31,
+      "missing_generated_dates": [],
+      "max_abs_ecart_delta_c_l": 0.28,
+      "mean_signed_ecart_delta_c_l": 0.0677
+    },
+    "DATA/sp95/e10/weekly/all": {
+      "transition_start": "2026-07-27",
+      "changed_rows": 4,
+      "missing_generated_dates": [],
+      "max_abs_ecart_delta_c_l": 0.14,
+      "mean_signed_ecart_delta_c_l": 0.0575
+    },
+    "DATA/sp95/e10/daily/reseau": {
+      "transition_start": "2026-07-23",
+      "changed_rows": 31,
+      "missing_generated_dates": [],
+      "max_abs_ecart_delta_c_l": 0.45,
+      "mean_signed_ecart_delta_c_l": -0.0474
+    },
+    "DATA/sp95/e10/weekly/reseau": {
+      "transition_start": "2026-07-27",
+      "changed_rows": 4,
+      "missing_generated_dates": [],
+      "max_abs_ecart_delta_c_l": 0.14,
+      "mean_signed_ecart_delta_c_l": -0.0675
+    },
+    "MARGES_GZ/all": {
+      "transition_start": "2026-07-27",
+      "changed_rows": 4,
+      "missing_generated_dates": [],
+      "max_abs_ecart_delta_c_l": 0.07,
+      "mean_signed_ecart_delta_c_l": 0.0225
+    },
+    "MARGES_GZ/reseau": {
+      "transition_start": "2026-07-27",
+      "changed_rows": 4,
+      "missing_generated_dates": [],
+      "max_abs_ecart_delta_c_l": 0.07,
+      "mean_signed_ecart_delta_c_l": 0.0475
+    }
+  },
+  "changed_rows_total": 220,
+  "missing_generated_dates_total": 0,
+  "notes": [
+    "No daily row before 2026-07-23 is changed.",
+    "The weekly period starting 2026-07-20 is preserved because it overlaps the switch date.",
+    "Only complete weekly periods starting 2026-07-27 or later are rebuilt with V2.",
+    "The preview is an artifact only; data.json is not modified."
+  ]
+}

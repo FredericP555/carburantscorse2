@@ -58,9 +58,9 @@
     "reason_counts": {
       "normal_45j": 173630,
       "rupture_active": 9189,
-      "ancien_hors_exception": 3966,
+      "ancien_hors_exception": 3982,
       "inactive_independant": 1796,
-      "bouclier_vivacite_45j_renouvelee": 757,
+      "bouclier_vivacite_45j_renouvelee": 741,
       "exception_carburant_non_principal": 480,
       "double_plafond_rotterdam_verrouille": 306,
       "double_plafond_rotterdam_admissible": 144,
@@ -84,7 +84,7 @@
       "BdR/Gazole/ancien_hors_exception": 691,
       "BdR/E10/inactive_independant": 669,
       "BdR/E10/exception_carburant_non_principal": 480,
-      "BdR/SP95/ancien_hors_exception": 375,
+      "BdR/SP95/ancien_hors_exception": 391,
       "Corse/SP95/double_plafond_rotterdam_verrouille": 306,
       "BdR/SP95/inactive_independant": 187,
       "Corse/SP95/double_plafond_rotterdam_admissible": 142,
@@ -94,11 +94,11 @@
       "Corse/SP95/rupture_active": 86,
       "Corse/SP95/ancien_pas_au_plafond": 79,
       "Corse/SP95/bouclier_sans_vivacite_recente": 50,
-      "BdR/SP95/bouclier_vivacite_45j_renouvelee": 17,
       "Corse/Gazole/ancien_pas_au_plafond": 15,
       "Corse/Gazole/pas_de_resurrection_a_entree_plafond": 11,
       "Corse/SP95/pas_de_resurrection_a_entree_plafond": 7,
-      "Corse/Gazole/double_plafond_rotterdam_admissible": 2
+      "Corse/Gazole/double_plafond_rotterdam_admissible": 2,
+      "BdR/SP95/bouclier_vivacite_45j_renouvelee": 1
     },
     "changed_station_days": {
       "BdR/E10/True->False": 2386,
@@ -108,15 +108,19 @@
       "Corse/Gazole/True->False": 893,
       "BdR/Gazole/False->True": 818,
       "BdR/SP95/True->False": 761,
-      "BdR/SP95/False->True": 717,
+      "BdR/SP95/False->True": 701,
       "Corse/SP95/False->True": 9
     }
   },
   "bdr_identity_probe": {
     "candidate_station_ids": 6,
-    "resolved_brand_count": 6,
-    "total_brand_count": 6,
-    "unresolved": {}
+    "resolved_brand_count": 3,
+    "total_brand_count": 3,
+    "unresolved": {
+      "13800010": "HTTPError: HTTP Error 502: Bad Gateway",
+      "13500011": "HTTPError: HTTP Error 502: Bad Gateway",
+      "13400002": "HTTPError: HTTP Error 502: Bad Gateway"
+    }
   },
   "comparison": {
     "NOUVELLE_REGLE_RETROACTIVE_vs_ACTUEL": {
@@ -17100,7 +17104,7 @@
         "common_periods": 598,
         "changed_periods": 234,
         "max_abs_delta_c_l": 1.33,
-        "median_abs_delta_c_l": 0.38,
+        "median_abs_delta_c_l": 0.39,
         "all_deltas": [
           {
             "date": "2025-01-03",
@@ -20135,20 +20139,20 @@
           {
             "date": "2026-05-23",
             "actuel": 3.44,
-            "v2": 2.68,
-            "delta_c_l": -0.76
+            "v2": 2.5,
+            "delta_c_l": -0.94
           },
           {
             "date": "2026-05-24",
             "actuel": 3.34,
-            "v2": 2.62,
-            "delta_c_l": -0.72
+            "v2": 2.43,
+            "delta_c_l": -0.91
           },
           {
             "date": "2026-05-25",
             "actuel": 3.26,
-            "v2": 2.55,
-            "delta_c_l": -0.71
+            "v2": 2.37,
+            "delta_c_l": -0.89
           },
           {
             "date": "2026-05-26",
@@ -20165,8 +20169,8 @@
           {
             "date": "2026-05-28",
             "actuel": 4.68,
-            "v2": 3.98,
-            "delta_c_l": -0.7
+            "v2": 3.83,
+            "delta_c_l": -0.85
           },
           {
             "date": "2026-05-29",
@@ -20195,14 +20199,14 @@
           {
             "date": "2026-06-02",
             "actuel": 7.08,
-            "v2": 6.3,
-            "delta_c_l": -0.78
+            "v2": 6.21,
+            "delta_c_l": -0.87
           },
           {
             "date": "2026-06-03",
             "actuel": 7.67,
-            "v2": 6.85,
-            "delta_c_l": -0.82
+            "v2": 6.77,
+            "delta_c_l": -0.9
           },
           {
             "date": "2026-06-04",
@@ -20219,26 +20223,26 @@
           {
             "date": "2026-06-06",
             "actuel": 7.86,
-            "v2": 7.53,
-            "delta_c_l": -0.33
+            "v2": 7.47,
+            "delta_c_l": -0.39
           },
           {
             "date": "2026-06-07",
             "actuel": 7.86,
-            "v2": 7.53,
-            "delta_c_l": -0.33
+            "v2": 7.47,
+            "delta_c_l": -0.39
           },
           {
             "date": "2026-06-08",
             "actuel": 8.55,
-            "v2": 8.06,
-            "delta_c_l": -0.49
+            "v2": 8.0,
+            "delta_c_l": -0.55
           },
           {
             "date": "2026-06-09",
             "actuel": 8.67,
-            "v2": 8.26,
-            "delta_c_l": -0.41
+            "v2": 8.21,
+            "delta_c_l": -0.46
           },
           {
             "date": "2026-06-10",
@@ -20249,26 +20253,26 @@
           {
             "date": "2026-06-11",
             "actuel": 8.76,
-            "v2": 8.2,
-            "delta_c_l": -0.56
+            "v2": 8.16,
+            "delta_c_l": -0.6
           },
           {
             "date": "2026-06-12",
             "actuel": 8.88,
-            "v2": 8.44,
-            "delta_c_l": -0.44
+            "v2": 8.4,
+            "delta_c_l": -0.48
           },
           {
             "date": "2026-06-13",
             "actuel": 8.97,
-            "v2": 8.67,
-            "delta_c_l": -0.3
+            "v2": 8.63,
+            "delta_c_l": -0.34
           },
           {
             "date": "2026-06-14",
             "actuel": 8.97,
-            "v2": 8.64,
-            "delta_c_l": -0.33
+            "v2": 8.6,
+            "delta_c_l": -0.37
           },
           {
             "date": "2026-06-15",
@@ -20285,14 +20289,14 @@
           {
             "date": "2026-06-17",
             "actuel": 10.49,
-            "v2": 10.57,
-            "delta_c_l": 0.08
+            "v2": 10.58,
+            "delta_c_l": 0.09
           },
           {
             "date": "2026-06-18",
             "actuel": 11.42,
-            "v2": 11.38,
-            "delta_c_l": -0.04
+            "v2": 11.4,
+            "delta_c_l": -0.02
           },
           {
             "date": "2026-06-19",
@@ -23793,20 +23797,20 @@
           {
             "date": "2026-05-23",
             "actuel": 3.3,
-            "v2": 2.24,
-            "delta_c_l": -1.06
+            "v2": 1.84,
+            "delta_c_l": -1.46
           },
           {
             "date": "2026-05-24",
             "actuel": 3.14,
-            "v2": 2.14,
-            "delta_c_l": -1.0
+            "v2": 1.74,
+            "delta_c_l": -1.4
           },
           {
             "date": "2026-05-25",
             "actuel": 3.06,
-            "v2": 2.07,
-            "delta_c_l": -0.99
+            "v2": 1.67,
+            "delta_c_l": -1.39
           },
           {
             "date": "2026-05-26",
@@ -23823,8 +23827,8 @@
           {
             "date": "2026-05-28",
             "actuel": 4.24,
-            "v2": 3.49,
-            "delta_c_l": -0.75
+            "v2": 3.17,
+            "delta_c_l": -1.07
           },
           {
             "date": "2026-05-29",
@@ -23853,14 +23857,14 @@
           {
             "date": "2026-06-02",
             "actuel": 5.13,
-            "v2": 4.27,
-            "delta_c_l": -0.86
+            "v2": 4.02,
+            "delta_c_l": -1.11
           },
           {
             "date": "2026-06-03",
             "actuel": 5.94,
-            "v2": 4.78,
-            "delta_c_l": -1.16
+            "v2": 4.54,
+            "delta_c_l": -1.4
           },
           {
             "date": "2026-06-04",
@@ -23877,26 +23881,26 @@
           {
             "date": "2026-06-06",
             "actuel": 6.36,
-            "v2": 5.72,
-            "delta_c_l": -0.64
+            "v2": 5.53,
+            "delta_c_l": -0.83
           },
           {
             "date": "2026-06-07",
             "actuel": 6.36,
-            "v2": 5.72,
-            "delta_c_l": -0.64
+            "v2": 5.53,
+            "delta_c_l": -0.83
           },
           {
             "date": "2026-06-08",
             "actuel": 6.75,
-            "v2": 5.92,
-            "delta_c_l": -0.83
+            "v2": 5.72,
+            "delta_c_l": -1.03
           },
           {
             "date": "2026-06-09",
             "actuel": 6.95,
-            "v2": 6.48,
-            "delta_c_l": -0.47
+            "v2": 6.33,
+            "delta_c_l": -0.62
           },
           {
             "date": "2026-06-10",
@@ -23907,26 +23911,26 @@
           {
             "date": "2026-06-11",
             "actuel": 6.88,
-            "v2": 6.09,
-            "delta_c_l": -0.79
+            "v2": 5.92,
+            "delta_c_l": -0.96
           },
           {
             "date": "2026-06-12",
             "actuel": 7.22,
-            "v2": 6.53,
-            "delta_c_l": -0.69
+            "v2": 6.38,
+            "delta_c_l": -0.84
           },
           {
             "date": "2026-06-13",
             "actuel": 7.23,
-            "v2": 6.73,
-            "delta_c_l": -0.5
+            "v2": 6.58,
+            "delta_c_l": -0.65
           },
           {
             "date": "2026-06-14",
             "actuel": 7.23,
-            "v2": 6.7,
-            "delta_c_l": -0.53
+            "v2": 6.54,
+            "delta_c_l": -0.69
           },
           {
             "date": "2026-06-15",
@@ -23943,14 +23947,14 @@
           {
             "date": "2026-06-17",
             "actuel": 8.77,
-            "v2": 8.65,
-            "delta_c_l": -0.12
+            "v2": 8.58,
+            "delta_c_l": -0.19
           },
           {
             "date": "2026-06-18",
             "actuel": 9.21,
-            "v2": 8.85,
-            "delta_c_l": -0.36
+            "v2": 8.8,
+            "delta_c_l": -0.41
           },
           {
             "date": "2026-06-19",
@@ -24853,32 +24857,32 @@
           {
             "date": "2026-05-18",
             "actuel": 3.46,
-            "v2": 2.82,
-            "delta_c_l": -0.64
+            "v2": 2.77,
+            "delta_c_l": -0.69
           },
           {
             "date": "2026-05-25",
             "actuel": 4.54,
-            "v2": 3.83,
-            "delta_c_l": -0.71
+            "v2": 3.78,
+            "delta_c_l": -0.76
           },
           {
             "date": "2026-06-01",
             "actuel": 7.46,
-            "v2": 6.84,
-            "delta_c_l": -0.62
+            "v2": 6.8,
+            "delta_c_l": -0.66
           },
           {
             "date": "2026-06-08",
             "actuel": 8.78,
-            "v2": 8.34,
-            "delta_c_l": -0.44
+            "v2": 8.3,
+            "delta_c_l": -0.48
           },
           {
             "date": "2026-06-15",
             "actuel": 11.33,
-            "v2": 11.26,
-            "delta_c_l": -0.07
+            "v2": 11.27,
+            "delta_c_l": -0.06
           },
           {
             "date": "2026-06-22",
@@ -24949,6 +24953,12 @@
             "delta_c_l": -0.91
           },
           {
+            "date": "2026-05-25",
+            "actuel": 4.54,
+            "v2": 3.78,
+            "delta_c_l": -0.76
+          },
+          {
             "date": "2026-07-20",
             "actuel": 7.83,
             "v2": 7.09,
@@ -24959,12 +24969,6 @@
             "actuel": 18.8,
             "v2": 18.06,
             "delta_c_l": -0.74
-          },
-          {
-            "date": "2026-05-25",
-            "actuel": 4.54,
-            "v2": 3.83,
-            "delta_c_l": -0.71
           },
           {
             "date": "2026-01-19",
@@ -24979,22 +24983,22 @@
             "delta_c_l": -0.7
           },
           {
-            "date": "2026-02-02",
-            "actuel": 15.68,
-            "v2": 15.02,
-            "delta_c_l": -0.66
-          },
-          {
             "date": "2026-05-18",
             "actuel": 3.46,
-            "v2": 2.82,
-            "delta_c_l": -0.64
+            "v2": 2.77,
+            "delta_c_l": -0.69
           },
           {
             "date": "2026-06-01",
             "actuel": 7.46,
-            "v2": 6.84,
-            "delta_c_l": -0.62
+            "v2": 6.8,
+            "delta_c_l": -0.66
+          },
+          {
+            "date": "2026-02-02",
+            "actuel": 15.68,
+            "v2": 15.02,
+            "delta_c_l": -0.66
           }
         ]
       },
@@ -25439,32 +25443,32 @@
           {
             "date": "2026-05-18",
             "actuel": 3.45,
-            "v2": 2.57,
-            "delta_c_l": -0.88
+            "v2": 2.46,
+            "delta_c_l": -0.99
           },
           {
             "date": "2026-05-25",
             "actuel": 3.9,
-            "v2": 2.88,
-            "delta_c_l": -1.02
+            "v2": 2.78,
+            "delta_c_l": -1.12
           },
           {
             "date": "2026-06-01",
             "actuel": 5.86,
-            "v2": 4.93,
-            "delta_c_l": -0.93
+            "v2": 4.8,
+            "delta_c_l": -1.06
           },
           {
             "date": "2026-06-08",
             "actuel": 7.02,
-            "v2": 6.38,
-            "delta_c_l": -0.64
+            "v2": 6.24,
+            "delta_c_l": -0.78
           },
           {
             "date": "2026-06-15",
             "actuel": 9.43,
-            "v2": 8.97,
-            "delta_c_l": -0.46
+            "v2": 8.96,
+            "delta_c_l": -0.47
           },
           {
             "date": "2026-06-22",
@@ -25535,16 +25539,28 @@
             "delta_c_l": -1.28
           },
           {
+            "date": "2026-05-25",
+            "actuel": 3.9,
+            "v2": 2.78,
+            "delta_c_l": -1.12
+          },
+          {
             "date": "2025-12-29",
             "actuel": 15.75,
             "v2": 14.65,
             "delta_c_l": -1.1
           },
           {
-            "date": "2026-05-25",
-            "actuel": 3.9,
-            "v2": 2.88,
-            "delta_c_l": -1.02
+            "date": "2026-06-01",
+            "actuel": 5.86,
+            "v2": 4.8,
+            "delta_c_l": -1.06
+          },
+          {
+            "date": "2026-05-18",
+            "actuel": 3.45,
+            "v2": 2.46,
+            "delta_c_l": -0.99
           },
           {
             "date": "2026-02-02",
@@ -25559,18 +25575,6 @@
             "delta_c_l": -0.97
           },
           {
-            "date": "2026-06-01",
-            "actuel": 5.86,
-            "v2": 4.93,
-            "delta_c_l": -0.93
-          },
-          {
-            "date": "2026-05-18",
-            "actuel": 3.45,
-            "v2": 2.57,
-            "delta_c_l": -0.88
-          },
-          {
             "date": "2026-01-26",
             "actuel": 12.93,
             "v2": 12.09,
@@ -25579,8 +25583,8 @@
           {
             "date": "2026-06-08",
             "actuel": 7.02,
-            "v2": 6.38,
-            "delta_c_l": -0.64
+            "v2": 6.24,
+            "delta_c_l": -0.78
           }
         ]
       }
