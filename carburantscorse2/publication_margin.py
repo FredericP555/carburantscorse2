@@ -37,6 +37,25 @@ def observed_week_is_complete(rotterdam_daily: pd.DataFrame, week_start) -> bool
     return observed.iloc[0] <= week_start + pd.Timedelta(1, unit="D") and observed.iloc[-1] >= week_start + pd.Timedelta(3, unit="D")
 
 
+def contiguous_supported_periods(rotterdam_daily: pd.DataFrame, periods) -> set[pd.Timestamp]:
+    """Return only the leading contiguous run of UFIP-supported weekly periods.
+
+    Once one unpublished week lacks sufficient real UFIP observations, later weeks are
+    withheld too. This prevents an append-only series from jumping over the missing week
+    and making that gap impossible to fill on a later run.
+    """
+    accepted: set[pd.Timestamp] = set()
+    previous: pd.Timestamp | None = None
+    for raw_period in sorted(pd.Timestamp(p).normalize() for p in periods):
+        if previous is not None and raw_period != previous + pd.Timedelta(7, unit="D"):
+            break
+        if not observed_week_is_complete(rotterdam_daily, raw_period):
+            break
+        accepted.add(raw_period)
+        previous = raw_period
+    return accepted
+
+
 def build_margin_series(
     state: pd.DataFrame,
     rotterdam_daily: pd.DataFrame,
@@ -49,8 +68,9 @@ def build_margin_series(
 
     The calculation is performed at station-day level, using the 4-decimal HT value of
     the published price profile, then averaged over all eligible station-days in the week.
-    A week is emitted only if real UFIP observations sufficiently cover that week; carried
-    values may fill weekends/holidays but cannot manufacture an absent working week.
+    Weeks are emitted only as a contiguous prefix for which real UFIP observations provide
+    sufficient coverage; carried values may fill weekends/holidays but cannot manufacture
+    an absent working week.
     """
     if bdr_scope not in {"all", "network"}:
         raise ValueError("bdr_scope must be all or network")
@@ -82,11 +102,7 @@ def build_margin_series(
     guard = bdr_all.groupby("period").agg(n_bdr_guard=("station_id", "nunique"))
     merged = cg.join(bg, how="inner").join(guard, how="left")
     merged = merged[(merged["n_corse"] >= min_corse_stations) & (merged["n_bdr_guard"] >= min_bdr_stations)]
-    supported_periods = {
-        pd.Timestamp(period).normalize()
-        for period in merged.index
-        if observed_week_is_complete(rotterdam_daily, period)
-    }
+    supported_periods = contiguous_supported_periods(rotterdam_daily, merged.index)
     merged = merged[merged.index.isin(supported_periods)]
 
     result: list[dict] = []
