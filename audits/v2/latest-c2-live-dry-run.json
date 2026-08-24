@@ -40,10 +40,10 @@
   "window": {
     "retroactive_start": "2026-01-01",
     "end": "2026-08-23",
-    "prospective_switch_date": "2026-08-24",
+    "prospective_switch_date": "2026-07-23",
     "prospective_switch_source": {
-      "source": "main-data.json",
-      "last_published_day": "2026-08-23"
+      "source": "workflow-dry-run-override",
+      "simulated_switch_date": "2026-07-23"
     }
   },
   "engine_calls": {
@@ -928,87 +928,639 @@
     "NOUVELLE_REGLE_PROSPECTIVE_vs_ACTUEL": {
       "gazole_sp95/daily/all": {
         "common_periods": 598,
-        "changed_periods": 0,
-        "max_abs_delta_c_l": 0.0,
-        "median_abs_delta_c_l": 0.0,
-        "largest_changes": []
+        "changed_periods": 30,
+        "max_abs_delta_c_l": 0.08,
+        "median_abs_delta_c_l": 0.04,
+        "largest_changes": [
+          {
+            "date": "2026-08-08",
+            "actuel": 15.69,
+            "v2": 15.77,
+            "delta_c_l": 0.08
+          },
+          {
+            "date": "2026-08-07",
+            "actuel": 14.96,
+            "v2": 15.04,
+            "delta_c_l": 0.08
+          },
+          {
+            "date": "2026-08-06",
+            "actuel": 13.23,
+            "v2": 13.31,
+            "delta_c_l": 0.08
+          },
+          {
+            "date": "2026-08-05",
+            "actuel": 11.71,
+            "v2": 11.79,
+            "delta_c_l": 0.08
+          },
+          {
+            "date": "2026-08-04",
+            "actuel": 10.69,
+            "v2": 10.77,
+            "delta_c_l": 0.08
+          },
+          {
+            "date": "2026-08-03",
+            "actuel": 10.74,
+            "v2": 10.82,
+            "delta_c_l": 0.08
+          },
+          {
+            "date": "2026-08-02",
+            "actuel": 10.79,
+            "v2": 10.87,
+            "delta_c_l": 0.08
+          },
+          {
+            "date": "2026-08-01",
+            "actuel": 10.83,
+            "v2": 10.91,
+            "delta_c_l": 0.08
+          },
+          {
+            "date": "2026-07-31",
+            "actuel": 11.66,
+            "v2": 11.73,
+            "delta_c_l": 0.07
+          },
+          {
+            "date": "2026-07-30",
+            "actuel": 13.34,
+            "v2": 13.41,
+            "delta_c_l": 0.07
+          }
+        ]
       },
       "gazole_sp95/daily/network": {
         "common_periods": 598,
-        "changed_periods": 0,
-        "max_abs_delta_c_l": 0.0,
-        "median_abs_delta_c_l": 0.0,
-        "largest_changes": []
+        "changed_periods": 30,
+        "max_abs_delta_c_l": 0.09,
+        "median_abs_delta_c_l": 0.04,
+        "largest_changes": [
+          {
+            "date": "2026-08-05",
+            "actuel": 9.78,
+            "v2": 9.87,
+            "delta_c_l": 0.09
+          },
+          {
+            "date": "2026-08-04",
+            "actuel": 9.26,
+            "v2": 9.35,
+            "delta_c_l": 0.09
+          },
+          {
+            "date": "2026-08-08",
+            "actuel": 12.43,
+            "v2": 12.51,
+            "delta_c_l": 0.08
+          },
+          {
+            "date": "2026-08-07",
+            "actuel": 11.88,
+            "v2": 11.96,
+            "delta_c_l": 0.08
+          },
+          {
+            "date": "2026-08-06",
+            "actuel": 10.6,
+            "v2": 10.68,
+            "delta_c_l": 0.08
+          },
+          {
+            "date": "2026-08-03",
+            "actuel": 9.34,
+            "v2": 9.42,
+            "delta_c_l": 0.08
+          },
+          {
+            "date": "2026-08-02",
+            "actuel": 9.26,
+            "v2": 9.33,
+            "delta_c_l": 0.07
+          },
+          {
+            "date": "2026-08-01",
+            "actuel": 9.27,
+            "v2": 9.34,
+            "delta_c_l": 0.07
+          },
+          {
+            "date": "2026-07-31",
+            "actuel": 9.73,
+            "v2": 9.8,
+            "delta_c_l": 0.07
+          },
+          {
+            "date": "2026-07-30",
+            "actuel": 10.89,
+            "v2": 10.96,
+            "delta_c_l": 0.07
+          }
+        ]
       },
       "gazole_sp95/weekly/all": {
         "common_periods": 86,
-        "changed_periods": 0,
-        "max_abs_delta_c_l": 0.0,
-        "median_abs_delta_c_l": 0.0,
-        "largest_changes": []
+        "changed_periods": 5,
+        "max_abs_delta_c_l": 0.07,
+        "median_abs_delta_c_l": 0.03,
+        "largest_changes": [
+          {
+            "date": "2026-08-03",
+            "actuel": 13.26,
+            "v2": 13.33,
+            "delta_c_l": 0.07
+          },
+          {
+            "date": "2026-07-27",
+            "actuel": 12.65,
+            "v2": 12.71,
+            "delta_c_l": 0.06
+          },
+          {
+            "date": "2026-08-17",
+            "actuel": 11.22,
+            "v2": 11.25,
+            "delta_c_l": 0.03
+          },
+          {
+            "date": "2026-08-10",
+            "actuel": 14.2,
+            "v2": 14.23,
+            "delta_c_l": 0.03
+          },
+          {
+            "date": "2026-07-20",
+            "actuel": 13.16,
+            "v2": 13.15,
+            "delta_c_l": -0.01
+          }
+        ]
       },
       "gazole_sp95/weekly/network": {
         "common_periods": 86,
-        "changed_periods": 0,
-        "max_abs_delta_c_l": 0.0,
-        "median_abs_delta_c_l": 0.0,
-        "largest_changes": []
+        "changed_periods": 5,
+        "max_abs_delta_c_l": 0.08,
+        "median_abs_delta_c_l": 0.04,
+        "largest_changes": [
+          {
+            "date": "2026-08-03",
+            "actuel": 10.82,
+            "v2": 10.9,
+            "delta_c_l": 0.08
+          },
+          {
+            "date": "2026-07-27",
+            "actuel": 10.66,
+            "v2": 10.73,
+            "delta_c_l": 0.07
+          },
+          {
+            "date": "2026-08-17",
+            "actuel": 9.61,
+            "v2": 9.65,
+            "delta_c_l": 0.04
+          },
+          {
+            "date": "2026-08-10",
+            "actuel": 11.65,
+            "v2": 11.67,
+            "delta_c_l": 0.02
+          },
+          {
+            "date": "2026-07-20",
+            "actuel": 10.57,
+            "v2": 10.56,
+            "delta_c_l": -0.01
+          }
+        ]
       },
       "sp95_e10/daily/all": {
         "common_periods": 598,
-        "changed_periods": 0,
-        "max_abs_delta_c_l": 0.0,
-        "median_abs_delta_c_l": 0.0,
-        "largest_changes": []
+        "changed_periods": 32,
+        "max_abs_delta_c_l": 0.32,
+        "median_abs_delta_c_l": 0.18,
+        "largest_changes": [
+          {
+            "date": "2026-08-04",
+            "actuel": 10.59,
+            "v2": 10.91,
+            "delta_c_l": 0.32
+          },
+          {
+            "date": "2026-08-03",
+            "actuel": 10.3,
+            "v2": 10.62,
+            "delta_c_l": 0.32
+          },
+          {
+            "date": "2026-08-06",
+            "actuel": 12.19,
+            "v2": 12.49,
+            "delta_c_l": 0.3
+          },
+          {
+            "date": "2026-07-27",
+            "actuel": 10.46,
+            "v2": 10.75,
+            "delta_c_l": 0.29
+          },
+          {
+            "date": "2026-08-05",
+            "actuel": 11.09,
+            "v2": 11.37,
+            "delta_c_l": 0.28
+          },
+          {
+            "date": "2026-07-28",
+            "actuel": 10.36,
+            "v2": 10.63,
+            "delta_c_l": 0.27
+          },
+          {
+            "date": "2026-07-29",
+            "actuel": 10.46,
+            "v2": 10.72,
+            "delta_c_l": 0.26
+          },
+          {
+            "date": "2026-07-23",
+            "actuel": 11.26,
+            "v2": 11.52,
+            "delta_c_l": 0.26
+          },
+          {
+            "date": "2026-08-02",
+            "actuel": 10.13,
+            "v2": 10.38,
+            "delta_c_l": 0.25
+          },
+          {
+            "date": "2026-08-01",
+            "actuel": 10.13,
+            "v2": 10.38,
+            "delta_c_l": 0.25
+          }
+        ]
       },
       "sp95_e10/daily/network": {
         "common_periods": 598,
-        "changed_periods": 0,
-        "max_abs_delta_c_l": 0.0,
-        "median_abs_delta_c_l": 0.0,
-        "largest_changes": []
+        "changed_periods": 32,
+        "max_abs_delta_c_l": 0.4,
+        "median_abs_delta_c_l": 0.22,
+        "largest_changes": [
+          {
+            "date": "2026-08-03",
+            "actuel": 8.65,
+            "v2": 9.05,
+            "delta_c_l": 0.4
+          },
+          {
+            "date": "2026-08-04",
+            "actuel": 8.71,
+            "v2": 9.1,
+            "delta_c_l": 0.39
+          },
+          {
+            "date": "2026-07-27",
+            "actuel": 9.03,
+            "v2": 9.39,
+            "delta_c_l": 0.36
+          },
+          {
+            "date": "2026-07-29",
+            "actuel": 8.99,
+            "v2": 9.32,
+            "delta_c_l": 0.33
+          },
+          {
+            "date": "2026-07-28",
+            "actuel": 8.91,
+            "v2": 9.24,
+            "delta_c_l": 0.33
+          },
+          {
+            "date": "2026-08-02",
+            "actuel": 8.48,
+            "v2": 8.8,
+            "delta_c_l": 0.32
+          },
+          {
+            "date": "2026-08-01",
+            "actuel": 8.48,
+            "v2": 8.8,
+            "delta_c_l": 0.32
+          },
+          {
+            "date": "2026-07-31",
+            "actuel": 8.5,
+            "v2": 8.82,
+            "delta_c_l": 0.32
+          },
+          {
+            "date": "2026-07-30",
+            "actuel": 8.85,
+            "v2": 9.17,
+            "delta_c_l": 0.32
+          },
+          {
+            "date": "2026-07-25",
+            "actuel": 8.81,
+            "v2": 9.13,
+            "delta_c_l": 0.32
+          }
+        ]
       },
       "sp95_e10/weekly/all": {
         "common_periods": 86,
-        "changed_periods": 0,
-        "max_abs_delta_c_l": 0.0,
-        "median_abs_delta_c_l": 0.0,
-        "largest_changes": []
+        "changed_periods": 5,
+        "max_abs_delta_c_l": 0.26,
+        "median_abs_delta_c_l": 0.13,
+        "largest_changes": [
+          {
+            "date": "2026-07-27",
+            "actuel": 10.32,
+            "v2": 10.58,
+            "delta_c_l": 0.26
+          },
+          {
+            "date": "2026-08-03",
+            "actuel": 12.08,
+            "v2": 12.29,
+            "delta_c_l": 0.21
+          },
+          {
+            "date": "2026-08-17",
+            "actuel": 10.7,
+            "v2": 10.83,
+            "delta_c_l": 0.13
+          },
+          {
+            "date": "2026-07-20",
+            "actuel": 10.97,
+            "v2": 11.09,
+            "delta_c_l": 0.12
+          },
+          {
+            "date": "2026-08-10",
+            "actuel": 11.87,
+            "v2": 11.91,
+            "delta_c_l": 0.04
+          }
+        ]
       },
       "sp95_e10/weekly/network": {
         "common_periods": 86,
-        "changed_periods": 0,
-        "max_abs_delta_c_l": 0.0,
-        "median_abs_delta_c_l": 0.0,
-        "largest_changes": []
+        "changed_periods": 5,
+        "max_abs_delta_c_l": 0.33,
+        "median_abs_delta_c_l": 0.16,
+        "largest_changes": [
+          {
+            "date": "2026-07-27",
+            "actuel": 8.75,
+            "v2": 9.08,
+            "delta_c_l": 0.33
+          },
+          {
+            "date": "2026-08-03",
+            "actuel": 9.56,
+            "v2": 9.79,
+            "delta_c_l": 0.23
+          },
+          {
+            "date": "2026-07-20",
+            "actuel": 8.72,
+            "v2": 8.88,
+            "delta_c_l": 0.16
+          },
+          {
+            "date": "2026-08-17",
+            "actuel": 9.13,
+            "v2": 9.28,
+            "delta_c_l": 0.15
+          },
+          {
+            "date": "2026-08-10",
+            "actuel": 9.87,
+            "v2": 9.9,
+            "delta_c_l": 0.03
+          }
+        ]
       },
       "sp95_sp95/daily/all": {
         "common_periods": 598,
-        "changed_periods": 0,
-        "max_abs_delta_c_l": 0.0,
-        "median_abs_delta_c_l": 0.0,
-        "largest_changes": []
+        "changed_periods": 32,
+        "max_abs_delta_c_l": 0.93,
+        "median_abs_delta_c_l": 0.48,
+        "largest_changes": [
+          {
+            "date": "2026-08-06",
+            "actuel": 7.12,
+            "v2": 8.05,
+            "delta_c_l": 0.93
+          },
+          {
+            "date": "2026-08-05",
+            "actuel": 6.66,
+            "v2": 7.53,
+            "delta_c_l": 0.87
+          },
+          {
+            "date": "2026-08-03",
+            "actuel": 5.82,
+            "v2": 6.65,
+            "delta_c_l": 0.83
+          },
+          {
+            "date": "2026-08-07",
+            "actuel": 7.67,
+            "v2": 8.48,
+            "delta_c_l": 0.81
+          },
+          {
+            "date": "2026-08-02",
+            "actuel": 5.04,
+            "v2": 5.85,
+            "delta_c_l": 0.81
+          },
+          {
+            "date": "2026-08-01",
+            "actuel": 5.05,
+            "v2": 5.86,
+            "delta_c_l": 0.81
+          },
+          {
+            "date": "2026-08-04",
+            "actuel": 6.39,
+            "v2": 7.19,
+            "delta_c_l": 0.8
+          },
+          {
+            "date": "2026-07-31",
+            "actuel": 5.38,
+            "v2": 6.1,
+            "delta_c_l": 0.72
+          },
+          {
+            "date": "2026-07-27",
+            "actuel": 6.79,
+            "v2": 7.5,
+            "delta_c_l": 0.71
+          },
+          {
+            "date": "2026-08-08",
+            "actuel": 7.85,
+            "v2": 8.55,
+            "delta_c_l": 0.7
+          }
+        ]
       },
       "sp95_sp95/daily/network": {
         "common_periods": 598,
-        "changed_periods": 0,
-        "max_abs_delta_c_l": 0.0,
-        "median_abs_delta_c_l": 0.0,
-        "largest_changes": []
+        "changed_periods": 32,
+        "max_abs_delta_c_l": 1.22,
+        "median_abs_delta_c_l": 0.62,
+        "largest_changes": [
+          {
+            "date": "2026-08-07",
+            "actuel": 4.84,
+            "v2": 6.06,
+            "delta_c_l": 1.22
+          },
+          {
+            "date": "2026-08-06",
+            "actuel": 4.48,
+            "v2": 5.67,
+            "delta_c_l": 1.19
+          },
+          {
+            "date": "2026-08-08",
+            "actuel": 4.85,
+            "v2": 5.97,
+            "delta_c_l": 1.12
+          },
+          {
+            "date": "2026-08-09",
+            "actuel": 4.83,
+            "v2": 5.92,
+            "delta_c_l": 1.09
+          },
+          {
+            "date": "2026-08-23",
+            "actuel": 3.77,
+            "v2": 4.81,
+            "delta_c_l": 1.04
+          },
+          {
+            "date": "2026-08-11",
+            "actuel": 4.85,
+            "v2": 5.86,
+            "delta_c_l": 1.01
+          },
+          {
+            "date": "2026-08-10",
+            "actuel": 4.96,
+            "v2": 5.96,
+            "delta_c_l": 1.0
+          },
+          {
+            "date": "2026-08-05",
+            "actuel": 4.51,
+            "v2": 5.44,
+            "delta_c_l": 0.93
+          },
+          {
+            "date": "2026-08-12",
+            "actuel": 4.31,
+            "v2": 5.16,
+            "delta_c_l": 0.85
+          },
+          {
+            "date": "2026-07-23",
+            "actuel": 6.42,
+            "v2": 7.19,
+            "delta_c_l": 0.77
+          }
+        ]
       },
       "sp95_sp95/weekly/all": {
         "common_periods": 86,
-        "changed_periods": 0,
-        "max_abs_delta_c_l": 0.0,
-        "median_abs_delta_c_l": 0.0,
-        "largest_changes": []
+        "changed_periods": 5,
+        "max_abs_delta_c_l": 0.82,
+        "median_abs_delta_c_l": 0.39,
+        "largest_changes": [
+          {
+            "date": "2026-08-03",
+            "actuel": 7.05,
+            "v2": 7.87,
+            "delta_c_l": 0.82
+          },
+          {
+            "date": "2026-07-27",
+            "actuel": 5.81,
+            "v2": 6.54,
+            "delta_c_l": 0.73
+          },
+          {
+            "date": "2026-08-17",
+            "actuel": 5.92,
+            "v2": 6.31,
+            "delta_c_l": 0.39
+          },
+          {
+            "date": "2026-08-10",
+            "actuel": 6.74,
+            "v2": 7.13,
+            "delta_c_l": 0.39
+          },
+          {
+            "date": "2026-07-20",
+            "actuel": 7.83,
+            "v2": 8.03,
+            "delta_c_l": 0.2
+          }
+        ]
       },
       "sp95_sp95/weekly/network": {
         "common_periods": 86,
-        "changed_periods": 0,
-        "max_abs_delta_c_l": 0.0,
-        "median_abs_delta_c_l": 0.0,
-        "largest_changes": []
+        "changed_periods": 5,
+        "max_abs_delta_c_l": 1.02,
+        "median_abs_delta_c_l": 0.56,
+        "largest_changes": [
+          {
+            "date": "2026-08-03",
+            "actuel": 4.55,
+            "v2": 5.57,
+            "delta_c_l": 1.02
+          },
+          {
+            "date": "2026-08-10",
+            "actuel": 4.59,
+            "v2": 5.3,
+            "delta_c_l": 0.71
+          },
+          {
+            "date": "2026-08-17",
+            "actuel": 4.31,
+            "v2": 4.87,
+            "delta_c_l": 0.56
+          },
+          {
+            "date": "2026-07-27",
+            "actuel": 4.33,
+            "v2": 4.86,
+            "delta_c_l": 0.53
+          },
+          {
+            "date": "2026-07-20",
+            "actuel": 6.31,
+            "v2": 6.58,
+            "delta_c_l": 0.27
+          }
+        ]
       }
     }
   },
@@ -1017,5 +1569,43 @@
     "independent closure/inactivity evidence is not present in the current shared price-only snapshot",
     "BDR Total identity is probed only for stale at-cap candidates and fails closed when unresolved",
     "retrospective window is limited by the years carried in the isolated C1 prep bundle"
-  ]
+  ],
+  "prospective_diagnostic": {
+    "simulated_switch_date": "2026-07-23",
+    "active_double_cap_started_on": "2026-07-23",
+    "r2_calibration": {
+      "corsica": {
+        "phase_started_on": "2026-07-23",
+        "r1": 0.8876666666666667,
+        "k": 0.7329942784488239,
+        "r2": 0.6506545878364061,
+        "r1_source_dates": [
+          "2026-07-20",
+          "2026-07-21",
+          "2026-07-22"
+        ],
+        "k_baseline_exit_dates": [
+          "2026-05-29",
+          "2026-06-01",
+          "2026-06-02"
+        ]
+      },
+      "bdr": {
+        "phase_started_on": "2026-07-23",
+        "r1": 0.8876666666666667,
+        "k": 0.8239033693579149,
+        "r2": 0.7313515575333758,
+        "r1_source_dates": [
+          "2026-07-20",
+          "2026-07-21",
+          "2026-07-22"
+        ],
+        "k_baseline_exit_dates": [
+          "2026-05-20",
+          "2026-05-21",
+          "2026-05-22"
+        ]
+      }
+    }
+  }
 }
