@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths: [.github/workflows/repair-ufip-margin-20260817.yml]
+  workflow_dispatch:
 
 permissions:
   contents: write
