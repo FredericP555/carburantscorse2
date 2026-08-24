@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/v2-live-dry-run.yml
       - scripts/v2_event_guards.py
+      - scripts/build_v2_transition_preview.py
       - tests/test_v2_event_guards.py
   workflow_dispatch:
 
@@ -143,6 +144,33 @@ jobs:
           p.write_text(text.replace(needle, replacement, 1), encoding='utf-8')
           PY
 
+      - name: Export prospective V2 publication state from isolated dry-run
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/dry_run_v2_candidate.py')
+          text = p.read_text(encoding='utf-8')
+          needle = (
+              '    state["eligible_v2_retroactive"] = v2_flags\n'
+              '    state["eligible_v2_prospective"] = prospective_flags\n\n'
+              '    series_current = _series(state, "eligible_current")\n'
+          )
+          replacement = (
+              '    state["eligible_v2_retroactive"] = v2_flags\n'
+              '    state["eligible_v2_prospective"] = prospective_flags\n\n'
+              '    transition_state = state.copy()\n'
+              '    transition_state["eligible_publication"] = transition_state["eligible_v2_prospective"].fillna(False).astype(bool)\n'
+              '    transition_state_path = ROOT / "outputs" / "v2" / "v2-prospective-state.csv.gz"\n'
+              '    transition_state_path.parent.mkdir(parents=True, exist_ok=True)\n'
+              '    transition_state.to_csv(transition_state_path, index=False, compression="gzip")\n\n'
+              '    series_current = _series(state, "eligible_current")\n'
+          )
+          if needle not in text:
+              raise SystemExit('Prospective-state insertion point not found; refusing transition export patch')
+          p.write_text(text.replace(needle, replacement, 1), encoding='utf-8')
+          PY
+
       - name: Execute real-data V2 candidate dry-run
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -150,6 +178,17 @@ jobs:
           python scripts/run_dry_run_v2_cached.py
           --tag-prefix a4c-prep-v2-
           --release-tag "${{ steps.c1.outputs.release_tag }}"
+
+      - name: Build production preview from 23 July transition
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p outputs/v2
+          git fetch --no-tags --depth=1 origin main
+          git show FETCH_HEAD:data.json > outputs/v2/main-data-baseline.json
+          python scripts/build_v2_transition_preview.py \
+            --switch-date "$SIMULATED_SWITCH_DATE"
 
       - name: Measure level effect at prospective boundary
         if: success()
@@ -259,6 +298,15 @@ jobs:
               b=boundary.get(key)
               if b:
                   print(f"- {key}: mean Δ={b.get('mean_signed_delta_c_l'):+.3f} c/L; median={b.get('median_signed_delta_c_l'):+.3f}; range={b.get('min_delta_c_l'):+.2f}…{b.get('max_delta_c_l'):+.2f}; signs -/0/+={b.get('negative_periods')}/{b.get('zero_periods')}/{b.get('positive_periods')}")
+          preview_path=pathlib.Path('outputs/v2/production-candidate-diff.json')
+          if preview_path.exists():
+              r=json.loads(preview_path.read_text(encoding='utf-8'))
+              print('### V2 transition production preview')
+              print(f"- Daily switch: {r.get('daily_switch_date')}; first full V2 week: {r.get('weekly_switch_date')}")
+              print(f"- Pre-boundary exact match: {r.get('pre_boundary_exact_match')}")
+              print(f"- Protected rows verified unchanged: {r.get('protected_rows_verified',0):,}")
+              print(f"- Changed rows after boundary: {r.get('changed_rows_total',0):,}")
+              print(f"- Missing generated dates: {r.get('missing_generated_dates_total',0):,}")
           print('- Production modified: no')
           PY
 
@@ -269,18 +317,23 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           mkdir -p audits/v2
           cp outputs/v2/v2-dry-run.json audits/v2/latest-c2-live-dry-run.json
-          git add audits/v2/latest-c2-live-dry-run.json
+          cp outputs/v2/production-candidate-diff.json audits/v2/latest-c2-v2-transition-preview.json
+          git add audits/v2/latest-c2-live-dry-run.json audits/v2/latest-c2-v2-transition-preview.json
           git diff --cached --quiet && exit 0
-          git commit -m "Store latest C2 V2 live dry-run audit"
+          git commit -m "Store latest C2 V2 transition preview audit"
           git push origin "HEAD:${GITHUB_REF_NAME}"
 
-      - name: Upload V2 dry-run audit artifact
+      - name: Upload V2 dry-run and transition preview artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: c2-v2-live-dry-run
           path: |
             outputs/v2/v2-dry-run.json
+            outputs/v2/production-candidate-preview.json
+            outputs/v2/production-candidate-diff.json
+            outputs/v2/main-data-baseline.json
+            outputs/v2/v2-prospective-state.csv.gz
             outputs/ufip/c1_shared_meta.json
             outputs/c1/shared_release_tag.txt
           retention-days: 14
