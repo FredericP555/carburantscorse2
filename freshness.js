@@ -42,9 +42,14 @@
     }
     return null;
   }
+  function isMarginView(){
+    return typeof DATA!=='undefined'&&DATA&&DATA.gazole&&
+      typeof currentCarbu!=='undefined'&&currentCarbu==='gazole'&&
+      typeof currentVue!=='undefined'&&currentVue==='marge';
+  }
   function c2Rows(gran){
     if(typeof DATA==='undefined'||!DATA||!DATA.gazole)return [];
-    if(typeof currentCarbu!=='undefined'&&currentCarbu==='gazole'&&typeof currentVue!=='undefined'&&currentVue==='marge'){
+    if(isMarginView()){
       return (typeof MARGES_GZ!=='undefined'&&MARGES_GZ&&Array.isArray(MARGES_GZ.all))?MARGES_GZ.all:[];
     }
     const car=(typeof currentCarbu!=='undefined')?currentCarbu:'gazole';
@@ -60,7 +65,7 @@
   function sourceMaxDate(){
     if(typeof DATA!=='undefined'&&DATA&&DATA.gazole){
       const meta=(typeof window!=='undefined'&&window.A4C_DATA_META)||{};
-      if(typeof currentCarbu!=='undefined'&&currentCarbu==='gazole'&&typeof currentVue!=='undefined'&&currentVue==='marge'){
+      if(isMarginView()){
         return meta.ufip_last_observed_date||lastC2('weekly');
       }
       return meta.official_source_max_date||meta.daily_target_end||lastC2('daily');
@@ -73,7 +78,7 @@
   }
   function isWeeklyView(){
     if(typeof DATA!=='undefined'&&DATA&&DATA.gazole){
-      if(typeof currentCarbu!=='undefined'&&currentCarbu==='gazole'&&typeof currentVue!=='undefined'&&currentVue==='marge')return true;
+      if(isMarginView())return true;
       return typeof currentGran!=='undefined'&&currentGran==='weekly';
     }
     return typeof resolution!=='undefined'&&resolution==='w';
@@ -113,8 +118,7 @@
     buildAnnualTicks=function(minTs,maxTs){
       const spanMonths=Math.max(1,(maxTs-minTs)/(30.44*DAY_MS));
       const step=spanMonths<=15?2:spanMonths<=30?3:12;
-      const weekly=(typeof currentGran!=='undefined'&&currentGran==='weekly')||
-        (typeof currentCarbu!=='undefined'&&currentCarbu==='gazole'&&typeof currentVue!=='undefined'&&currentVue==='marge');
+      const weekly=(typeof currentGran!=='undefined'&&currentGran==='weekly')||isMarginView();
       const out=[];
       if(step===12){
         const y0=new Date(minTs).getFullYear(),y1=new Date(maxTs).getFullYear();
@@ -185,7 +189,13 @@
       const start=weeklyStartDate();
       if(start){
         const end=addDays(start,6);
-        if(end&&sourceMax>=end){
+        if(isMarginView()&&end){
+          // A margin week is present only after the publication guard has verified real
+          // UFIP coverage of the working week. Friday can therefore legitimately be the
+          // last observed quote while the Monday-Sunday weekly aggregate is complete.
+          badge.textContent=`Hebdo · semaine du ${frDate(start)} · complète au ${frDate(end)}`;
+          freshnessDate=end;
+        }else if(end&&sourceMax>=end){
           badge.textContent=`Hebdo · semaine complète au ${frDate(end)}`;
           freshnessDate=end;
         }else{
