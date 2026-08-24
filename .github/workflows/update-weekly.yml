@@ -15,10 +15,14 @@ concurrency:
   group: carburantscorse2-weekly
   cancel-in-progress: false
 
+env:
+  PYTHONPATH: .
+  C1_V2_TAG_PREFIX: a4c-v2-shared-
+
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 50
     steps:
       - name: Select the 08:00 Europe/Paris slot
         id: gate
@@ -30,7 +34,6 @@ jobs:
           import os
           from datetime import datetime
           from zoneinfo import ZoneInfo
-
           if os.environ.get('EVENT_NAME') == 'workflow_dispatch':
               run = True
           else:
@@ -39,27 +42,24 @@ jobs:
               expected_utc_hour = (8 - offset_hours) % 24
               schedule = os.environ.get('EVENT_SCHEDULE', '')
               try:
-                  parts = schedule.split()
-                  scheduled_hour = int(parts[1])
+                  scheduled_hour = int(schedule.split()[1])
               except Exception:
                   scheduled_hour = -1
-              # The two cron entries carry the minute. The gate only chooses which UTC
-              # hour corresponds to 08:00 Europe/Paris, so changing the common cron minute
-              # cannot silently disable production.
               run = scheduled_hour == expected_utc_hour
-
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
               fh.write(f"run={'true' if run else 'false'}\n")
           print('Run selected:', run)
           PY
 
-      - uses: actions/checkout@v4
+      - name: Checkout triggering ref
         if: steps.gate.outputs.run == 'true'
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
         if: steps.gate.outputs.run == 'true'
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: pip
@@ -72,38 +72,84 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         run: python -m unittest discover -s tests -v
 
+      - name: Compile V2 production sources
+        if: steps.gate.outputs.run == 'true'
+        run: python -m compileall -q a4c_common carburantscorse2 scripts
+
       - name: Validate dashboard loader
         if: steps.gate.outputs.run == 'true'
         run: python scripts/migrate_index_data_source.py index.html --check
 
-      - name: Build append-only candidate and resolve only new BDR IDs
+      - name: Pin latest validated C1 V2 bundle
+        if: steps.gate.outputs.run == 'true'
+        id: c1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag=$(gh release list \
+            --repo FredericP555/carburantscorse1 \
+            --limit 50 \
+            --json tagName,publishedAt \
+            --jq '[.[] | select(.tagName | startswith("a4c-v2-shared-"))] | sort_by(.publishedAt) | reverse | .[0].tagName // ""')
+          if [ -z "$tag" ]; then
+            echo "No validated C1 V2 production bundle found." >&2
+            exit 1
+          fi
+          echo "release_tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Pinned C1 release: $tag"
+
+      - name: Build production V2 candidate and resolve only new BDR IDs
         if: steps.gate.outputs.run == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: python -m scripts.build_append_candidate_incremental --official-source shared
+        run: >-
+          python scripts/build_v2_production_candidate.py
+          --tag-prefix "$C1_V2_TAG_PREFIX"
+          --release-tag "${{ steps.c1.outputs.release_tag }}"
 
-      - name: Verify fresh c1 release and official stock
+      - name: Verify fresh pinned C1 release and official stock
         if: steps.gate.outputs.run == 'true'
         run: >-
           python -m scripts.check_shared_freshness
-          --candidate outputs/candidate-data.json
+          --candidate outputs/v2-production-candidate.json
           --baseline data.json
           --max-release-age-hours 12
           --max-source-age-days 4
 
-      - name: Promote candidate after append-only checks
+      - name: Verify controlled V2 promotion contract
         if: steps.gate.outputs.run == 'true'
-        id: promote
-        run: python -m scripts.promote_candidate
+        run: python scripts/promote_v2_candidate.py
 
-      - name: Upload audit candidate
+      - name: Detect C2 data change
+        if: steps.gate.outputs.run == 'true'
+        id: changed
+        shell: bash
+        run: |
+          if cmp -s data.json outputs/v2-production-candidate.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "C2 V2 candidate is an exact no-op."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "C2 has publishable V2 changes."
+          fi
+
+      - name: Promote verified C2 V2 candidate in workspace
+        if: steps.gate.outputs.run == 'true'
+        run: python scripts/promote_v2_candidate.py --promote
+
+      - name: Upload weekly V2 audit
         if: steps.gate.outputs.run == 'true' && always()
         uses: actions/upload-artifact@v4
         with:
-          name: carburantscorse2-weekly-audit
+          name: carburantscorse2-v2-weekly-audit
           path: |
-            outputs/candidate-data.json
-            outputs/candidate-summary.json
+            outputs/v2-production-candidate.json
+            outputs/v2-production-summary.json
+            outputs/ufip/c1_shared_meta.json
+            outputs/c1/shared_release_tag.txt
+            outputs/c1/corse_station_brands.json
             config/bdr_station_brands.json
           retention-days: 30
 
@@ -113,21 +159,25 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data.json config/bdr_station_brands.json
-          git diff --cached --quiet && exit 0
-          if [ "${{ steps.promote.outputs.changed }}" = "true" ]; then
-            msg="Update carburantscorse2 data through ${{ steps.promote.outputs.daily_target_end }}"
+          if git diff --cached --quiet; then
+            echo "No C2 repository data/registry commit required."
           else
-            msg="Resolve new BDR station brands"
+            if [ "${{ steps.changed.outputs.changed }}" = "true" ]; then
+              target=$(python -c "import json; print(json.load(open('outputs/v2-production-summary.json'))['target_end'])")
+              msg="Update carburantscorse2 V2 data through $target"
+            else
+              msg="Resolve new BDR station brands"
+            fi
+            git commit -m "$msg"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
-          git commit -m "$msg"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - name: Trigger GitHub Pages rebuild
-        if: steps.gate.outputs.run == 'true' && steps.promote.outputs.changed == 'true' && github.ref_name == github.event.repository.default_branch
+        if: steps.gate.outputs.run == 'true' && steps.changed.outputs.changed == 'true' && github.ref_name == github.event.repository.default_branch
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          code=$(curl -sS -o /tmp/pages-build.json -w '%{http_code}' \
+          code=$(curl --retry 3 --retry-delay 3 -sS -o /tmp/pages-build.json -w '%{http_code}' \
             -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${GH_TOKEN}" \
@@ -139,6 +189,23 @@ jobs:
             exit 1
           fi
 
-      - name: No-op summary
-        if: steps.gate.outputs.run == 'true' && steps.promote.outputs.changed != 'true'
-        run: echo "No new publishable price point; only an incremental station registry change may have been committed."
+      - name: Write concise weekly summary
+        if: steps.gate.outputs.run == 'true' && always()
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          print('## C2 V2 weekly production')
+          p=Path('outputs/v2-production-summary.json')
+          if p.exists():
+              o=json.loads(p.read_text(encoding='utf-8'))
+              e=o.get('engine') or {}
+              g=o.get('official_event_guards') or {}
+              print(f"- Pinned C1 release: `{o.get('c1_release_tag')}`")
+              print(f"- Daily data through: {o.get('target_end')}")
+              print(f"- Weekly data through: {o.get('weekly_end')}")
+              print(f"- Rewritten rows: {o.get('rewritten_rows_total',0):,}")
+              print(f"- Appended rows: {o.get('added_rows_total',0):,}")
+              print(f"- R2 calls: {e.get('r2_calls',0):,}; unavailable: {e.get('r2_unavailable',0):,}")
+              print(f"- Official event rows: {g.get('event_rows',0):,}")
+          PY
