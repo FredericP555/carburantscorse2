@@ -2,9 +2,9 @@ name: Update carburantscorse2 weekly
 
 on:
   schedule:
-    # Two UTC slots cover 07:40 Europe/Paris across DST; the gate below keeps only one.
-    - cron: '40 5 * * 1'
-    - cron: '40 6 * * 1'
+    # Two UTC slots cover 08:00 Europe/Paris across DST; the gate below keeps only one.
+    - cron: '0 6 * * 1'
+    - cron: '0 7 * * 1'
   workflow_dispatch:
 
 permissions:
@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
-      - name: Select the 07:40 Europe/Paris slot
+      - name: Select the 08:00 Europe/Paris slot
         id: gate
         env:
           EVENT_NAME: ${{ github.event_name }}
@@ -36,7 +36,7 @@ jobs:
           else:
               paris = datetime.now(ZoneInfo('Europe/Paris'))
               offset_hours = int(paris.utcoffset().total_seconds() // 3600)
-              expected_utc_hour = (7 - offset_hours) % 24
+              expected_utc_hour = (8 - offset_hours) % 24
               schedule = os.environ.get('EVENT_SCHEDULE', '')
               try:
                   parts = schedule.split()
@@ -44,7 +44,7 @@ jobs:
               except Exception:
                   scheduled_hour = -1
               # The two cron entries carry the minute. The gate only chooses which UTC
-              # hour corresponds to 07:xx Europe/Paris, so changing the common cron minute
+              # hour corresponds to 08:00 Europe/Paris, so changing the common cron minute
               # cannot silently disable production.
               run = scheduled_hour == expected_utc_hour
 
