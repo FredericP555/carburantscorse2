@@ -1,0 +1,99 @@
+name: V2 production activation preflight
+
+on:
+  push:
+    branches: [prep/v2-production-activation]
+    paths:
+      - .github/workflows/v2-production-activation-preflight.yml
+      - a4c_common/shared_release.py
+      - a4c_common/corse_brand.py
+      - a4c_common/price_math.py
+      - carburantscorse2/reliability_policy_v2.py
+      - carburantscorse2/shield_phase_v2.py
+      - carburantscorse2/rotterdam_calibration_v2.py
+      - carburantscorse2/r2_guard_v2.py
+      - scripts/v2_event_guards.py
+      - scripts/build_v2_production_candidate.py
+      - scripts/promote_v2_candidate.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: .
+  C1_PREPROD_TAG: a4c-preprod-v2-20260824T222157Z-32784177852
+  C1_TAG_PREFIX: a4c-preprod-v2-
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Compile production V2 sources
+        run: python -m compileall -q a4c_common carburantscorse2 scripts
+
+      - name: Build production-shaped V2 candidate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          python scripts/build_v2_production_candidate.py
+          --tag-prefix "$C1_TAG_PREFIX"
+          --release-tag "$C1_PREPROD_TAG"
+
+      - name: Verify controlled transition and recurring safety contract
+        run: python scripts/promote_v2_candidate.py
+
+      - name: Assert preflight did not modify production data.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- data.json
+          echo "Production data.json modified: no" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Write activation summary
+        if: always()
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, pathlib
+          p=pathlib.Path('outputs/v2-production-summary.json')
+          print('## A4C V2 production activation preflight')
+          if not p.exists():
+              print('- Candidate not produced.')
+              raise SystemExit(0)
+          o=json.loads(p.read_text(encoding='utf-8'))
+          e=o.get('engine',{})
+          g=o.get('official_event_guards',{})
+          print(f"- C1 pinned release: `{o.get('c1_release_tag')}`")
+          print(f"- Daily transition: {o.get('daily_switch_date')}; weekly transition: {o.get('weekly_switch_date')}")
+          print(f"- Rewritten existing rows: {o.get('rewritten_rows_total',0):,}")
+          print(f"- Newly appended rows: {o.get('added_rows_total',0):,}")
+          print(f"- Missing replacements: {o.get('missing_replacements_total',0):,}")
+          print(f"- R2 calls: {e.get('r2_calls',0):,}; unavailable: {e.get('r2_unavailable',0):,}")
+          print(f"- Official events: {g.get('event_rows',0):,}; rupture hits: {g.get('unique_active_rupture_station_fuel_days',0):,}; closure hits: {g.get('unique_active_closure_station_days',0):,}")
+          print('- Production modified: no')
+          PY
+
+      - name: Upload activation candidate and audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c2-v2-production-activation-preflight
+          path: |
+            outputs/v2-production-candidate.json
+            outputs/v2-production-summary.json
+            outputs/ufip/c1_shared_meta.json
+            outputs/c1/shared_release_tag.txt
+            outputs/c1/corse_station_brands.json
+            config/bdr_station_brands.json
+          retention-days: 14
