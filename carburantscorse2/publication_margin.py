@@ -7,6 +7,36 @@ import pandas as pd
 from carburantscorse2.margins import excise_gazole_eur_l
 
 
+def observed_week_is_complete(rotterdam_daily: pd.DataFrame, week_start) -> bool:
+    """Return True only when UFIP genuinely covers the Monday-Sunday week.
+
+    Forward-fill is allowed for weekends/holidays, but a whole missing working week must
+    never be manufactured from the previous Friday. We therefore require at least three
+    genuinely observed quotations in the week, with coverage reaching the start of the
+    week (Mon/Tue) and the end of the working week (Thu/Fri).
+    """
+    week_start = pd.Timestamp(week_start).normalize()
+    week_end = week_start + pd.Timedelta(6, unit="D")
+    rot = rotterdam_daily.copy()
+    if rot.empty or "date" not in rot.columns or "rotterdam_eur_l" not in rot.columns:
+        return False
+    rot["date_key"] = pd.to_datetime(rot["date"], errors="coerce").dt.normalize()
+    if "rotterdam_observed" in rot.columns:
+        observed_mask = rot["rotterdam_observed"].eq(True)
+    else:
+        # Raw UFIP rows are observations by definition; this also keeps diagnostics/tests
+        # that pass an observed-only dataframe backwards compatible.
+        observed_mask = rot["rotterdam_eur_l"].notna()
+    observed = rot[
+        observed_mask
+        & rot["rotterdam_eur_l"].notna()
+        & rot["date_key"].between(week_start, week_end)
+    ]["date_key"].dropna().drop_duplicates().sort_values()
+    if len(observed) < 3:
+        return False
+    return observed.iloc[0] <= week_start + pd.Timedelta(1, unit="D") and observed.iloc[-1] >= week_start + pd.Timedelta(3, unit="D")
+
+
 def build_margin_series(
     state: pd.DataFrame,
     rotterdam_daily: pd.DataFrame,
@@ -19,7 +49,8 @@ def build_margin_series(
 
     The calculation is performed at station-day level, using the 4-decimal HT value of
     the published price profile, then averaged over all eligible station-days in the week.
-    This preserves any day-to-day variation in station counts and in Rotterdam values.
+    A week is emitted only if real UFIP observations sufficiently cover that week; carried
+    values may fill weekends/holidays but cannot manufacture an absent working week.
     """
     if bdr_scope not in {"all", "network"}:
         raise ValueError("bdr_scope must be all or network")
@@ -51,6 +82,12 @@ def build_margin_series(
     guard = bdr_all.groupby("period").agg(n_bdr_guard=("station_id", "nunique"))
     merged = cg.join(bg, how="inner").join(guard, how="left")
     merged = merged[(merged["n_corse"] >= min_corse_stations) & (merged["n_bdr_guard"] >= min_bdr_stations)]
+    supported_periods = {
+        pd.Timestamp(period).normalize()
+        for period in merged.index
+        if observed_week_is_complete(rotterdam_daily, period)
+    }
+    merged = merged[merged.index.isin(supported_periods)]
 
     result: list[dict] = []
     for period, row in merged.sort_index().iterrows():
