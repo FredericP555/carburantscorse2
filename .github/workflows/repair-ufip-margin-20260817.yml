@@ -1,9 +1,6 @@
 name: Repair UFIP margin week 2026-08-17 once
 
 on:
-  push:
-    branches: [main]
-    paths: [.github/workflows/repair-ufip-margin-20260817.yml]
   workflow_dispatch:
 
 permissions:
