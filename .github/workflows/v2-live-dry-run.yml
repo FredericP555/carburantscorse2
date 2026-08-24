@@ -112,6 +112,30 @@ jobs:
           p.write_text(text, encoding='utf-8')
           PY
 
+      - name: Add boundary-effect diagnostics to isolated dry-run
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/dry_run_v2_candidate.py')
+          text = p.read_text(encoding='utf-8')
+          needle = (
+              '        "median_abs_delta_c_l": round(float(pd.Series(abs_values).median()), 2) if abs_values else 0.0,\n'
+              '        "largest_changes": changes[:10],\n'
+          )
+          replacement = (
+              '        "median_abs_delta_c_l": round(float(pd.Series(abs_values).median()), 2) if abs_values else 0.0,\n'
+              '        "all_deltas": [\n'
+              '            {"date": day, "actuel": left[day], "v2": right[day], "delta_c_l": round(right[day] - left[day], 2)}\n'
+              '            for day in common\n'
+              '        ],\n'
+              '        "largest_changes": changes[:10],\n'
+          )
+          if needle not in text:
+              raise SystemExit('Comparison return block not found; refusing boundary diagnostic patch')
+          p.write_text(text.replace(needle, replacement, 1), encoding='utf-8')
+          PY
+
       - name: Execute real-data V2 candidate dry-run
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -119,6 +143,51 @@ jobs:
           python scripts/run_dry_run_v2_cached.py
           --tag-prefix a4c-prep-v2-
           --release-tag "${{ steps.c1.outputs.release_tag }}"
+
+      - name: Measure level effect at prospective boundary
+        if: success()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os, statistics
+          from pathlib import Path
+
+          p = Path('outputs/v2/v2-dry-run.json')
+          o = json.loads(p.read_text(encoding='utf-8'))
+          start = os.environ['SIMULATED_SWITCH_DATE']
+          end = o.get('window', {}).get('end')
+          block = o.get('comparison', {}).get('NOUVELLE_REGLE_PROSPECTIVE_vs_ACTUEL', {})
+          result = {
+              'start': start,
+              'end': end,
+              'interpretation': 'signed V2-minus-current gap effect over periods beginning on/after the simulated switch; zeros included',
+              'series': {},
+          }
+          for key, item in sorted(block.items()):
+              rows = [r for r in item.get('all_deltas', []) if str(r.get('date', '')) >= start]
+              if not rows:
+                  continue
+              vals = [float(r['delta_c_l']) for r in rows]
+              current = [float(r['actuel']) for r in rows]
+              candidate = [float(r['v2']) for r in rows]
+              result['series'][key] = {
+                  'periods': len(vals),
+                  'mean_current_c_l': round(statistics.fmean(current), 3),
+                  'mean_v2_c_l': round(statistics.fmean(candidate), 3),
+                  'mean_signed_delta_c_l': round(statistics.fmean(vals), 3),
+                  'median_signed_delta_c_l': round(statistics.median(vals), 3),
+                  'min_delta_c_l': min(vals),
+                  'max_delta_c_l': max(vals),
+                  'negative_periods': sum(v < 0 for v in vals),
+                  'zero_periods': sum(v == 0 for v in vals),
+                  'positive_periods': sum(v > 0 for v in vals),
+                  'first_period': rows[0],
+                  'last_period': rows[-1],
+              }
+              item.pop('all_deltas', None)
+          o['boundary_effect'] = result
+          p.write_text(json.dumps(o, ensure_ascii=False, indent=2), encoding='utf-8')
+          PY
 
       - name: Enrich audit with active-period R1 and R2
         if: success()
@@ -177,6 +246,12 @@ jobs:
               changed=sum(v.get('changed_periods',0) for v in block.values())
               maximum=max((v.get('max_abs_delta_c_l',0) for v in block.values()), default=0)
               print(f"- {label}: {changed} changed periods across series; max |Δ|={maximum:.2f} c/L")
+          boundary=o.get('boundary_effect',{}).get('series',{})
+          print('### Boundary level effect (V2 - current)')
+          for key in ('gazole_sp95/daily/all','gazole_sp95/daily/network','sp95_sp95/daily/all','sp95_sp95/daily/network','gazole_sp95/weekly/all','gazole_sp95/weekly/network','sp95_sp95/weekly/all','sp95_sp95/weekly/network'):
+              b=boundary.get(key)
+              if b:
+                  print(f"- {key}: mean Δ={b.get('mean_signed_delta_c_l'):+.3f} c/L; median={b.get('median_signed_delta_c_l'):+.3f}; range={b.get('min_delta_c_l'):+.2f}…{b.get('max_delta_c_l'):+.2f}; signs -/0/+={b.get('negative_periods')}/{b.get('zero_periods')}/{b.get('positive_periods')}")
           print('- Production modified: no')
           PY
 
