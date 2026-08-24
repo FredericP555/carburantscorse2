@@ -42,7 +42,8 @@ jobs:
               expected_utc_hour = (8 - offset_hours) % 24
               schedule = os.environ.get('EVENT_SCHEDULE', '')
               try:
-                  scheduled_hour = int(schedule.split()[1])
+                  parts = schedule.split()
+                  scheduled_hour = int(parts[1])
               except Exception:
                   scheduled_hour = -1
               run = scheduled_hour == expected_utc_hour
