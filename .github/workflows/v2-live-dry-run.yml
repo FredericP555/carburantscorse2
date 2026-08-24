@@ -7,7 +7,10 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+env:
+  EXPECTED_C1_PREP_SHA: 44be367940b8aecefaf5a6a03ca2ef474527fbc2
 
 jobs:
   dry-run:
@@ -27,7 +30,7 @@ jobs:
       - name: Compile Python sources
         run: python -m compileall -q a4c_common carburantscorse2 scripts
 
-      - name: Wait for isolated C1 prep release
+      - name: Wait for guarded isolated C1 prep release
         id: c1
         shell: bash
         run: |
@@ -37,16 +40,16 @@ jobs:
               -H 'Accept: application/vnd.github+json' \
               -H 'X-GitHub-Api-Version: 2022-11-28' \
               'https://api.github.com/repos/FredericP555/carburantscorse1/releases?per_page=30')
-            tag=$(printf '%s' "$payload" | python -c 'import json,sys; rows=json.load(sys.stdin); c=[r for r in rows if not r.get("draft") and str(r.get("tag_name","")).startswith("a4c-prep-v2-")]; c.sort(key=lambda r: str(r.get("published_at") or r.get("created_at") or ""), reverse=True); print(c[0]["tag_name"] if c else "")')
+            tag=$(printf '%s' "$payload" | EXPECTED="$EXPECTED_C1_PREP_SHA" python -c 'import json,os,sys; rows=json.load(sys.stdin); expected=os.environ["EXPECTED"]; c=[r for r in rows if not r.get("draft") and str(r.get("tag_name","")).startswith("a4c-prep-v2-") and str(r.get("target_commitish",""))==expected]; c.sort(key=lambda r: str(r.get("published_at") or r.get("created_at") or ""), reverse=True); print(c[0]["tag_name"] if c else "")')
             if [ -n "$tag" ]; then
               echo "release_tag=$tag" >> "$GITHUB_OUTPUT"
-              echo "Using isolated C1 prep release: $tag"
+              echo "Using guarded C1 prep release: $tag ($EXPECTED_C1_PREP_SHA)"
               exit 0
             fi
-            echo "C1 prep release not ready yet (attempt $attempt/15); waiting 60s"
+            echo "Guarded C1 prep release not ready yet (attempt $attempt/15); waiting 60s"
             sleep 60
           done
-          echo 'No isolated C1 prep release became available within 15 minutes' >&2
+          echo "No C1 prep release targeting $EXPECTED_C1_PREP_SHA became available within 15 minutes" >&2
           exit 1
 
       - name: Execute real-data V2 candidate dry-run
@@ -80,6 +83,18 @@ jobs:
               print(f"- {label}: {changed} changed periods across series; max |Δ|={maximum:.2f} c/L")
           print('- Production modified: no')
           PY
+
+      - name: Persist dry-run report on prep branch
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p audits/v2
+          cp outputs/v2/v2-dry-run.json audits/v2/latest-c2-live-dry-run.json
+          git add audits/v2/latest-c2-live-dry-run.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Store latest C2 V2 live dry-run audit"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - name: Upload V2 dry-run audit artifact
         if: always()
