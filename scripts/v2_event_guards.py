@@ -24,6 +24,7 @@ import urllib.request
 
 EVENT_ASSET = "official_13_20_events.csv.gz"
 EVENT_SCHEMA = "a4c-official-13-20-events-v1"
+DEFAULT_PRICE_ASSET = "official_13_20.csv.gz"
 DEFAULT_REPOSITORY = "FredericP555/carburantscorse1"
 
 
@@ -77,6 +78,16 @@ def _active(day: date, start: date, end: date | None) -> bool:
     return start <= day and (end is None or day <= end)
 
 
+def _read_gzip_csv(payload: bytes) -> list[dict]:
+    rows: list[dict] = []
+    with gzip.GzipFile(fileobj=io.BytesIO(payload), mode="rb") as gz:
+        with io.TextIOWrapper(gz, encoding="utf-8", newline="") as text:
+            reader = csv.DictReader(text)
+            for row in reader:
+                rows.append(dict(row))
+    return rows
+
+
 class EventGuards:
     def __init__(self, rows: list[dict], *, release_tag: str, metadata: dict):
         self.release_tag = release_tag
@@ -87,9 +98,8 @@ class EventGuards:
         self.hit_closures: set[tuple[str, date]] = set()
         self.bound_to_declarations = False
         self.reopen_stats = Counter()
+        self.declaration_source_asset = None
 
-        # Raw intervals keep the official timestamps so an open-ended event can be
-        # terminated by the first later official price declaration.
         self.raw_ruptures: dict[tuple[str, str], list[tuple[datetime, datetime | None, str]]] = {}
         self.raw_closures: dict[str, list[tuple[datetime, datetime | None, str]]] = {}
         self.ruptures: dict[tuple[str, str], list[tuple[date, date | None, str]]] = {}
@@ -139,29 +149,38 @@ class EventGuards:
         event_meta = metadata.get("official_events")
         if not isinstance(event_meta, dict) or event_meta.get("schema") != EVENT_SCHEMA:
             raise RuntimeError("Pinned C1 metadata has no valid official-event contract")
-        asset_name = str(event_meta.get("asset") or EVENT_ASSET)
+        event_asset_name = str(event_meta.get("asset") or EVENT_ASSET)
         url = f"https://api.github.com/repos/{repository}/releases/tags/{quote(release_tag, safe='')}"
         release = _json(url)
         if str(release.get("tag_name") or "") != release_tag:
             raise RuntimeError("Pinned C1 release lookup returned a different tag")
-        payload = _bytes(_asset_url(release, asset_name), 180)
-        expected_sha = str(event_meta.get("sha256") or "")
-        actual_sha = hashlib.sha256(payload).hexdigest()
-        if not expected_sha or actual_sha != expected_sha:
-            raise RuntimeError("Official-event asset SHA-256 mismatch")
 
-        rows: list[dict] = []
-        with gzip.GzipFile(fileobj=io.BytesIO(payload), mode="rb") as gz:
-            with io.TextIOWrapper(gz, encoding="utf-8", newline="") as text:
-                reader = csv.DictReader(text)
-                for row in reader:
-                    rows.append(dict(row))
+        event_payload = _bytes(_asset_url(release, event_asset_name), 180)
+        expected_event_sha = str(event_meta.get("sha256") or "")
+        actual_event_sha = hashlib.sha256(event_payload).hexdigest()
+        if not expected_event_sha or actual_event_sha != expected_event_sha:
+            raise RuntimeError("Official-event asset SHA-256 mismatch")
+        rows = _read_gzip_csv(event_payload)
         if len(rows) != int(event_meta.get("rows", -1)):
             raise RuntimeError("Official-event row count differs from C1 metadata")
-        return cls(rows, release_tag=release_tag, metadata=event_meta)
+
+        guard = cls(rows, release_tag=release_tag, metadata=event_meta)
+
+        # Bind open-ended events to the later official price declarations from the
+        # exact same pinned C1 release, so no unrelated or newer source can alter the audit.
+        price_asset_name = str(metadata.get("asset") or DEFAULT_PRICE_ASSET)
+        price_payload = _bytes(_asset_url(release, price_asset_name), 180)
+        expected_price_sha = str(metadata.get("sha256") or "")
+        actual_price_sha = hashlib.sha256(price_payload).hexdigest()
+        if not expected_price_sha or actual_price_sha != expected_price_sha:
+            raise RuntimeError("Pinned official price asset SHA-256 mismatch while binding event guards")
+        observations = _read_gzip_csv(price_payload)
+        guard.declaration_source_asset = price_asset_name
+        guard.bind_observations(observations)
+        return guard
 
     def bind_observations(self, observations) -> None:
-        """Apply the agreed reopening rule using the pinned official price declarations.
+        """Apply the agreed reopening rule using pinned official price declarations.
 
         Explicit event ends are authoritative and are never shortened. Only open-ended
         events are capped by a later declaration. For daily eligibility, the declaration
@@ -275,6 +294,7 @@ class EventGuards:
             "release_tag": self.release_tag,
             "schema": self.metadata.get("schema"),
             "asset": self.metadata.get("asset"),
+            "declaration_source_asset": self.declaration_source_asset,
             "event_rows": len(self.rows),
             "rows_by_kind": dict(kind_counts),
             "rows_by_department": dict(dept_counts),
