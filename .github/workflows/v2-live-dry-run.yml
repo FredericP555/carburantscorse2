@@ -39,9 +39,12 @@ jobs:
       - name: Find guarded isolated C1 prep release
         id: c1
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          payload=$(curl -fsSL \
+          payload=$(curl --retry 4 --retry-delay 2 --retry-all-errors -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
             -H 'Accept: application/vnd.github+json' \
             -H 'X-GitHub-Api-Version: 2022-11-28' \
             'https://api.github.com/repos/FredericP555/carburantscorse1/releases?per_page=30')
@@ -88,11 +91,15 @@ jobs:
           if tag_needle not in text:
               raise SystemExit('selected-tag statement not found')
           text = text.replace(tag_needle, tag_replacement, 1)
+          if "                target_rupture_active=False,\n" not in text:
+              raise SystemExit('target_rupture_active diagnostic placeholder not found')
           text = text.replace(
               "                target_rupture_active=False,\n",
               "                target_rupture_active=event_guards.rupture_active(sid, fuel, day),\n",
               1,
           )
+          if "                independently_inactive=False,\n" not in text:
+              raise SystemExit('independently_inactive diagnostic placeholder not found')
           text = text.replace(
               "                independently_inactive=False,\n",
               "                independently_inactive=event_guards.independently_inactive(sid, day),\n",
