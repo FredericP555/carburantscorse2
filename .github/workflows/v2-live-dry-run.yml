@@ -1,0 +1,93 @@
+name: V2 live candidate dry-run
+
+on:
+  push:
+    branches: [prep/v2-live-dry-run]
+    paths: [.github/workflows/v2-live-dry-run.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Compile Python sources
+        run: python -m compileall -q a4c_common carburantscorse2 scripts
+
+      - name: Wait for isolated C1 prep release
+        id: c1
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 15); do
+            payload=$(curl -fsSL \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              'https://api.github.com/repos/FredericP555/carburantscorse1/releases?per_page=30')
+            tag=$(printf '%s' "$payload" | python -c 'import json,sys; rows=json.load(sys.stdin); c=[r for r in rows if not r.get("draft") and str(r.get("tag_name","")).startswith("a4c-prep-v2-")]; c.sort(key=lambda r: str(r.get("published_at") or r.get("created_at") or ""), reverse=True); print(c[0]["tag_name"] if c else "")')
+            if [ -n "$tag" ]; then
+              echo "release_tag=$tag" >> "$GITHUB_OUTPUT"
+              echo "Using isolated C1 prep release: $tag"
+              exit 0
+            fi
+            echo "C1 prep release not ready yet (attempt $attempt/15); waiting 60s"
+            sleep 60
+          done
+          echo 'No isolated C1 prep release became available within 15 minutes' >&2
+          exit 1
+
+      - name: Execute real-data V2 candidate dry-run
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          python scripts/dry_run_v2_candidate.py
+          --tag-prefix a4c-prep-v2-
+          --release-tag "${{ steps.c1.outputs.release_tag }}"
+
+      - name: Write concise dry-run summary
+        if: always()
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, pathlib
+          p=pathlib.Path('outputs/v2/v2-dry-run.json')
+          if not p.exists():
+              print('## V2 live dry-run\n\nArtifact not produced.')
+              raise SystemExit(0)
+          o=json.loads(p.read_text(encoding='utf-8'))
+          e=o.get('engine_calls',{})
+          print('## V2 live dry-run')
+          print(f"- C1 prep release: `{o.get('c1_release',{}).get('selected_tag')}`")
+          print(f"- Window: {o.get('window',{}).get('retroactive_start')} → {o.get('window',{}).get('end')}")
+          print(f"- Prospective switch: {o.get('window',{}).get('prospective_switch_date')}")
+          print(f"- evaluate() station-days: {e.get('evaluate_station_days',0):,}")
+          print(f"- R2 calls: {e.get('r2_calls',0):,} (true={e.get('r2_true',0):,}, false={e.get('r2_false',0):,}, unavailable={e.get('r2_unavailable',0):,})")
+          for label, block in o.get('comparison',{}).items():
+              changed=sum(v.get('changed_periods',0) for v in block.values())
+              maximum=max((v.get('max_abs_delta_c_l',0) for v in block.values()), default=0)
+              print(f"- {label}: {changed} changed periods across series; max |Δ|={maximum:.2f} c/L")
+          print('- Production modified: no')
+          PY
+
+      - name: Upload V2 dry-run audit artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c2-v2-live-dry-run
+          path: |
+            outputs/v2/v2-dry-run.json
+            outputs/ufip/c1_shared_meta.json
+            outputs/c1/shared_release_tag.txt
+          retention-days: 14
