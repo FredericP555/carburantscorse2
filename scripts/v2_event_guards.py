@@ -2,12 +2,18 @@
 """Load official rupture/closure intervals from one pinned C1 prep release.
 
 Prep-only helper for the V2 live dry-run. It does not mutate production data.
+
+Rule for open-ended official events:
+- an open rupture stays active until a later official declaration of the same fuel;
+- an open closure stays active until a later official declaration of any fuel at the station;
+- an explicit official end date always has priority over a later price declaration.
 """
 from __future__ import annotations
 
+from bisect import bisect_right
 from collections import Counter
 import csv
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 import gzip
 import hashlib
 import io
@@ -54,6 +60,19 @@ def _parse_day(raw: str | None) -> date | None:
     return date.fromisoformat(value) if value else None
 
 
+def _parse_dt(raw) -> datetime | None:
+    value = str(raw or "").strip()
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
 def _active(day: date, start: date, end: date | None) -> bool:
     return start <= day and (end is None or day <= end)
 
@@ -62,12 +81,19 @@ class EventGuards:
     def __init__(self, rows: list[dict], *, release_tag: str, metadata: dict):
         self.release_tag = release_tag
         self.metadata = metadata
-        self.ruptures: dict[tuple[str, str], list[tuple[date, date | None, str]]] = {}
-        self.closures: dict[str, list[tuple[date, date | None, str]]] = {}
         self.rows = rows
         self.calls = Counter()
         self.hit_ruptures: set[tuple[str, str, date]] = set()
         self.hit_closures: set[tuple[str, date]] = set()
+        self.bound_to_declarations = False
+        self.reopen_stats = Counter()
+
+        # Raw intervals keep the official timestamps so an open-ended event can be
+        # terminated by the first later official price declaration.
+        self.raw_ruptures: dict[tuple[str, str], list[tuple[datetime, datetime | None, str]]] = {}
+        self.raw_closures: dict[str, list[tuple[datetime, datetime | None, str]]] = {}
+        self.ruptures: dict[tuple[str, str], list[tuple[date, date | None, str]]] = {}
+        self.closures: dict[str, list[tuple[date, date | None, str]]] = {}
 
         seen = set()
         for row in rows:
@@ -75,26 +101,32 @@ class EventGuards:
             kind = str(row.get("event_kind") or "").strip()
             fuel = str(row.get("fuel") or "").strip()
             event_type = str(row.get("event_type") or "").strip()
-            start = _parse_day(row.get("start_date"))
-            end = _parse_day(row.get("end_date"))
-            if not sid or kind not in {"rupture", "fermeture"} or start is None:
+            started = _parse_dt(row.get("started_at"))
+            ended = _parse_dt(row.get("ended_at"))
+            if started is None:
+                start_day = _parse_day(row.get("start_date"))
+                started = datetime.combine(start_day, datetime.min.time()) if start_day else None
+            if ended is None:
+                end_day = _parse_day(row.get("end_date"))
+                ended = datetime.combine(end_day, datetime.max.time()) if end_day else None
+            if not sid or kind not in {"rupture", "fermeture"} or started is None:
                 continue
-            key = (sid, kind, fuel, event_type, start, end)
+            key = (sid, kind, fuel, event_type, started, ended)
             if key in seen:
                 continue
             seen.add(key)
-            interval = (start, end, event_type)
+            interval = (started, ended, event_type)
             if kind == "rupture":
                 if not fuel:
                     continue
-                self.ruptures.setdefault((sid, fuel), []).append(interval)
+                self.raw_ruptures.setdefault((sid, fuel), []).append(interval)
             else:
-                self.closures.setdefault(sid, []).append(interval)
+                self.raw_closures.setdefault(sid, []).append(interval)
 
-        for values in self.ruptures.values():
-            values.sort(key=lambda item: (item[0], item[1] or date.max, item[2]))
-        for values in self.closures.values():
-            values.sort(key=lambda item: (item[0], item[1] or date.max, item[2]))
+        for values in self.raw_ruptures.values():
+            values.sort(key=lambda item: (item[0], item[1] or datetime.max, item[2]))
+        for values in self.raw_closures.values():
+            values.sort(key=lambda item: (item[0], item[1] or datetime.max, item[2]))
 
     @classmethod
     def from_release(
@@ -128,7 +160,94 @@ class EventGuards:
             raise RuntimeError("Official-event row count differs from C1 metadata")
         return cls(rows, release_tag=release_tag, metadata=event_meta)
 
+    def bind_observations(self, observations) -> None:
+        """Apply the agreed reopening rule using the pinned official price declarations.
+
+        Explicit event ends are authoritative and are never shortened. Only open-ended
+        events are capped by a later declaration. For daily eligibility, the declaration
+        day itself is considered reopened, so the inferred event ends the day before.
+        """
+        by_station_fuel: dict[tuple[str, str], list[datetime]] = {}
+        by_station: dict[str, list[datetime]] = {}
+        for row in observations:
+            if hasattr(row, "to_dict"):
+                row = row.to_dict()
+            sid = str(row.get("station_id") or "").strip()
+            fuel = str(row.get("fuel") or "").strip()
+            ts = _parse_dt(row.get("timestamp"))
+            if not sid or not fuel or ts is None:
+                continue
+            by_station_fuel.setdefault((sid, fuel), []).append(ts)
+            by_station.setdefault(sid, []).append(ts)
+        for values in by_station_fuel.values():
+            values.sort()
+        for values in by_station.values():
+            values.sort()
+
+        self.ruptures = {}
+        self.closures = {}
+        self.reopen_stats.clear()
+
+        for key, intervals in self.raw_ruptures.items():
+            declarations = by_station_fuel.get(key, [])
+            effective = []
+            for started, ended, event_type in intervals:
+                end_day = ended.date() if ended is not None else None
+                if ended is not None:
+                    self.reopen_stats["rupture_explicit_end"] += 1
+                else:
+                    idx = bisect_right(declarations, started)
+                    if idx < len(declarations):
+                        reopen = declarations[idx]
+                        end_day = reopen.date() - timedelta(days=1)
+                        self.reopen_stats["rupture_open_closed_by_declaration"] += 1
+                        if reopen.date() == started.date():
+                            self.reopen_stats["rupture_same_day_reopen"] += 1
+                    else:
+                        self.reopen_stats["rupture_open_remaining"] += 1
+                if end_day is not None and end_day < started.date():
+                    self.reopen_stats["rupture_effectively_empty_after_reopen"] += 1
+                    continue
+                effective.append((started.date(), end_day, event_type))
+            if effective:
+                self.ruptures[key] = effective
+
+        for sid, intervals in self.raw_closures.items():
+            declarations = by_station.get(sid, [])
+            effective = []
+            for started, ended, event_type in intervals:
+                end_day = ended.date() if ended is not None else None
+                if ended is not None:
+                    self.reopen_stats["closure_explicit_end"] += 1
+                else:
+                    idx = bisect_right(declarations, started)
+                    if idx < len(declarations):
+                        reopen = declarations[idx]
+                        end_day = reopen.date() - timedelta(days=1)
+                        self.reopen_stats["closure_open_closed_by_declaration"] += 1
+                        if reopen.date() == started.date():
+                            self.reopen_stats["closure_same_day_reopen"] += 1
+                    else:
+                        self.reopen_stats["closure_open_remaining"] += 1
+                if end_day is not None and end_day < started.date():
+                    self.reopen_stats["closure_effectively_empty_after_reopen"] += 1
+                    continue
+                effective.append((started.date(), end_day, event_type))
+            if effective:
+                self.closures[sid] = effective
+
+        for values in self.ruptures.values():
+            values.sort(key=lambda item: (item[0], item[1] or date.max, item[2]))
+        for values in self.closures.values():
+            values.sort(key=lambda item: (item[0], item[1] or date.max, item[2]))
+        self.bound_to_declarations = True
+
+    def _require_bound(self) -> None:
+        if not self.bound_to_declarations:
+            raise RuntimeError("Official event guards must be bound to price declarations before evaluation")
+
     def rupture_active(self, station_id: str, fuel: str, day: date) -> bool:
+        self._require_bound()
         self.calls["rupture_checks"] += 1
         verdict = any(_active(day, start, end) for start, end, _event_type in self.ruptures.get((str(station_id), str(fuel)), []))
         if verdict:
@@ -137,6 +256,7 @@ class EventGuards:
         return verdict
 
     def independently_inactive(self, station_id: str, day: date) -> bool:
+        self._require_bound()
         self.calls["closure_checks"] += 1
         verdict = any(_active(day, start, end) for start, end, _event_type in self.closures.get(str(station_id), []))
         if verdict:
@@ -160,6 +280,13 @@ class EventGuards:
             "rows_by_department": dict(dept_counts),
             "min_start_date": start_dates[0].isoformat() if start_dates else None,
             "max_start_date": start_dates[-1].isoformat() if start_dates else None,
+            "reopening_rule": {
+                "rupture_open_end": "first later official price declaration of the same fuel",
+                "closure_open_end": "first later official price declaration of any fuel at the station",
+                "explicit_end_priority": True,
+                "declaration_day_considered_reopened": True,
+            },
+            "reopening_stats": dict(self.reopen_stats),
             "rupture_interval_keys": len(self.ruptures),
             "closure_station_keys": len(self.closures),
             "engine_checks": dict(self.calls),
