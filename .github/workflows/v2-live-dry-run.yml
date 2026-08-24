@@ -3,7 +3,10 @@ name: V2 live candidate dry-run
 on:
   push:
     branches: [prep/v2-live-dry-run]
-    paths: [.github/workflows/v2-live-dry-run.yml]
+    paths:
+      - .github/workflows/v2-live-dry-run.yml
+      - scripts/v2_event_guards.py
+      - tests/test_v2_event_guards.py
   workflow_dispatch:
 
 permissions:
@@ -12,8 +15,8 @@ permissions:
 env:
   EXPECTED_C1_PREP_SHA: 43e37681846f60a1257d21ded2c96d8cc49f1792
   PYTHONPATH: .
-  SIMULATED_SWITCH_DATE: 2026-07-23
-  ACTIVE_DOUBLE_CAP_START: 2026-07-23
+  SIMULATED_SWITCH_DATE: "2026-07-23"
+  ACTIVE_DOUBLE_CAP_START: "2026-07-23"
 
 jobs:
   dry-run:
@@ -33,27 +36,22 @@ jobs:
       - name: Compile Python sources
         run: python -m compileall -q a4c_common carburantscorse2 scripts
 
-      - name: Wait for guarded isolated C1 prep release
+      - name: Find guarded isolated C1 prep release
         id: c1
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 15); do
-            payload=$(curl -fsSL \
-              -H 'Accept: application/vnd.github+json' \
-              -H 'X-GitHub-Api-Version: 2022-11-28' \
-              'https://api.github.com/repos/FredericP555/carburantscorse1/releases?per_page=30')
-            tag=$(printf '%s' "$payload" | EXPECTED="$EXPECTED_C1_PREP_SHA" python -c 'import json,os,sys; rows=json.load(sys.stdin); expected=os.environ["EXPECTED"]; c=[r for r in rows if not r.get("draft") and str(r.get("tag_name","")).startswith("a4c-prep-v2-") and str(r.get("target_commitish",""))==expected]; c.sort(key=lambda r: str(r.get("published_at") or r.get("created_at") or ""), reverse=True); print(c[0]["tag_name"] if c else "")')
-            if [ -n "$tag" ]; then
-              echo "release_tag=$tag" >> "$GITHUB_OUTPUT"
-              echo "Using guarded C1 prep release: $tag ($EXPECTED_C1_PREP_SHA)"
-              exit 0
-            fi
-            echo "Guarded C1 prep release not ready yet (attempt $attempt/15); waiting 60s"
-            sleep 60
-          done
-          echo "No C1 prep release targeting $EXPECTED_C1_PREP_SHA became available within 15 minutes" >&2
-          exit 1
+          payload=$(curl -fsSL \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            'https://api.github.com/repos/FredericP555/carburantscorse1/releases?per_page=30')
+          tag=$(printf '%s' "$payload" | EXPECTED="$EXPECTED_C1_PREP_SHA" python -c 'import json,os,sys; rows=json.load(sys.stdin); expected=os.environ["EXPECTED"]; c=[r for r in rows if not r.get("draft") and str(r.get("tag_name","")).startswith("a4c-prep-v2-") and str(r.get("target_commitish", "")) == expected]; c.sort(key=lambda r: str(r.get("published_at") or r.get("created_at") or ""), reverse=True); print(c[0]["tag_name"] if c else "")')
+          if [ -z "$tag" ]; then
+            echo "No C1 prep release targets $EXPECTED_C1_PREP_SHA" >&2
+            exit 1
+          fi
+          echo "release_tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Using guarded C1 prep release: $tag ($EXPECTED_C1_PREP_SHA)"
 
       - name: Apply isolated prospective switch override
         shell: bash
@@ -61,7 +59,6 @@ jobs:
           python - <<'PY'
           import os
           from pathlib import Path
-
           p = Path('scripts/dry_run_v2_candidate.py')
           text = p.read_text(encoding='utf-8')
           needle = "    switch_day, switch_meta = _load_main_switch_date(end_day + timedelta(days=1))\n"
@@ -73,7 +70,6 @@ jobs:
           if needle not in text:
               raise SystemExit('Expected switch-date statement not found; refusing diagnostic patch')
           p.write_text(text.replace(needle, replacement, 1), encoding='utf-8')
-          print('Dry-run-only prospective switch:', os.environ['SIMULATED_SWITCH_DATE'])
           PY
 
       - name: Wire official rupture and closure guards into isolated dry-run
@@ -81,36 +77,27 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-
           p = Path('scripts/dry_run_v2_candidate.py')
           text = p.read_text(encoding='utf-8')
-
           import_needle = "import pandas as pd\n"
           if import_needle not in text:
               raise SystemExit('pandas import not found')
           text = text.replace(import_needle, import_needle + "\nfrom scripts.v2_event_guards import EventGuards\n", 1)
-
           tag_needle = "    selected_tag = C1_TAG_FILE.read_text(encoding=\"utf-8\").strip()\n"
           tag_replacement = tag_needle + "    event_guards = EventGuards.from_release(selected_tag, metadata=_load_json(C1_META))\n"
           if tag_needle not in text:
               raise SystemExit('selected-tag statement not found')
           text = text.replace(tag_needle, tag_replacement, 1)
-
-          if "                target_rupture_active=False,\n" not in text:
-              raise SystemExit('target_rupture_active diagnostic placeholder not found')
           text = text.replace(
               "                target_rupture_active=False,\n",
               "                target_rupture_active=event_guards.rupture_active(sid, fuel, day),\n",
               1,
           )
-          if "                independently_inactive=False,\n" not in text:
-              raise SystemExit('independently_inactive diagnostic placeholder not found')
           text = text.replace(
               "                independently_inactive=False,\n",
               "                independently_inactive=event_guards.independently_inactive(sid, day),\n",
               1,
           )
-
           output_needle = "    output_path = ROOT / args.output\n"
           output_replacement = (
               "    output['official_event_guards'] = event_guards.audit()\n"
@@ -122,9 +109,7 @@ jobs:
           if output_needle not in text:
               raise SystemExit('output write statement not found')
           text = text.replace(output_needle, output_replacement, 1)
-
           p.write_text(text, encoding='utf-8')
-          print('Official event guards wired into dry-run-only script')
           PY
 
       - name: Execute real-data V2 candidate dry-run
@@ -144,7 +129,6 @@ jobs:
           from datetime import date
           from pathlib import Path
           from carburantscorse2 import rotterdam_calibration_v2 as rc
-
           p = Path('outputs/v2/v2-dry-run.json')
           o = json.loads(p.read_text(encoding='utf-8'))
           phase_start = date.fromisoformat(os.environ['ACTIVE_DOUBLE_CAP_START'])
@@ -165,7 +149,6 @@ jobs:
               'r2_calibration': calibrations,
           }
           p.write_text(json.dumps(o, ensure_ascii=False, indent=2), encoding='utf-8')
-          print(json.dumps(o['prospective_diagnostic'], ensure_ascii=False, indent=2))
           PY
 
       - name: Write concise dry-run summary
@@ -179,19 +162,17 @@ jobs:
               raise SystemExit(0)
           o=json.loads(p.read_text(encoding='utf-8'))
           e=o.get('engine_calls',{})
+          guards=o.get('official_event_guards',{})
+          reopen=guards.get('reopening_stats',{})
           print('## V2 live dry-run')
           print(f"- C1 prep release: `{o.get('c1_release',{}).get('selected_tag')}`")
           print(f"- Window: {o.get('window',{}).get('retroactive_start')} → {o.get('window',{}).get('end')}")
-          print(f"- Prospective switch: {o.get('window',{}).get('prospective_switch_date')} ({o.get('window',{}).get('prospective_switch_source',{}).get('source')})")
+          print(f"- Prospective switch: {o.get('window',{}).get('prospective_switch_date')}")
           print(f"- evaluate() station-days: {e.get('evaluate_station_days',0):,}")
           print(f"- R2 calls: {e.get('r2_calls',0):,} (true={e.get('r2_true',0):,}, false={e.get('r2_false',0):,}, unavailable={e.get('r2_unavailable',0):,})")
-          guards=o.get('official_event_guards',{})
-          checks=guards.get('engine_checks',{})
-          print(f"- Official events: {guards.get('event_rows',0):,} rows (rupture={guards.get('rows_by_kind',{}).get('rupture',0):,}, fermeture={guards.get('rows_by_kind',{}).get('fermeture',0):,})")
-          print(f"- Active event guards in evaluated state: rupture={guards.get('unique_active_rupture_station_fuel_days',0):,}, fermeture={guards.get('unique_active_closure_station_days',0):,}; checks={checks}")
-          diag=o.get('prospective_diagnostic',{})
-          for territory, cal in diag.get('r2_calibration',{}).items():
-              print(f"- {territory} active R1={cal.get('r1'):.6f}, k={cal.get('k'):.9f}, R2={cal.get('r2'):.6f}; R1 dates={', '.join(cal.get('r1_source_dates',[]))}")
+          print(f"- Official events: {guards.get('event_rows',0):,}; active rupture days={guards.get('unique_active_rupture_station_fuel_days',0):,}; active closure days={guards.get('unique_active_closure_station_days',0):,}")
+          print(f"- Open ruptures closed by later price declaration: {reopen.get('rupture_open_closed_by_declaration',0):,}; remaining open={reopen.get('rupture_open_remaining',0):,}")
+          print(f"- Open closures closed by later station declaration: {reopen.get('closure_open_closed_by_declaration',0):,}; remaining open={reopen.get('closure_open_remaining',0):,}")
           for label, block in o.get('comparison',{}).items():
               changed=sum(v.get('changed_periods',0) for v in block.values())
               maximum=max((v.get('max_abs_delta_c_l',0) for v in block.values()), default=0)
