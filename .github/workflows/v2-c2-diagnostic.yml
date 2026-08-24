@@ -1,0 +1,86 @@
+name: Diagnose C2 V2 dry-run failure
+
+on:
+  push:
+    branches: [prep/v2-live-dry-run]
+    paths: [.github/workflows/v2-c2-diagnostic.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  PYTHONPATH: .
+  EXPECTED_C1_PREP_SHA: 6c04e20aebefecc77a463bc442e14dd4a1afd799
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Run diagnostic commands without stopping
+        shell: bash
+        run: |
+          set +e
+          mkdir -p audits/v2 outputs/v2 outputs/ufip outputs/c1
+          REPORT=audits/v2/c2-diagnostic.txt
+          : > "$REPORT"
+          run_cmd() {
+            name="$1"; shift
+            echo "===== $name =====" | tee -a "$REPORT"
+            "$@" > /tmp/c2-diag.log 2>&1
+            code=$?
+            tail -n 180 /tmp/c2-diag.log | tee -a "$REPORT"
+            echo "EXIT_CODE=$code" | tee -a "$REPORT"
+            echo | tee -a "$REPORT"
+            return 0
+          }
+          run_cmd "pip install" python -m pip install -r requirements.txt
+          run_cmd "unit tests" python -m unittest discover -s tests -v
+          run_cmd "compile" python -m compileall -q a4c_common carburantscorse2 scripts
+
+          echo "===== find guarded C1 release =====" | tee -a "$REPORT"
+          curl -fsSL -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' \
+            'https://api.github.com/repos/FredericP555/carburantscorse1/releases?per_page=30' > /tmp/releases.json
+          TAG=$(EXPECTED="$EXPECTED_C1_PREP_SHA" python - <<'PY'
+          import json, os, pathlib
+          rows=json.loads(pathlib.Path('/tmp/releases.json').read_text())
+          expected=os.environ['EXPECTED']
+          c=[r for r in rows if not r.get('draft') and str(r.get('tag_name','')).startswith('a4c-prep-v2-') and str(r.get('target_commitish',''))==expected]
+          c.sort(key=lambda r: str(r.get('published_at') or r.get('created_at') or ''), reverse=True)
+          if c:
+              r=c[0]
+              print(r.get('tag_name',''))
+              pathlib.Path('/tmp/release-info.txt').write_text(json.dumps({
+                  'tag':r.get('tag_name'), 'target_commitish':r.get('target_commitish'),
+                  'published_at':r.get('published_at'), 'prerelease':r.get('prerelease'),
+                  'assets':[a.get('name') for a in r.get('assets',[])]
+              }, ensure_ascii=False, indent=2))
+          PY
+          )
+          cat /tmp/release-info.txt 2>/dev/null | tee -a "$REPORT"
+          echo "TAG=$TAG" | tee -a "$REPORT"
+          if [ -z "$TAG" ]; then
+            echo "NO_GUARDED_RELEASE" | tee -a "$REPORT"
+          else
+            run_cmd "live dry-run" python scripts/run_dry_run_v2_cached.py --tag-prefix a4c-prep-v2- --release-tag "$TAG"
+          fi
+          echo "Diagnostic completed" | tee -a "$REPORT"
+
+      - name: Persist diagnostic report
+        if: always()
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          test -f audits/v2/c2-diagnostic.txt || echo "diagnostic report missing" > audits/v2/c2-diagnostic.txt
+          git add audits/v2/c2-diagnostic.txt
+          git diff --cached --quiet && exit 0
+          git commit -m "Store C2 V2 dry-run failure diagnostic"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
