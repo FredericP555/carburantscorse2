@@ -190,10 +190,9 @@
       if(start){
         const end=addDays(start,6);
         if(isMarginView()&&end){
-          // A margin week is present only after the publication guard has verified real
-          // UFIP coverage of the working week. Friday can therefore legitimately be the
-          // last observed quote while the Monday-Sunday weekly aggregate is complete.
-          badge.textContent=`Hebdo · semaine du ${frDate(start)} · complète au ${frDate(end)}`;
+          // Align the margin badge with the price view: once a guarded weekly
+          // margin exists, display the covered end date in the same compact form.
+          badge.textContent=`Données au ${frDate(end)}`;
           freshnessDate=end;
         }else if(end&&sourceMax>=end){
           badge.textContent=`Hebdo · semaine complète au ${frDate(end)}`;
