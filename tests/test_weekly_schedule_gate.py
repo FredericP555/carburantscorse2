@@ -14,9 +14,9 @@ class WeeklyScheduleGateTests(unittest.TestCase):
         minutes = {int(minute) for minute, _hour in crons}
         hours = {int(hour) for _minute, hour in crons}
         self.assertEqual(len(minutes), 1, "Both DST cron slots must use the same minute")
-        self.assertEqual(hours, {5, 6}, "Expected the two UTC hours covering 07:xx Europe/Paris")
+        self.assertEqual(hours, {6, 7}, "Expected the two UTC hours covering 08:xx Europe/Paris")
 
-        label = re.search(r"name: Select the 07:(\d{2}) Europe/Paris slot", WORKFLOW)
+        label = re.search(r"name: Select the 08:(\d{2}) Europe/Paris slot", WORKFLOW)
         self.assertIsNotNone(label)
         self.assertEqual(int(label.group(1)), next(iter(minutes)), "Step label and cron minute must stay aligned")
 
