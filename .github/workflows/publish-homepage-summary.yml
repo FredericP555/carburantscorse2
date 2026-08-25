@@ -81,7 +81,7 @@ jobs:
         id: changed
         shell: bash
         run: |
-          if git diff --quiet -- homepage-summary.json; then
+          if [ -z "$(git status --porcelain -- homepage-summary.json)" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "Homepage summary is already current."
           else
