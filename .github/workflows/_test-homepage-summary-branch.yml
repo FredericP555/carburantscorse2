@@ -1,0 +1,62 @@
+name: Test homepage summary branch
+
+on:
+  push:
+    branches:
+      - feature/homepage-weekly-summary
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run all unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Compile new generator
+        run: python -m compileall -q scripts/build_homepage_summary.py
+
+      - name: Generate summary without modifying production data
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          before=$(sha256sum data.json | cut -d' ' -f1)
+          python scripts/build_homepage_summary.py --output outputs/homepage-summary.json
+          after=$(sha256sum data.json | cut -d' ' -f1)
+          test "$before" = "$after"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = json.loads(Path('outputs/homepage-summary.json').read_text(encoding='utf-8'))
+          assert p['schema'] == 'a4c-homepage-summary-v1'
+          assert p['quality']['r2_unavailable'] == 0
+          print(json.dumps(p['homepage_default'], ensure_ascii=False, indent=2))
+          print('daily through:', p['source']['daily_data_through'])
+          print('weekly through:', p['source']['weekly_data_through'])
+          print('ufip through:', p['source']['ufip_last_observed_date'])
+          PY
+
+      - name: Upload validation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: homepage-summary-validation
+          path: outputs/homepage-summary.json
+          retention-days: 7
