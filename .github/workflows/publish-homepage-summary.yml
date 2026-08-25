@@ -81,6 +81,7 @@ jobs:
         id: changed
         shell: bash
         run: |
+          # git status sees both the first untracked publication and later modifications.
           if [ -z "$(git status --porcelain -- homepage-summary.json)" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "Homepage summary is already current."
