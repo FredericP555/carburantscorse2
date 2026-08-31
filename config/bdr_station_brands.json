@@ -4,5 +4,16 @@
     "legacy": "IDs already present in bdr_categories_published_2026-06-06.csv keep their published category",
     "new_ids": "official brand -> A4C segment/detail; Esso Express and TotalEnergies Access are gms_lowcost"
   },
-  "stations": {}
+  "stations": {
+    "13120012": {
+      "enseigne": "Carrefour Market",
+      "segment": "gms_lowcost",
+      "detail": "gms",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-08-31",
+      "verified_at": "2026-08-31T08:05:56.369558+00:00"
+    }
+  },
+  "generated_at": "2026-08-31T08:05:56.369558+00:00"
 }
