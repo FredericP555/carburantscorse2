@@ -1,0 +1,133 @@
+name: Retry C2 after fresh C1 release
+
+on:
+  schedule:
+    # Monday follow-ups at 11:47, 14:47, 17:47 and 20:47 Europe/Paris.
+    # Two UTC slots per local time cover CET/CEST; the gate below keeps only one.
+    - cron: '47 9 * * 1'
+    - cron: '47 10 * * 1'
+    - cron: '47 12 * * 1'
+    - cron: '47 13 * * 1'
+    - cron: '47 15 * * 1'
+    - cron: '47 16 * * 1'
+    - cron: '47 18 * * 1'
+    - cron: '47 19 * * 1'
+    # Final safety follow-up Tuesday at 07:47 Europe/Paris.
+    - cron: '47 5 * * 2'
+    - cron: '47 6 * * 2'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  retry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Select the Europe/Paris follow-up slot
+        id: clock
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          python - <<'PY'
+          import os
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+
+          if os.environ.get('EVENT_NAME') == 'workflow_dispatch':
+              selected = True
+          else:
+              schedule = os.environ.get('EVENT_SCHEDULE', '')
+              try:
+                  minute, hour, _, _, dow = schedule.split()
+                  minute = int(minute)
+                  hour = int(hour)
+                  dow = int(dow)
+              except Exception:
+                  minute, hour, dow = -1, -1, -1
+
+              offset = int(datetime.now(ZoneInfo('Europe/Paris')).utcoffset().total_seconds() // 3600)
+              shifted = hour + offset
+              local_hour = shifted % 24
+              local_dow = (dow + (shifted // 24)) % 7
+              selected = (
+                  minute == 47
+                  and (
+                      (local_dow == 1 and local_hour in {11, 14, 17, 20})
+                      or (local_dow == 2 and local_hour == 7)
+                  )
+              )
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
+              fh.write(f"selected={'true' if selected else 'false'}\n")
+          print('Follow-up slot selected:', selected)
+          PY
+
+      - name: Check whether C1 published a newer validated release
+        if: steps.clock.outputs.selected == 'true'
+        id: c1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          c1=$(gh release list \
+            --repo FredericP555/carburantscorse1 \
+            --limit 50 \
+            --json tagName,publishedAt \
+            --jq '[.[] | select(.tagName | startswith("a4c-v2-shared-"))] | sort_by(.publishedAt) | reverse | .[0]')
+
+          tag=$(printf '%s' "$c1" | jq -r '.tagName // ""')
+          published=$(printf '%s' "$c1" | jq -r '.publishedAt // ""')
+          if [ -z "$tag" ] || [ -z "$published" ]; then
+            echo "No validated C1 V2 release found." >&2
+            exit 1
+          fi
+
+          last_c2_started=$(gh run list \
+            --repo FredericP555/carburantscorse2 \
+            --workflow update-weekly.yml \
+            --status success \
+            --limit 20 \
+            --json startedAt \
+            --jq '[.[].startedAt | select(. != null)] | sort | reverse | .[0] // ""')
+
+          if [ -z "$last_c2_started" ] || [[ "$published" > "$last_c2_started" ]]; then
+            ready=true
+          else
+            ready=false
+          fi
+
+          echo "ready=$ready" >> "$GITHUB_OUTPUT"
+          echo "release_tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "release_published=$published" >> "$GITHUB_OUTPUT"
+          echo "last_c2_started=$last_c2_started" >> "$GITHUB_OUTPUT"
+
+          echo "Latest C1 release: $tag ($published)"
+          echo "Latest successful C2 weekly start: ${last_c2_started:-none}"
+          echo "Full C2 rerun required: $ready"
+
+      - name: Dispatch full C2 production update
+        if: steps.clock.outputs.selected == 'true' && steps.c1.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run update-weekly.yml \
+            --repo FredericP555/carburantscorse2 \
+            --ref "${{ github.event.repository.default_branch }}"
+          echo "A newer validated C1 release is available; full C2 update dispatched."
+
+      - name: Write retry summary
+        if: steps.clock.outputs.selected == 'true' && always()
+        run: |
+          {
+            echo '## C2 conditional follow-up'
+            echo "- Latest C1 release: ${{ steps.c1.outputs.release_tag }}"
+            echo "- C1 published at: ${{ steps.c1.outputs.release_published }}"
+            echo "- Latest successful C2 weekly start: ${{ steps.c1.outputs.last_c2_started }}"
+            echo "- Full C2 rerun dispatched: ${{ steps.c1.outputs.ready == 'true' }}"
+          } >> "$GITHUB_STEP_SUMMARY"
