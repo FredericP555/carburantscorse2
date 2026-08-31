@@ -15,6 +15,11 @@ on:
     # Final safety follow-up Tuesday at 07:47 Europe/Paris.
     - cron: '47 5 * * 2'
     - cron: '47 6 * * 2'
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/retry-after-c1.yml
   workflow_dispatch:
 
 permissions:
@@ -37,7 +42,7 @@ jobs:
           from datetime import datetime
           from zoneinfo import ZoneInfo
 
-          if os.environ.get('EVENT_NAME') == 'workflow_dispatch':
+          if os.environ.get('EVENT_NAME') in {'workflow_dispatch', 'push'}:
               selected = True
           else:
               schedule = os.environ.get('EVENT_SCHEDULE', '')
