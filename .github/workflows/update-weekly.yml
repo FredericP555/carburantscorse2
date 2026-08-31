@@ -2,9 +2,9 @@ name: Update carburantscorse2 weekly
 
 on:
   schedule:
-    # Two UTC slots cover 08:00 Europe/Paris across DST; the gate below keeps only one.
-    - cron: '0 6 * * 1'
-    - cron: '0 7 * * 1'
+    # Two UTC slots cover 08:07 Europe/Paris across DST; the gate below keeps only one.
+    - cron: '7 6 * * 1'
+    - cron: '7 7 * * 1'
   workflow_dispatch:
 
 permissions:
@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
-      - name: Select the 08:00 Europe/Paris slot
+      - name: Select the 08:07 Europe/Paris slot
         id: gate
         env:
           EVENT_NAME: ${{ github.event_name }}
