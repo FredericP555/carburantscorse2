@@ -150,6 +150,95 @@
     return true;
   }
 
+  function installDynamicMarginRecord(){
+    if(typeof window.buildMarginAnalysis!=='function')return false;
+    if(window.buildMarginAnalysis.__a4cDynamicMarginRecord)return true;
+
+    const base=window.buildMarginAnalysis;
+    const marker='<p style="color:#991b1b;font-weight:600">';
+
+    function maxRow(rows,field,start,end){
+      const vals=(rows||[]).filter(r=>
+        (!start||r.date>=start)&&(!end||r.date<=end)&&Number.isFinite(Number(r[field]))
+      );
+      return vals.length?vals.reduce((best,r)=>Number(r[field])>Number(best[field])?r:best):null;
+    }
+    function samePeak(a,b,field){
+      return !!(a&&b&&a.date===b.date&&Math.abs(Number(a[field])-Number(b[field]))<1e-9);
+    }
+    function signed(v){
+      if(v==null||!Number.isFinite(Number(v)))return '—';
+      const n=Math.abs(Number(v));
+      const s=n.toFixed(1).replace('.',',').replace(/,0$/,'');
+      return (Number(v)>=0?'+':'−')+s;
+    }
+    function longDate(iso){
+      return frDate(iso);
+    }
+    function joinFr(parts){
+      if(!parts.length)return '';
+      if(parts.length===1)return parts[0];
+      return parts.slice(0,-1).join(', ')+' et '+parts[parts.length-1];
+    }
+
+    function patchedMarginAnalysis(){
+      const html=base();
+      const rows=(typeof MARGES_GZ!=='undefined'&&MARGES_GZ&&Array.isArray(MARGES_GZ.all))?MARGES_GZ.all:[];
+      if(!rows.length)return html;
+
+      const sanctionStart='2025-11-17';
+      const sanctionEnd='2025-12-31';
+      const gapAfter=maxRow(rows,'ecart',sanctionStart,sanctionEnd);
+      const corseAfter=maxRow(rows,'corse',sanctionStart,sanctionEnd);
+      if(!gapAfter||!corseAfter)return html;
+
+      const gapThrough=maxRow(rows,'ecart',null,sanctionEnd);
+      const corseThrough=maxRow(rows,'corse',null,sanctionEnd);
+      const gapOverall=maxRow(rows,'ecart');
+      const corseOverall=maxRow(rows,'corse');
+      const gapWasRecord=samePeak(gapAfter,gapThrough,'ecart');
+      const corseWasRecord=samePeak(corseAfter,corseThrough,'corse');
+
+      let recordText='Fait le plus significatif : dans les semaines suivant la sanction du 17 novembre 2025, ';
+      if(gapAfter.date===corseAfter.date){
+        recordText+=`l'écart de marge a atteint <strong>${signed(gapAfter.ecart)} c/L</strong> et la marge corse <strong>${signed(corseAfter.corse)} c/L</strong> au cours de la semaine du <strong>${longDate(gapAfter.date)}</strong>.`;
+      }else{
+        recordText+=`l'écart de marge a atteint <strong>${signed(gapAfter.ecart)} c/L</strong> la semaine du <strong>${longDate(gapAfter.date)}</strong>, tandis que la marge corse a culminé à <strong>${signed(corseAfter.corse)} c/L</strong> la semaine du <strong>${longDate(corseAfter.date)}</strong>.`;
+      }
+
+      if(gapWasRecord&&corseWasRecord){
+        recordText+=' Ces deux niveaux constituaient alors des records depuis 2022.';
+      }else if(gapWasRecord){
+        recordText+=' L’écart de marge constituait alors un record depuis 2022.';
+      }else if(corseWasRecord){
+        recordText+=' La marge corse constituait alors un record depuis 2022.';
+      }
+
+      const later=[];
+      if(gapOverall&&Number(gapOverall.ecart)>Number(gapAfter.ecart)+1e-9){
+        later.push(`le record d'écart de marge a depuis été porté à <strong>${signed(gapOverall.ecart)} c/L</strong> la semaine du <strong>${longDate(gapOverall.date)}</strong>`);
+      }
+      if(corseOverall&&Number(corseOverall.corse)>Number(corseAfter.corse)+1e-9){
+        later.push(`le record de marge corse à <strong>${signed(corseOverall.corse)} c/L</strong> la semaine du <strong>${longDate(corseOverall.date)}</strong>`);
+      }
+      if(later.length){
+        recordText+=` Depuis, ${joinFr(later)}.`;
+      }else if(gapWasRecord&&corseWasRecord){
+        recordText+=' Ces records n’ont pas été dépassés depuis.';
+      }
+
+      recordText+=' Les données observées dans les semaines suivant la décision ne montrent donc aucun effet correctif immédiat sur les comportements tarifaires.';
+
+      const paragraph=`${marker}${recordText}</p>`;
+      const pos=html.lastIndexOf(marker);
+      return pos>=0?html.slice(0,pos)+paragraph:html+paragraph;
+    }
+
+    patchedMarginAnalysis.__a4cDynamicMarginRecord=true;
+    window.buildMarginAnalysis=patchedMarginAnalysis;
+    return true;
+  }
+
   function ensureBadge(){
     let badge=document.getElementById('a4c-freshness-badge');
     if(badge)return badge;
@@ -234,6 +323,7 @@
 
   enableC2PeriodSliderEverywhere();
   installC2AdaptiveAxis();
+  installDynamicMarginRecord();
   window.A4C_updateFreshnessBadge=updateFreshnessBadge;
   document.addEventListener('click',function(e){
     const t=e.target&&e.target.closest&&e.target.closest('[data-res],[data-carbu],#btn-daily,#btn-weekly,#btn-prix,#btn-marge,#btn-gz,#btn-sp,#btn-sp95ref,#btn-e10ref');
@@ -242,6 +332,7 @@
   window.addEventListener('load',function(){
     enableC2PeriodSliderEverywhere();
     installC2AdaptiveAxis();
+    installDynamicMarginRecord();
     let tries=0;
     const timer=setInterval(function(){
       tries++;
