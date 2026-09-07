@@ -16,6 +16,7 @@ on:
 permissions:
   contents: read
   actions: write
+  pages: write
 
 jobs:
   watchdog:
@@ -33,7 +34,9 @@ jobs:
           from datetime import datetime
           from zoneinfo import ZoneInfo
 
-          if os.environ.get('EVENT_NAME') in {'workflow_dispatch', 'push'}:
+          event = os.environ.get('EVENT_NAME', '')
+          dry_run = event == 'push'
+          if event in {'workflow_dispatch', 'push'}:
               selected = True
           else:
               schedule = os.environ.get('EVENT_SCHEDULE', '')
@@ -53,10 +56,12 @@ jobs:
 
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
               fh.write(f"selected={'true' if selected else 'false'}\n")
+              fh.write(f"dry_run={'true' if dry_run else 'false'}\n")
           print('Watchdog slot selected:', selected)
+          print('Dry-run self-test:', dry_run)
           PY
 
-      - name: Check whether today's C1 release still needs C2 processing
+      - name: Evaluate C2 business publication state
         if: steps.clock.outputs.selected == 'true'
         id: state
         env:
@@ -92,61 +97,145 @@ jobs:
           PY
           )
 
-          summary_tag=$(gh api \
+          data_json=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            repos/FredericP555/carburantscorse2/contents/data.json \
+            --jq '.content' | tr -d '\n' | base64 -d)
+          summary_json=$(gh api \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             repos/FredericP555/carburantscorse2/contents/homepage-summary.json \
-            --jq '.content' \
-            | tr -d '\n' \
-            | base64 -d \
-            | jq -r '.source.c1_release_tag // ""')
+            --jq '.content' | tr -d '\n' | base64 -d)
 
-          active=$(gh run list \
+          data_tag=$(printf '%s' "$data_json" | jq -r '.meta.official_shared_release_tag // ""')
+          data_snapshot=$(printf '%s' "$data_json" | jq -r '.meta.official_shared_sha256 // ""')
+          summary_tag=$(printf '%s' "$summary_json" | jq -r '.source.c1_release_tag // ""')
+          summary_snapshot=$(printf '%s' "$summary_json" | jq -r '.source.c1_snapshot_sha256 // ""')
+
+          release_snapshot=""
+          if [ -n "$latest_today" ]; then
+            release_detail=$(gh api "repos/FredericP555/carburantscorse1/releases/tags/$latest_today")
+            release_digest=$(jq -r '[.assets[] | select(.name=="official_13_20.csv.gz")][0].digest // ""' <<<"$release_detail")
+            release_snapshot="${release_digest#sha256:}"
+          fi
+
+          active_update=$(gh run list \
             --repo FredericP555/carburantscorse2 \
             --workflow update-weekly.yml \
             --limit 20 \
             --json status \
             --jq '[.[] | select(.status != "completed")] | length')
 
-          if [ -z "$latest_today" ]; then
-            dispatch=false
-            reason="no validated C1 release exists today"
-          elif [ "$summary_tag" = "$latest_today" ]; then
-            dispatch=false
-            reason="C2 already processed today's latest C1 release: $latest_today"
-          elif [ "$active" -gt 0 ]; then
-            dispatch=false
-            reason="a full C2 update is already queued or running"
-          else
-            dispatch=true
-            reason="today's latest C1 release has not yet been processed by C2"
+          active_verify=$(gh run list \
+            --repo FredericP555/carburantscorse2 \
+            --workflow verify-c2-publication.yml \
+            --limit 20 \
+            --json status \
+            --jq '[.[] | select(.status != "completed")] | length')
+
+          business_run=""
+          if [ -n "$latest_today" ]; then
+            rm -rf /tmp/c2-business-receipts
+            mkdir -p /tmp/c2-business-receipts
+            while read -r run_id; do
+              [ -z "$run_id" ] && continue
+              dir="/tmp/c2-business-receipts/$run_id"
+              mkdir -p "$dir"
+              if gh run download "$run_id" \
+                   --repo FredericP555/carburantscorse2 \
+                   --name c2-business-success-receipt \
+                   --dir "$dir" >/dev/null 2>&1; then
+                receipt="$dir/c2-business-success.json"
+                if [ -f "$receipt" ] && jq -e --arg tag "$latest_today" \
+                     '.status == "business-success" and .c1_release_tag == $tag and .pages_data_sha256 == .expected_data_sha256 and .pages_summary_sha256 == .expected_summary_sha256 and .c1_snapshot_sha256 == .c1_release_bundle_sha256' \
+                     "$receipt" >/dev/null; then
+                  business_run="$run_id"
+                  break
+                fi
+              fi
+            done < <(gh run list \
+              --repo FredericP555/carburantscorse2 \
+              --workflow verify-c2-publication.yml \
+              --status success \
+              --limit 20 \
+              --json databaseId \
+              --jq '.[].databaseId')
           fi
 
-          echo "dispatch=$dispatch" >> "$GITHUB_OUTPUT"
+          if [ -z "$latest_today" ]; then
+            action="none"
+            reason="no validated C1 release exists today; C2 has no new weekly input to process"
+          elif [ -n "$business_run" ]; then
+            action="none"
+            reason="C2 business success is proven for today's latest C1 release: $latest_today (verifier run $business_run)"
+          elif [ "$active_update" -gt 0 ] || [ "$active_verify" -gt 0 ]; then
+            action="wait"
+            reason="C2 production or end-to-end verification is still active"
+          elif [ "$data_tag" != "$latest_today" ] || [ "$summary_tag" != "$latest_today" ]; then
+            action="full-update"
+            reason="C2 repository content has not consumed today's latest C1 release"
+          elif [ -z "$release_snapshot" ] || [ "$data_snapshot" != "$summary_snapshot" ] || [ "$data_snapshot" != "$release_snapshot" ]; then
+            action="full-update"
+            reason="C2 local C1 provenance is inconsistent with the referenced release asset"
+          else
+            action="repair-publication"
+            reason="C2 repository content is current, but no end-to-end receipt proves both public Pages files"
+          fi
+
+          echo "action=$action" >> "$GITHUB_OUTPUT"
           echo "c1_release_today=$latest_today" >> "$GITHUB_OUTPUT"
+          echo "data_c1_release=$data_tag" >> "$GITHUB_OUTPUT"
           echo "summary_c1_release=$summary_tag" >> "$GITHUB_OUTPUT"
-          echo "active_runs=$active" >> "$GITHUB_OUTPUT"
+          echo "business_run=$business_run" >> "$GITHUB_OUTPUT"
+          echo "active_updates=$active_update" >> "$GITHUB_OUTPUT"
+          echo "active_verifiers=$active_verify" >> "$GITHUB_OUTPUT"
           echo "reason=$reason" >> "$GITHUB_OUTPUT"
           echo "$reason"
 
       - name: Dispatch full C2 production update
-        if: steps.clock.outputs.selected == 'true' && steps.state.outputs.dispatch == 'true'
+        if: steps.clock.outputs.selected == 'true' && steps.clock.outputs.dry_run != 'true' && steps.state.outputs.action == 'full-update'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh workflow run update-weekly.yml \
             --repo FredericP555/carburantscorse2 \
             --ref "${{ github.event.repository.default_branch }}"
-          echo "C2 weekly production dispatched by watchdog."
+          echo "C2 weekly production dispatched because local production is not linked to the expected C1 release."
+
+      - name: Rebuild Pages and re-run C2 business verification
+        if: steps.clock.outputs.selected == 'true' && steps.clock.outputs.dry_run != 'true' && steps.state.outputs.action == 'repair-publication'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl --retry 3 --retry-delay 3 -sS -o /tmp/pages-response.json -w "%{http_code}" \
+            -L -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pages/builds")
+          cat /tmp/pages-response.json
+          echo "Pages API HTTP $code"
+          test "$code" = "201"
+          gh workflow run verify-c2-publication.yml \
+            --repo FredericP555/carburantscorse2 \
+            --ref "${{ github.event.repository.default_branch }}"
+          echo "Pages rebuild requested and C2 business verifier dispatched."
 
       - name: Write watchdog summary
         if: steps.clock.outputs.selected == 'true' && always()
         run: |
           {
-            echo '## C2 weekly watchdog'
-            echo "- C1 release today: ${{ steps.state.outputs.c1_release_today || 'none' }}"
-            echo "- C1 release already reflected by homepage summary: ${{ steps.state.outputs.summary_c1_release || 'none' }}"
-            echo "- Active full C2 runs: ${{ steps.state.outputs.active_runs || '0' }}"
-            echo "- Full C2 dispatched: ${{ steps.state.outputs.dispatch == 'true' }}"
-            echo "- Decision: ${{ steps.state.outputs.reason }}"
+            echo '## C2 business-aware weekly watchdog'
+            echo "- Latest C1 release today: ${{ steps.state.outputs.c1_release_today || 'none' }}"
+            echo "- C1 release in C2 data.json: ${{ steps.state.outputs.data_c1_release || 'none' }}"
+            echo "- C1 release in homepage summary: ${{ steps.state.outputs.summary_c1_release || 'none' }}"
+            echo "- Matching business-success run: ${{ steps.state.outputs.business_run || 'none' }}"
+            echo "- Active full C2 runs: ${{ steps.state.outputs.active_updates || '0' }}"
+            echo "- Active C2 business verifiers: ${{ steps.state.outputs.active_verifiers || '0' }}"
+            echo "- Decision: ${{ steps.state.outputs.action || 'not evaluated' }}"
+            echo "- Dry-run self-test: ${{ steps.clock.outputs.dry_run == 'true' }}"
+            echo "- Reason: ${{ steps.state.outputs.reason }}"
           } >> "$GITHUB_STEP_SUMMARY"
