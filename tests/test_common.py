@@ -95,11 +95,23 @@ class CommonTests(unittest.TestCase):
         after_last_61 = daily[daily["date"].eq(pd.Timestamp("2026-04-12"))].iloc[0]
         self.assertTrue(bool(after_last_61.station_inactive))
 
-    def test_margin_formula(self):
-        self.assertEqual(excise_gazole_eur_l("13", date(2024,12,31)), 0.594)
-        self.assertEqual(excise_gazole_eur_l("13", date(2025,1,1)), 0.6075)
-        expected = 1.90 / 1.13 - 0.594 - 0.90
-        self.assertAlmostEqual(compute_gazole_margin(1.90, "20", date(2026,8,18), 0.90), expected)
+    def test_margin_formula_and_excise_matrix(self):
+        for year in range(2022, 2027):
+            with self.subTest(year=year, department="13"):
+                self.assertEqual(excise_gazole_eur_l("13", date(year, 1, 1)), 0.6075)
+            with self.subTest(year=year, department="20"):
+                self.assertEqual(excise_gazole_eur_l("20", date(year, 1, 1)), 0.5940)
+
+        expected_corse = 1.90 / 1.13 - 0.5940 - 0.90
+        self.assertAlmostEqual(
+            compute_gazole_margin(1.90, "20", date(2026, 8, 18), 0.90),
+            expected_corse,
+        )
+        expected_bdr = 1.90 / 1.20 - 0.6075 - 0.90
+        self.assertAlmostEqual(
+            compute_gazole_margin(1.90, "13", date(2024, 12, 31), 0.90),
+            expected_bdr,
+        )
 
 
 if __name__ == "__main__":
