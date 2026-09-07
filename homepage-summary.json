@@ -1085,7 +1085,7 @@
       }
     }
   },
-  "generated_at": "2026-09-07T08:06:40.427364+00:00",
+  "generated_at": "2026-09-07T15:18:31.715828+00:00",
   "homepage_default": {
     "comparison": "Corse vs Bouches-du-Rhone - reseau traditionnel",
     "gazole": {
@@ -1103,24 +1103,18 @@
   "margin_gazole": {
     "all": {
       "latest": {
+        "bdr": 28.86,
+        "corse": 41.91,
+        "date": "2026-08-31",
+        "ecart": 13.05
+      },
+      "previous": {
         "bdr": 32.78,
         "corse": 45.64,
         "date": "2026-08-24",
         "ecart": 12.86
       },
-      "previous": {
-        "bdr": 27.05,
-        "corse": 39.62,
-        "date": "2026-08-17",
-        "ecart": 12.56
-      },
       "recent": [
-        {
-          "bdr": 28.33,
-          "corse": 46.74,
-          "date": "2026-07-06",
-          "ecart": 18.42
-        },
         {
           "bdr": 27.96,
           "corse": 44.39,
@@ -1162,29 +1156,29 @@
           "corse": 45.64,
           "date": "2026-08-24",
           "ecart": 12.86
+        },
+        {
+          "bdr": 28.86,
+          "corse": 41.91,
+          "date": "2026-08-31",
+          "ecart": 13.05
         }
       ]
     },
     "network": {
       "latest": {
+        "bdr": 30.97,
+        "corse": 41.91,
+        "date": "2026-08-31",
+        "ecart": 10.95
+      },
+      "previous": {
         "bdr": 34.68,
         "corse": 45.64,
         "date": "2026-08-24",
         "ecart": 10.96
       },
-      "previous": {
-        "bdr": 28.63,
-        "corse": 39.62,
-        "date": "2026-08-17",
-        "ecart": 10.98
-      },
       "recent": [
-        {
-          "bdr": 30.89,
-          "corse": 46.74,
-          "date": "2026-07-06",
-          "ecart": 15.85
-        },
         {
           "bdr": 30.61,
           "corse": 44.39,
@@ -1226,10 +1220,16 @@
           "corse": 45.64,
           "date": "2026-08-24",
           "ecart": 10.96
+        },
+        {
+          "bdr": 30.97,
+          "corse": 41.91,
+          "date": "2026-08-31",
+          "ecart": 10.95
         }
       ]
     },
-    "ufip_last_observed_date": "2026-08-31"
+    "ufip_last_observed_date": "2026-09-04"
   },
   "methodology": {
     "comparison_default": "network",
@@ -1397,12 +1397,12 @@
     }
   },
   "source": {
-    "c1_release_published_at": "2026-09-07T08:00:28Z",
-    "c1_release_tag": "a4c-v2-shared-20260907T080025Z-34097928996",
-    "c1_snapshot_sha256": "127f7101d5e5b97d0243abecde8a5a0aca884c8ac7265f2ea68ab3923794cf78",
+    "c1_release_published_at": "2026-09-07T15:09:21Z",
+    "c1_release_tag": "a4c-v2-shared-20260907T150917Z-34136444178",
+    "c1_snapshot_sha256": "164ccc93a623e0ddf83e2f2a1c92f6939b0f09b1415c92f96e85e6616895e65f",
     "daily_data_through": "2026-09-06",
     "official_source_max_date": "2026-09-06",
-    "ufip_last_observed_date": "2026-08-31",
+    "ufip_last_observed_date": "2026-09-04",
     "weekly_data_through": "2026-09-06"
   }
 }
