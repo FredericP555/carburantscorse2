@@ -142,7 +142,44 @@ function buildMarginAnalysis(){
   const lastGap=lastFullYear>=firstYear?editorialYearMean(all,lastFullYear,'ecart'):null;
   const pct=(firstGap!=null&&lastGap!=null&&firstGap!==0)?(lastGap-firstGap)/Math.abs(firstGap)*100:null;
   const evolution=(firstGap!=null&&lastGap!=null)?`L'écart annuel moyen toutes stations est passé de <strong>${editorialSigned(firstGap)} c/L en ${firstYear}</strong> à <strong>${editorialSigned(lastGap)} c/L en ${lastFullYear}</strong>, ${editorialEvolutionText(pct)}.`:'';
-  return `<p style="margin-bottom:8px">La marge de distribution, c'est tout ce qui sépare le prix du carburant à sa sortie du marché de gros (cotation Rotterdam) du prix hors taxes payé à la pompe. C'est la part qui revient à la chaîne de distribution dans son ensemble. Il s'agit d'une marge théorique, car elle part d'un prix de référence : des groupes intégrés spécialisés dans le trading, comme TotalEnergies, ENI ou Rubis, peuvent en réalité s'approvisionner en dessous de ce cours — leur marge réelle est donc probablement supérieure à celle calculée ici.</p><p style="margin-bottom:8px"><em>La marge de distribution est calculée en soustrayant du prix HT à la pompe l'accise sur les carburants (différenciée selon la zone et la période) et la cotation Rotterdam du Gazole publiée par l'UFIP. Ce qui reste représente ce que les distributeurs conservent pour couvrir leurs coûts et dégager un bénéfice.</em></p><p style="margin-bottom:8px">De ${editorialMonthYear(start23)} à ${editorialMonthYear(p.end)}, la marge de distribution en Corse s'établit en moyenne à <strong>${editorialSigned(corse)} c/L</strong>, contre <strong>${editorialSigned(bdr)} c/L</strong> dans les Bouches-du-Rhône (toutes stations). ${evolution} Si les seuls coûts d'insularité expliquaient cet écart, celui-ci devrait rester relativement stable dans le temps. En septembre-octobre 2022, la remise TotalEnergies a comprimé les marges à leur niveau le plus bas de la période analysée, montrant la capacité des opérateurs à absorber des baisses significatives.</p><p style="color:#991b1b;font-weight:600">Fait le plus significatif : dans les semaines suivant la sanction du 17 novembre 2025, non seulement l'écart de marge a atteint son niveau record à <strong>+24 c/L</strong> (semaine du 15 décembre 2025), mais la marge corse elle-même culminait à près de <strong>+49 c/L</strong> — son plus haut niveau depuis 2022. La décision n'a produit aucun effet correctif sur les comportements tarifaires.</p>`;
+
+  const sanctionStart='2025-11-17';
+  const sanctionEnd='2025-12-31';
+  const gapAfter=editorialMax(all,'ecart',sanctionStart,sanctionEnd);
+  const corseAfter=editorialMax(all,'corse',sanctionStart,sanctionEnd);
+  const gapThrough=editorialMax(all,'ecart',null,sanctionEnd);
+  const corseThrough=editorialMax(all,'corse',null,sanctionEnd);
+  const gapOverall=editorialMax(all,'ecart');
+  const corseOverall=editorialMax(all,'corse');
+  const gapWasRecord=!!(gapAfter&&gapThrough&&gapAfter.date===gapThrough.date&&Number(gapAfter.ecart)===Number(gapThrough.ecart));
+  const corseWasRecord=!!(corseAfter&&corseThrough&&corseAfter.date===corseThrough.date&&Number(corseAfter.corse)===Number(corseThrough.corse));
+  let recordText='';
+  if(gapAfter&&corseAfter){
+    recordText=`Fait le plus significatif : dans les semaines suivant la sanction du 17 novembre 2025, l'écart de marge a atteint <strong>${editorialSigned(Number(gapAfter.ecart))} c/L</strong> la semaine du <strong>${editorialLongDate(gapAfter.date)}</strong>, tandis que la marge corse a culminé à <strong>${editorialSigned(Number(corseAfter.corse))} c/L</strong> la semaine du <strong>${editorialLongDate(corseAfter.date)}</strong>.`;
+    if(gapWasRecord&&corseWasRecord){
+      recordText+=' Ces deux niveaux constituaient alors des records depuis 2022.';
+    }else if(gapWasRecord){
+      recordText+=' L’écart de marge constituait alors un record depuis 2022.';
+    }else if(corseWasRecord){
+      recordText+=' La marge corse constituait alors un record depuis 2022.';
+    }
+
+    const gapLater=gapOverall&&Number(gapOverall.ecart)>Number(gapAfter.ecart);
+    const corseLater=corseOverall&&Number(corseOverall.corse)>Number(corseAfter.corse);
+    if(gapLater&&corseLater&&gapOverall.date===corseOverall.date){
+      recordText+=` Depuis, le record d'écart de marge a été porté à <strong>${editorialSigned(Number(gapOverall.ecart))} c/L</strong> et celui de la marge corse à <strong>${editorialSigned(Number(corseOverall.corse))} c/L</strong>, tous deux la semaine du <strong>${editorialLongDate(gapOverall.date)}</strong>.`;
+    }else{
+      if(gapLater){
+        recordText+=` Depuis, le record d'écart de marge a été porté à <strong>${editorialSigned(Number(gapOverall.ecart))} c/L</strong> la semaine du <strong>${editorialLongDate(gapOverall.date)}</strong>.`;
+      }
+      if(corseLater){
+        recordText+=` Depuis, le record de marge corse a été porté à <strong>${editorialSigned(Number(corseOverall.corse))} c/L</strong> la semaine du <strong>${editorialLongDate(corseOverall.date)}</strong>.`;
+      }
+    }
+    recordText+=' Les données observées dans les semaines suivant la décision ne montrent donc aucun effet correctif immédiat sur ces indicateurs.';
+  }
+
+  return `<p style="margin-bottom:8px">La marge de distribution, c'est tout ce qui sépare le prix du carburant à sa sortie du marché de gros (cotation Rotterdam) du prix hors taxes payé à la pompe. C'est la part qui revient à la chaîne de distribution dans son ensemble. Il s'agit d'une marge théorique, car elle part d'un prix de référence : des groupes intégrés spécialisés dans le trading, comme TotalEnergies, ENI ou Rubis, peuvent en réalité s'approvisionner en dessous de ce cours — leur marge réelle est donc probablement supérieure à celle calculée ici.</p><p style="margin-bottom:8px"><em>La marge de distribution est calculée en soustrayant du prix HT à la pompe l'accise sur les carburants (différenciée selon la zone et la période) et la cotation Rotterdam du Gazole publiée par l'UFIP. Ce qui reste représente ce que les distributeurs conservent pour couvrir leurs coûts et dégager un bénéfice.</em></p><p style="margin-bottom:8px">De ${editorialMonthYear(start23)} à ${editorialMonthYear(p.end)}, la marge de distribution en Corse s'établit en moyenne à <strong>${editorialSigned(corse)} c/L</strong>, contre <strong>${editorialSigned(bdr)} c/L</strong> dans les Bouches-du-Rhône (toutes stations). ${evolution} Si les seuls coûts d'insularité expliquaient cet écart, celui-ci devrait rester relativement stable dans le temps. En septembre-octobre 2022, la remise TotalEnergies a comprimé les marges à leur niveau le plus bas de la période analysée, montrant la capacité des opérateurs à absorber des baisses significatives.</p>${recordText?`<p style="color:#991b1b;font-weight:600">${recordText}</p>`:''}`;
 }
 function syncDynamicPeriodLabels(){
   const y=getLatestDataYear();
