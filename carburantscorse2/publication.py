@@ -126,8 +126,6 @@ def build_publication_state(
         frame["real_observation"] = frame["date"].isin(set(real_dates))
         frame["gap_suspect"] = False
 
-        # Published legacy behaviour: once a bounded gap is deemed too long, all
-        # forward-filled days inside that bounded gap are suspect.
         for previous_date, next_date in zip(real_dates[:-1], real_dates[1:]):
             if (next_date - previous_date).days > threshold:
                 mask = (frame["date"] > previous_date) & (frame["date"] < next_date)
@@ -208,7 +206,7 @@ def build_gap_series(
     return result
 
 
-def unknown_recent_bdr_stations(state: pd.DataFrame, *, since: pd.Timestamp) -> list[str]:
+def _unknown_recent_bdr_stations(state: pd.DataFrame, *, since: pd.Timestamp) -> list[str]:
     recent = state[
         (state["territory"] == "Bouches-du-Rhone")
         & (state["date"] >= pd.Timestamp(since))
@@ -216,3 +214,21 @@ def unknown_recent_bdr_stations(state: pd.DataFrame, *, since: pd.Timestamp) -> 
         & state["category"].eq("unknown")
     ]
     return sorted(recent["station_id"].astype(str).unique().tolist())
+
+
+def validate_recent_bdr_perimeter(state: pd.DataFrame, *, since: pd.Timestamp) -> list[str]:
+    """Fail closed when an eligible recent BDR station has no resolved category."""
+    unknown = _unknown_recent_bdr_stations(state, since=since)
+    if unknown:
+        preview = ", ".join(unknown[:10])
+        suffix = "…" if len(unknown) > 10 else ""
+        raise RuntimeError(
+            f"C2 BDR perimeter incomplete: {len(unknown)} recent eligible station(s) "
+            f"remain unclassified: {preview}{suffix}"
+        )
+    return unknown
+
+
+def unknown_recent_bdr_stations(state: pd.DataFrame, *, since: pd.Timestamp) -> list[str]:
+    """Production alias: an incomplete recent BDR perimeter is now a hard stop."""
+    return validate_recent_bdr_perimeter(state, since=since)

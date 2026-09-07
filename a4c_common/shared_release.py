@@ -7,6 +7,7 @@ Rotterdam series and Corsica station-brand registry from that release.
 """
 from __future__ import annotations
 
+from collections import Counter
 import csv
 import gzip
 import hashlib
@@ -90,6 +91,43 @@ def _as_bool(value: str | bool | None) -> bool:
     return str(value or "").strip().lower() in {"1", "true", "yes", "y"}
 
 
+def _counter_dict(counter: Counter) -> dict[str, int]:
+    return dict(sorted((str(k), int(v)) for k, v in counter.items()))
+
+
+def _validate_decoded_manifest(rows: list[dict], metadata: dict) -> None:
+    if not rows:
+        raise RuntimeError("Shared snapshot contains no observations")
+    years = Counter(str(row["source_year"]) for row in rows)
+    departments = Counter(str(row["department"]) for row in rows)
+    fuels = Counter(str(row["fuel"]) for row in rows)
+    dates = [row["date"] for row in rows]
+
+    checks = {
+        "rows": (len(rows), metadata.get("rows")),
+        "min_date": (min(dates).isoformat(), metadata.get("min_date")),
+        "max_date": (max(dates).isoformat(), metadata.get("max_date")),
+        "rows_by_year": (_counter_dict(years), metadata.get("rows_by_year")),
+        "rows_by_department": (_counter_dict(departments), metadata.get("rows_by_department")),
+        "rows_by_fuel": (_counter_dict(fuels), metadata.get("rows_by_fuel")),
+    }
+    for field, (actual, expected) in checks.items():
+        if actual != expected:
+            raise RuntimeError(
+                f"Shared snapshot decoded {field} differs from C1 metadata: expected={expected!r} actual={actual!r}"
+            )
+
+    actual_years = {int(x) for x in years}
+    actual_departments = set(departments)
+    actual_fuels = set(fuels)
+    if actual_years != {int(x) for x in metadata.get("years", [])}:
+        raise RuntimeError("Shared snapshot decoded years differ from C1 metadata")
+    if actual_departments != {str(x) for x in metadata.get("departments", [])}:
+        raise RuntimeError("Shared snapshot decoded departments differ from C1 metadata")
+    if actual_fuels != {str(x) for x in metadata.get("fuels", [])}:
+        raise RuntimeError("Shared snapshot decoded fuels differ from C1 metadata")
+
+
 def _decode_snapshot(data_bytes: bytes, metadata: dict, years: Iterable[int]) -> list[dict]:
     requested_years = {int(year) for year in years}
     available_years = {int(year) for year in metadata.get("years", [])}
@@ -102,17 +140,20 @@ def _decode_snapshot(data_bytes: bytes, metadata: dict, years: Iterable[int]) ->
     digest = hashlib.sha256(data_bytes).hexdigest()
     if digest != metadata.get("sha256"):
         raise RuntimeError(f"Shared snapshot SHA-256 mismatch: expected={metadata.get('sha256')} actual={digest}")
-    rows: list[dict] = []
+
+    decoded: list[dict] = []
     with gzip.GzipFile(fileobj=io.BytesIO(data_bytes), mode="rb") as gz:
         with io.TextIOWrapper(gz, encoding="utf-8", newline="") as text:
             for raw in csv.DictReader(text):
                 source_year = int(raw["source_year"])
-                if source_year not in requested_years:
-                    continue
                 timestamp = datetime.fromisoformat(raw["timestamp"])
                 day = date.fromisoformat(raw["date"])
+                if day.year != source_year:
+                    raise RuntimeError(
+                        f"Shared snapshot source_year/date mismatch: source_year={source_year} date={day}"
+                    )
                 price_raw = (raw.get("price") or "").strip()
-                rows.append({
+                decoded.append({
                     "source_year": source_year, "station_id": raw.get("station_id", ""),
                     "department": raw.get("department", ""), "cp": raw.get("cp", ""),
                     "city": raw.get("city", ""), "address": raw.get("address", ""),
@@ -123,6 +164,9 @@ def _decode_snapshot(data_bytes: bytes, metadata: dict, years: Iterable[int]) ->
                     "price": float(price_raw) if price_raw else None,
                     "price_in_reference_band": _as_bool(raw.get("price_in_reference_band")),
                 })
+
+    _validate_decoded_manifest(decoded, metadata)
+    rows = [row for row in decoded if row["source_year"] in requested_years]
     if not rows:
         raise RuntimeError("Shared snapshot contains no requested observations")
     return rows

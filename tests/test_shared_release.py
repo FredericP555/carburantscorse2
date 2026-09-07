@@ -4,8 +4,8 @@ import csv
 import gzip
 import hashlib
 import io
-import json
 import os
+from collections import Counter
 from unittest.mock import patch
 import unittest
 
@@ -18,6 +18,63 @@ from a4c_common.shared_release import (
     _request_headers,
     _select_shared_release,
 )
+
+
+FIELDS = [
+    "source_year", "station_id", "department", "cp", "city", "address", "pop",
+    "is_motorway", "latitude", "longitude", "fuel_id", "fuel", "timestamp", "date",
+    "price", "price_in_reference_band",
+]
+
+
+def snapshot_fixture():
+    rows = [
+        {
+            "source_year": 2026, "station_id": "13000001", "department": "13", "cp": "13001",
+            "city": "Marseille", "address": "Test", "pop": "R", "is_motorway": "False",
+            "latitude": "", "longitude": "", "fuel_id": "1", "fuel": "Gazole",
+            "timestamp": "2026-08-18T08:00:00", "date": "2026-08-18", "price": "1.8",
+            "price_in_reference_band": "True",
+        },
+        {
+            "source_year": 2026, "station_id": "20000001", "department": "20", "cp": "20200",
+            "city": "Bastia", "address": "Test", "pop": "R", "is_motorway": "False",
+            "latitude": "", "longitude": "", "fuel_id": "2", "fuel": "SP95",
+            "timestamp": "2026-08-19T08:00:00", "date": "2026-08-19", "price": "1.9",
+            "price_in_reference_band": "True",
+        },
+        {
+            "source_year": 2026, "station_id": "13000002", "department": "13", "cp": "13002",
+            "city": "Marseille", "address": "Test", "pop": "R", "is_motorway": "False",
+            "latitude": "", "longitude": "", "fuel_id": "5", "fuel": "E10",
+            "timestamp": "2026-08-20T08:00:00", "date": "2026-08-20", "price": "1.7",
+            "price_in_reference_band": "True",
+        },
+    ]
+    raw = io.BytesIO()
+    with gzip.GzipFile(fileobj=raw, mode="wb") as gz:
+        text = io.TextIOWrapper(gz, encoding="utf-8", newline="")
+        writer = csv.DictWriter(text, fieldnames=FIELDS)
+        writer.writeheader()
+        writer.writerows(rows)
+        text.flush()
+    payload = raw.getvalue()
+    by_dept = Counter(str(row["department"]) for row in rows)
+    by_fuel = Counter(str(row["fuel"]) for row in rows)
+    meta = {
+        "schema": SCHEMA,
+        "years": [2026],
+        "departments": ["13", "20"],
+        "fuels": ["E10", "Gazole", "SP95"],
+        "rows": len(rows),
+        "min_date": "2026-08-18",
+        "max_date": "2026-08-20",
+        "rows_by_year": {"2026": len(rows)},
+        "rows_by_department": dict(sorted(by_dept.items())),
+        "rows_by_fuel": dict(sorted(by_fuel.items())),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+    }
+    return payload, meta
 
 
 class SharedReleaseTests(unittest.TestCase):
@@ -47,46 +104,10 @@ class SharedReleaseTests(unittest.TestCase):
         self.assertEqual(api_headers.get("Authorization"), "Bearer test-token")
         self.assertNotIn("Authorization", asset_headers)
 
-    def test_decode_validates_checksum_and_restores_types(self):
-        fields = [
-            "source_year", "station_id", "department", "cp", "city", "address", "pop",
-            "is_motorway", "latitude", "longitude", "fuel_id", "fuel", "timestamp", "date",
-            "price", "price_in_reference_band",
-        ]
-        raw = io.BytesIO()
-        with gzip.GzipFile(fileobj=raw, mode="wb") as gz:
-            text = io.TextIOWrapper(gz, encoding="utf-8", newline="")
-            writer = csv.DictWriter(text, fieldnames=fields)
-            writer.writeheader()
-            writer.writerow({
-                "source_year": 2026,
-                "station_id": "13000001",
-                "department": "13",
-                "cp": "13001",
-                "city": "Marseille",
-                "address": "Test",
-                "pop": "R",
-                "is_motorway": "False",
-                "latitude": "",
-                "longitude": "",
-                "fuel_id": "1",
-                "fuel": "Gazole",
-                "timestamp": "2026-08-18T08:00:00",
-                "date": "2026-08-18",
-                "price": "1.8",
-                "price_in_reference_band": "True",
-            })
-            text.flush()
-        payload = raw.getvalue()
-        meta = {
-            "schema": SCHEMA,
-            "years": [2025, 2026],
-            "departments": ["13", "20"],
-            "fuels": ["E10", "Gazole", "SP95"],
-            "sha256": hashlib.sha256(payload).hexdigest(),
-        }
+    def test_decode_validates_checksum_manifest_and_restores_types(self):
+        payload, meta = snapshot_fixture()
         rows = _decode_snapshot(payload, meta, [2026])
-        self.assertEqual(len(rows), 1)
+        self.assertEqual(len(rows), 3)
         self.assertEqual(rows[0]["source_year"], 2026)
         self.assertEqual(rows[0]["department"], "13")
         self.assertEqual(rows[0]["date"].isoformat(), "2026-08-18")
@@ -96,6 +117,11 @@ class SharedReleaseTests(unittest.TestCase):
 
         bad_meta = dict(meta)
         bad_meta["sha256"] = "0" * 64
+        with self.assertRaises(RuntimeError):
+            _decode_snapshot(payload, bad_meta, [2026])
+
+        bad_meta = dict(meta)
+        bad_meta["rows"] = 4
         with self.assertRaises(RuntimeError):
             _decode_snapshot(payload, bad_meta, [2026])
 
