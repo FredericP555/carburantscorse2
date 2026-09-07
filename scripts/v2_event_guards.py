@@ -32,16 +32,25 @@ def _headers() -> dict[str, str]:
     if token: headers["Authorization"] = f"Bearer {token}"
     return headers
 
+
 def _bytes(url: str, timeout: int = 120) -> bytes:
     request = urllib.request.Request(url, headers=_headers())
     with urllib.request.urlopen(request, timeout=timeout) as response: return response.read()
+
+
 def _json(url: str): return json.loads(_bytes(url, 60).decode("utf-8"))
+
+
 def _asset_url(release: dict, name: str) -> str:
     for asset in release.get("assets", []):
         if asset.get("name") == name and asset.get("browser_download_url"): return str(asset["browser_download_url"])
     raise RuntimeError(f"Pinned C1 release {release.get('tag_name')} has no asset {name}")
+
+
 def _parse_day(raw: str | None) -> date | None:
     value=str(raw or "").strip(); return date.fromisoformat(value) if value else None
+
+
 def _parse_dt(raw) -> datetime | None:
     value=str(raw or "").strip()
     if not value: return None
@@ -49,13 +58,39 @@ def _parse_dt(raw) -> datetime | None:
     except ValueError: return None
     if dt.tzinfo is not None: dt=dt.astimezone(timezone.utc).replace(tzinfo=None)
     return dt
+
+
 def _active(day: date, start: date, end: date | None) -> bool: return start <= day and (end is None or day <= end)
+
+
 def _read_gzip_csv(payload: bytes) -> list[dict]:
     rows=[]
     with gzip.GzipFile(fileobj=io.BytesIO(payload), mode="rb") as gz:
         with io.TextIOWrapper(gz, encoding="utf-8", newline="") as text:
             rows.extend(dict(row) for row in csv.DictReader(text))
     return rows
+
+
+def _sorted_counter(rows: list[dict], field: str) -> dict[str, int]:
+    return dict(sorted(Counter(str(row.get(field) or "") for row in rows).items()))
+
+
+def validate_event_manifest(rows: list[dict], metadata: dict) -> None:
+    """Compare the C1 event manifest with the event rows actually decoded by C2."""
+    starts = sorted(day for day in (_parse_day(row.get("start_date")) for row in rows) if day is not None)
+    checks = {
+        "rows": (len(rows), metadata.get("rows")),
+        "rows_by_kind": (_sorted_counter(rows, "event_kind"), metadata.get("rows_by_kind")),
+        "rows_by_department": (_sorted_counter(rows, "department"), metadata.get("rows_by_department")),
+        "min_start_date": (starts[0].isoformat() if starts else None, metadata.get("min_start_date")),
+        "max_start_date": (starts[-1].isoformat() if starts else None, metadata.get("max_start_date")),
+    }
+    for field, (actual, expected) in checks.items():
+        if actual != expected:
+            raise RuntimeError(
+                f"Official-event decoded {field} differs from C1 metadata: expected={expected!r} actual={actual!r}"
+            )
+
 
 class EventGuards:
     def __init__(self, rows: list[dict], *, release_tag: str, metadata: dict):
@@ -86,7 +121,7 @@ class EventGuards:
         event_payload=_bytes(_asset_url(release,event_asset_name),180); expected_event_sha=str(event_meta.get("sha256") or "")
         if not expected_event_sha or hashlib.sha256(event_payload).hexdigest() != expected_event_sha: raise RuntimeError("Official-event asset SHA-256 mismatch")
         rows=_read_gzip_csv(event_payload)
-        if len(rows) != int(event_meta.get("rows",-1)): raise RuntimeError("Official-event row count differs from C1 metadata")
+        validate_event_manifest(rows,event_meta)
         guard=cls(rows,release_tag=release_tag,metadata=event_meta)
         price_asset_name=str(metadata.get("asset") or DEFAULT_PRICE_ASSET); price_payload=_bytes(_asset_url(release,price_asset_name),180); expected_price_sha=str(metadata.get("sha256") or "")
         if not expected_price_sha or hashlib.sha256(price_payload).hexdigest() != expected_price_sha: raise RuntimeError("Pinned official price asset SHA-256 mismatch while binding event guards")
@@ -136,14 +171,17 @@ class EventGuards:
 
     def _require_bound(self):
         if not self.bound_to_declarations: raise RuntimeError("Official event guards must be bound to price declarations before evaluation")
+
     def rupture_active(self, station_id: str, fuel: str, day: date) -> bool:
         self._require_bound(); self.calls["rupture_checks"] += 1; verdict=any(_active(day,start,end) for start,end,_ in self.ruptures.get((str(station_id),str(fuel)),[]))
         if verdict: self.calls["rupture_true"] += 1; self.hit_ruptures.add((str(station_id),str(fuel),day))
         return verdict
+
     def independently_inactive(self, station_id: str, day: date) -> bool:
         self._require_bound(); self.calls["closure_checks"] += 1; verdict=any(_active(day,start,end) for start,end,_ in self.closures.get(str(station_id),[]))
         if verdict: self.calls["closure_true"] += 1; self.hit_closures.add((str(station_id),day))
         return verdict
+
     def audit(self) -> dict:
         kind_counts=Counter(str(row.get("event_kind") or "") for row in self.rows); dept_counts=Counter(str(row.get("department") or "") for row in self.rows); start_dates=sorted(d for d in (_parse_day(row.get("start_date")) for row in self.rows) if d is not None)
         return {"source":"official prix-carburants.gouv.fr rupture/fermeture nodes via pinned C1 release","release_tag":self.release_tag,"schema":self.metadata.get("schema"),"asset":self.metadata.get("asset"),"declaration_source_asset":self.declaration_source_asset,"event_rows":len(self.rows),"rows_by_kind":dict(kind_counts),"rows_by_department":dict(dept_counts),"min_start_date":start_dates[0].isoformat() if start_dates else None,"max_start_date":start_dates[-1].isoformat() if start_dates else None,"reopening_rule":{"rupture_open_end":"first later official price declaration of the same fuel","closure_open_end":"first later official price declaration of any fuel at the station","explicit_end_priority":True,"declaration_day_considered_reopened":True},"reopening_stats":dict(self.reopen_stats),"rupture_interval_keys":len(self.ruptures),"closure_station_keys":len(self.closures),"engine_checks":dict(self.calls),"unique_active_rupture_station_fuel_days":len(self.hit_ruptures),"unique_active_closure_station_days":len(self.hit_closures)}
