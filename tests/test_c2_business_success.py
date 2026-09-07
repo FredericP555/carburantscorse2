@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import unittest
 
-import verify_c2_business_success as business
+from scripts import verify_c2_business_success as business
 
 
 def data_payload(tag="c1-tag", snap="a" * 64, through="2026-09-06", marker=1) -> bytes:
