@@ -19,7 +19,9 @@ La page présente, pour le Gazole et le SP95 :
 
 ## Méthodologie
 
-Les prix sont reconstruits en série journalière continue par station, avec correction des valeurs aberrantes et neutralisation des remises selon l'enseigne. La marge de distribution correspond au prix hors taxes diminué de l'accise (variable selon la zone et la période) et de la cotation Rotterdam.
+Les prix sont reconstruits en série journalière continue par station, avec correction des valeurs aberrantes et neutralisation des remises selon l'enseigne. La marge de distribution correspond au prix hors taxes diminué de l'accise et de la cotation Rotterdam.
+
+Pour le Gazole sur la période publique 2022–2026, l'accise utilisée dans le calcul de marge est de **0,5940 €/L en Corse** et de **0,6075 €/L dans les Bouches-du-Rhône / PACA**. Une correction historique C2-01 a remplacé l'ancien taux BdR erroné de 0,5940 €/L utilisé pour 2022–2024, sans recalculer les prix historiques ni les cotations UFIP.
 
 ## Intégration WordPress
 

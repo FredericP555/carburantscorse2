@@ -6,11 +6,23 @@ from datetime import date
 import pandas as pd
 
 
+CORSE_GAZOLE_EXCISE_EUR_L = 0.5940
+BDR_GAZOLE_EXCISE_EUR_L = 0.6075
+
+
 def excise_gazole_eur_l(department: str, when: date) -> float:
+    """Return the gazole excise used by the observatory for departments 20 and 13.
+
+    Over the public 2022+ series, the Corsican rate is 0.5940 EUR/L and the
+    Provence-Alpes-Cote d'Azur / Bouches-du-Rhone rate is 0.6075 EUR/L.
+    ``when`` remains part of the API because other fiscal components may become
+    time-dependent in the future.
+    """
+    del when
     if str(department) == "20":
-        return 0.5940
+        return CORSE_GAZOLE_EXCISE_EUR_L
     if str(department) == "13":
-        return 0.5940 if when.year <= 2024 else 0.6075
+        return BDR_GAZOLE_EXCISE_EUR_L
     raise ValueError(f"Unsupported department {department}")
 
 
