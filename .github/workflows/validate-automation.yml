@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+env:
+  PYTHONPATH: .
+  C1_V2_TAG_PREFIX: a4c-v2-shared-
+
 jobs:
   tests:
     runs-on: ubuntu-latest
@@ -34,19 +38,43 @@ jobs:
           pathlib.Path('/tmp/carburantscorse2-inline.js').write_text('\n'.join(blocks), encoding='utf-8')
           PY
           node --check /tmp/carburantscorse2-inline.js
-      - name: Build live append-only candidate with incremental BDR resolver
+      - name: Pin latest validated C1 V2 bundle
+        id: c1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag=$(gh release list \
+            --repo FredericP555/carburantscorse1 \
+            --limit 50 \
+            --json tagName,publishedAt \
+            --jq '[.[] | select(.tagName | startswith("a4c-v2-shared-"))] | sort_by(.publishedAt) | reverse | .[0].tagName // ""')
+          if [ -z "$tag" ]; then
+            echo "No validated C1 V2 bundle found." >&2
+            exit 1
+          fi
+          echo "release_tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Pinned C1 release: $tag"
+      - name: Build production-shaped V2 candidate
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: python -m scripts.build_append_candidate_incremental --official-source shared
-      - name: Exercise append-only promotion guard
-        run: python -m scripts.promote_candidate
+        run: >-
+          python scripts/build_v2_production_candidate.py
+          --tag-prefix "$C1_V2_TAG_PREFIX"
+          --release-tag "${{ steps.c1.outputs.release_tag }}"
+      - name: Exercise V2 append-only promotion guard
+        run: python scripts/promote_v2_candidate.py
       - name: Upload candidate and audit summary
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: carburantscorse2-candidate
+          name: carburantscorse2-v2-pr-candidate
           path: |
-            outputs/candidate-data.json
-            outputs/candidate-summary.json
+            outputs/v2-production-candidate.json
+            outputs/v2-production-summary.json
+            outputs/ufip/c1_shared_meta.json
+            outputs/c1/shared_release_tag.txt
+            outputs/c1/corse_station_brands.json
             config/bdr_station_brands.json
           retention-days: 14
