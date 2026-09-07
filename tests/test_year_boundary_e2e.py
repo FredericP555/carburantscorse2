@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 import csv
 from datetime import datetime
 import gzip
@@ -30,39 +31,17 @@ def snapshot_payload() -> tuple[bytes, dict]:
         station = f"20{i:06d}"
         rows.extend([
             {
-                "source_year": 2026,
-                "station_id": station,
-                "department": "20",
-                "cp": "20000",
-                "city": "Ajaccio",
-                "address": "Test",
-                "pop": "R",
-                "is_motorway": "False",
-                "latitude": "",
-                "longitude": "",
-                "fuel_id": "1",
-                "fuel": "Gazole",
-                "timestamp": "2026-12-31T12:00:00",
-                "date": "2026-12-31",
-                "price": "1.90",
+                "source_year": 2026, "station_id": station, "department": "20", "cp": "20000",
+                "city": "Ajaccio", "address": "Test", "pop": "R", "is_motorway": "False",
+                "latitude": "", "longitude": "", "fuel_id": "1", "fuel": "Gazole",
+                "timestamp": "2026-12-31T12:00:00", "date": "2026-12-31", "price": "1.90",
                 "price_in_reference_band": "True",
             },
             {
-                "source_year": 2027,
-                "station_id": station,
-                "department": "20",
-                "cp": "20000",
-                "city": "Ajaccio",
-                "address": "Test",
-                "pop": "R",
-                "is_motorway": "False",
-                "latitude": "",
-                "longitude": "",
-                "fuel_id": "1",
-                "fuel": "Gazole",
-                "timestamp": "2027-01-02T12:00:00",
-                "date": "2027-01-02",
-                "price": "1.95",
+                "source_year": 2027, "station_id": station, "department": "20", "cp": "20000",
+                "city": "Ajaccio", "address": "Test", "pop": "R", "is_motorway": "False",
+                "latitude": "", "longitude": "", "fuel_id": "1", "fuel": "Gazole",
+                "timestamp": "2027-01-02T12:00:00", "date": "2027-01-02", "price": "1.95",
                 "price_in_reference_band": "True",
             },
         ])
@@ -71,55 +50,60 @@ def snapshot_payload() -> tuple[bytes, dict]:
         station = f"13{i:06d}"
         rows.extend([
             {
-                "source_year": 2026,
-                "station_id": station,
-                "department": "13",
-                "cp": "13000",
-                "city": "Marseille",
-                "address": "Test",
-                "pop": "R",
-                "is_motorway": "False",
-                "latitude": "",
-                "longitude": "",
-                "fuel_id": "1",
-                "fuel": "Gazole",
-                "timestamp": "2026-12-31T12:00:00",
-                "date": "2026-12-31",
-                "price": "1.80",
+                "source_year": 2026, "station_id": station, "department": "13", "cp": "13000",
+                "city": "Marseille", "address": "Test", "pop": "R", "is_motorway": "False",
+                "latitude": "", "longitude": "", "fuel_id": "1", "fuel": "Gazole",
+                "timestamp": "2026-12-31T12:00:00", "date": "2026-12-31", "price": "1.80",
                 "price_in_reference_band": "True",
             },
             {
-                "source_year": 2027,
-                "station_id": station,
-                "department": "13",
-                "cp": "13000",
-                "city": "Marseille",
-                "address": "Test",
-                "pop": "R",
-                "is_motorway": "False",
-                "latitude": "",
-                "longitude": "",
-                "fuel_id": "1",
-                "fuel": "Gazole",
-                "timestamp": "2027-01-02T12:00:00",
-                "date": "2027-01-02",
-                "price": "1.80",
+                "source_year": 2027, "station_id": station, "department": "13", "cp": "13000",
+                "city": "Marseille", "address": "Test", "pop": "R", "is_motorway": "False",
+                "latitude": "", "longitude": "", "fuel_id": "1", "fuel": "Gazole",
+                "timestamp": "2027-01-02T12:00:00", "date": "2027-01-02", "price": "1.80",
                 "price_in_reference_band": "True",
             },
         ])
+
+    # The production C1 manifest promises all three fuels.  Include tiny non-Gazole
+    # observations so this synthetic manifest is semantically complete too.
+    rows.extend([
+        {
+            "source_year": 2027, "station_id": "13009998", "department": "13", "cp": "13000",
+            "city": "Marseille", "address": "Test", "pop": "R", "is_motorway": "False",
+            "latitude": "", "longitude": "", "fuel_id": "2", "fuel": "SP95",
+            "timestamp": "2027-01-02T12:00:00", "date": "2027-01-02", "price": "1.90",
+            "price_in_reference_band": "True",
+        },
+        {
+            "source_year": 2027, "station_id": "13009999", "department": "13", "cp": "13000",
+            "city": "Marseille", "address": "Test", "pop": "R", "is_motorway": "False",
+            "latitude": "", "longitude": "", "fuel_id": "5", "fuel": "E10",
+            "timestamp": "2027-01-02T12:00:00", "date": "2027-01-02", "price": "1.85",
+            "price_in_reference_band": "True",
+        },
+    ])
 
     text = io.StringIO(newline="")
     writer = csv.DictWriter(text, fieldnames=FIELDS)
     writer.writeheader()
     writer.writerows(rows)
     payload = gzip.compress(text.getvalue().encode("utf-8"))
+    by_year = Counter(str(row["source_year"]) for row in rows)
+    by_department = Counter(str(row["department"]) for row in rows)
+    by_fuel = Counter(str(row["fuel"]) for row in rows)
+    dates = sorted(str(row["date"]) for row in rows)
     meta = {
         "schema": SCHEMA,
         "years": [2026, 2027],
         "departments": ["13", "20"],
         "fuels": ["E10", "Gazole", "SP95"],
         "rows": len(rows),
-        "max_date": "2027-01-02",
+        "min_date": dates[0],
+        "max_date": dates[-1],
+        "rows_by_year": dict(sorted(by_year.items())),
+        "rows_by_department": dict(sorted(by_department.items())),
+        "rows_by_fuel": dict(sorted(by_fuel.items())),
         "sha256": hashlib.sha256(payload).hexdigest(),
     }
     return payload, meta
@@ -162,9 +146,7 @@ class YearBoundaryEndToEndTests(unittest.TestCase):
             list(by_date),
             ["2026-12-31", "2027-01-01", "2027-01-02", "2027-01-03"],
         )
-        # 1 January has no declaration: it must inherit the valid 31 December state.
         self.assertEqual(by_date["2027-01-01"], by_date["2026-12-31"])
-        # New-year declarations on 2 January must then take over normally.
         self.assertNotEqual(by_date["2027-01-02"], by_date["2027-01-01"])
         self.assertEqual(by_date["2027-01-03"], by_date["2027-01-02"])
 
