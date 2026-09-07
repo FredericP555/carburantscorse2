@@ -1,0 +1,152 @@
+name: Watchdog C2 weekly publication
+
+on:
+  schedule:
+    # 09:47 and 10:47 Europe/Paris across CET/CEST.
+    - cron: '47 7 * * 1'
+    - cron: '47 8 * * 1'
+    - cron: '47 9 * * 1'
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/watchdog-weekly.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Select watchdog slot
+        id: clock
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          python - <<'PY'
+          import os
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+
+          if os.environ.get('EVENT_NAME') in {'workflow_dispatch', 'push'}:
+              selected = True
+          else:
+              schedule = os.environ.get('EVENT_SCHEDULE', '')
+              try:
+                  minute, hour, _, _, dow = schedule.split()
+                  minute = int(minute)
+                  hour = int(hour)
+                  dow = int(dow)
+              except Exception:
+                  minute, hour, dow = -1, -1, -1
+
+              offset = int(datetime.now(ZoneInfo('Europe/Paris')).utcoffset().total_seconds() // 3600)
+              shifted = hour + offset
+              local_hour = shifted % 24
+              local_dow = (dow + (shifted // 24)) % 7
+              selected = minute == 47 and local_dow == 1 and local_hour in {9, 10}
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
+              fh.write(f"selected={'true' if selected else 'false'}\n")
+          print('Watchdog slot selected:', selected)
+          PY
+
+      - name: Check whether today's C1 release still needs C2 processing
+        if: steps.clock.outputs.selected == 'true'
+        id: state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          today=$(TZ=Europe/Paris date +%F)
+          release_json=$(gh release list \
+            --repo FredericP555/carburantscorse1 \
+            --limit 50 \
+            --json tagName,publishedAt)
+
+          latest_today=$(RELEASE_JSON="$release_json" TODAY="$today" python - <<'PY'
+          import json
+          import os
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+
+          items = json.loads(os.environ['RELEASE_JSON'])
+          today = os.environ['TODAY']
+          rows = []
+          for item in items:
+              tag = str(item.get('tagName') or '')
+              published = item.get('publishedAt')
+              if not tag.startswith('a4c-v2-shared-') or not published:
+                  continue
+              local = datetime.fromisoformat(published.replace('Z', '+00:00')).astimezone(ZoneInfo('Europe/Paris'))
+              if local.date().isoformat() == today:
+                  rows.append((published, tag))
+          print(max(rows)[1] if rows else '')
+          PY
+          )
+
+          summary_tag=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            repos/FredericP555/carburantscorse2/contents/homepage-summary.json \
+            --jq '.content' \
+            | tr -d '\n' \
+            | base64 -d \
+            | jq -r '.source.c1_release_tag // ""')
+
+          active=$(gh run list \
+            --repo FredericP555/carburantscorse2 \
+            --workflow update-weekly.yml \
+            --limit 20 \
+            --json status \
+            --jq '[.[] | select(.status != "completed")] | length')
+
+          if [ -z "$latest_today" ]; then
+            dispatch=false
+            reason="no validated C1 release exists today"
+          elif [ "$summary_tag" = "$latest_today" ]; then
+            dispatch=false
+            reason="C2 already processed today's latest C1 release: $latest_today"
+          elif [ "$active" -gt 0 ]; then
+            dispatch=false
+            reason="a full C2 update is already queued or running"
+          else
+            dispatch=true
+            reason="today's latest C1 release has not yet been processed by C2"
+          fi
+
+          echo "dispatch=$dispatch" >> "$GITHUB_OUTPUT"
+          echo "c1_release_today=$latest_today" >> "$GITHUB_OUTPUT"
+          echo "summary_c1_release=$summary_tag" >> "$GITHUB_OUTPUT"
+          echo "active_runs=$active" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+          echo "$reason"
+
+      - name: Dispatch full C2 production update
+        if: steps.clock.outputs.selected == 'true' && steps.state.outputs.dispatch == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run update-weekly.yml \
+            --repo FredericP555/carburantscorse2 \
+            --ref "${{ github.event.repository.default_branch }}"
+          echo "C2 weekly production dispatched by watchdog."
+
+      - name: Write watchdog summary
+        if: steps.clock.outputs.selected == 'true' && always()
+        run: |
+          {
+            echo '## C2 weekly watchdog'
+            echo "- C1 release today: ${{ steps.state.outputs.c1_release_today || 'none' }}"
+            echo "- C1 release already reflected by homepage summary: ${{ steps.state.outputs.summary_c1_release || 'none' }}"
+            echo "- Active full C2 runs: ${{ steps.state.outputs.active_runs || '0' }}"
+            echo "- Full C2 dispatched: ${{ steps.state.outputs.dispatch == 'true' }}"
+            echo "- Decision: ${{ steps.state.outputs.reason }}"
+          } >> "$GITHUB_STEP_SUMMARY"
