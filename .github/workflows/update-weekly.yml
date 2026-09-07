@@ -23,29 +23,81 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
-      - name: Select the 08:07 Europe/Paris slot
+      - name: Select the 08:07 Europe/Paris slot and avoid duplicate scheduled processing
         id: gate
         env:
           EVENT_NAME: ${{ github.event_name }}
           EVENT_SCHEDULE: ${{ github.event.schedule }}
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           python - <<'PY'
+          import base64
+          import json
           import os
+          import urllib.request
           from datetime import datetime
           from zoneinfo import ZoneInfo
-          if os.environ.get('EVENT_NAME') == 'workflow_dispatch':
+
+          event = os.environ.get('EVENT_NAME')
+          paris = datetime.now(ZoneInfo('Europe/Paris'))
+
+          if event == 'workflow_dispatch':
               run = True
           else:
-              paris = datetime.now(ZoneInfo('Europe/Paris'))
               offset_hours = int(paris.utcoffset().total_seconds() // 3600)
               expected_utc_hour = (8 - offset_hours) % 24
               schedule = os.environ.get('EVENT_SCHEDULE', '')
               try:
-                  parts = schedule.split()
-                  scheduled_hour = int(parts[1])
+                  scheduled_hour = int(schedule.split()[1])
               except Exception:
                   scheduled_hour = -1
               run = scheduled_hour == expected_utc_hour
+
+              if run:
+                  try:
+                      headers = {
+                          'Accept': 'application/vnd.github+json',
+                          'Authorization': f"Bearer {os.environ['GH_TOKEN']}",
+                          'X-GitHub-Api-Version': '2022-11-28',
+                          'User-Agent': 'A4C-C2-weekly-guard',
+                      }
+
+                      req = urllib.request.Request(
+                          'https://api.github.com/repos/FredericP555/carburantscorse1/releases?per_page=20',
+                          headers=headers,
+                      )
+                      with urllib.request.urlopen(req, timeout=20) as response:
+                          releases = json.load(response)
+
+                      candidates = []
+                      for release in releases:
+                          tag = str(release.get('tag_name') or '')
+                          published = release.get('published_at')
+                          if tag.startswith('a4c-v2-shared-') and published:
+                              candidates.append((published, tag))
+
+                      if candidates:
+                          latest_published, latest_tag = max(candidates)
+                          latest_local = datetime.fromisoformat(latest_published.replace('Z', '+00:00')).astimezone(ZoneInfo('Europe/Paris'))
+
+                          if latest_local.date() == paris.date():
+                              req = urllib.request.Request(
+                                  f"https://api.github.com/repos/{os.environ['REPOSITORY']}/contents/homepage-summary.json",
+                                  headers=headers,
+                              )
+                              with urllib.request.urlopen(req, timeout=20) as response:
+                                  payload = json.load(response)
+                              summary = json.loads(base64.b64decode(payload['content']).decode('utf-8'))
+                              summary_tag = ((summary.get('source') or {}).get('c1_release_tag') or '')
+                              if summary_tag == latest_tag:
+                                  run = False
+                                  print(f'C2 already processed today C1 release: {latest_tag}')
+                  except Exception as exc:
+                      # Reliability first: if the duplicate guard cannot be checked,
+                      # let the scheduled production run rather than miss the update.
+                      print(f'WARNING: duplicate-processing guard unavailable: {exc}')
+
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
               fh.write(f"run={'true' if run else 'false'}\n")
           print('Run selected:', run)
