@@ -216,3 +216,16 @@ def unknown_recent_bdr_stations(state: pd.DataFrame, *, since: pd.Timestamp) -> 
         & state["category"].eq("unknown")
     ]
     return sorted(recent["station_id"].astype(str).unique().tolist())
+
+
+def validate_recent_bdr_perimeter(state: pd.DataFrame, *, since: pd.Timestamp) -> list[str]:
+    """Fail closed when an eligible recent BDR station has no resolved category."""
+    unknown = unknown_recent_bdr_stations(state, since=since)
+    if unknown:
+        preview = ", ".join(unknown[:10])
+        suffix = "…" if len(unknown) > 10 else ""
+        raise RuntimeError(
+            f"C2 BDR perimeter incomplete: {len(unknown)} recent eligible station(s) "
+            f"remain unclassified: {preview}{suffix}"
+        )
+    return unknown
