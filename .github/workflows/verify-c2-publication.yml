@@ -1,0 +1,134 @@
+name: Verify C2 publication end-to-end
+
+on:
+  workflow_run:
+    workflows: ["Update carburantscorse2 weekly"]
+    types: [completed]
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-c2-publication.yml'
+      - 'scripts/verify_c2_business_success.py'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: c2-business-success
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Require successful upstream production workflow
+        if: github.event_name == 'workflow_run'
+        env:
+          UPSTREAM_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          UPSTREAM_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          echo "Upstream run: $UPSTREAM_RUN_ID"
+          echo "Upstream conclusion: $UPSTREAM_CONCLUSION"
+          test "$UPSTREAM_CONCLUSION" = "success"
+
+      - name: Checkout current C2 production main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Read the C1 release actually consumed by C2
+        id: consumed
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+          s=json.loads(Path('homepage-summary.json').read_text(encoding='utf-8'))
+          src=s.get('source') or {}
+          tag=str(src.get('c1_release_tag') or '')
+          sha=str(src.get('c1_snapshot_sha256') or '')
+          if not tag or not sha:
+              raise SystemExit('C2 homepage summary lacks C1 release provenance')
+          print(f'tag={tag}')
+          print(f'snapshot_sha={sha}')
+          PY
+
+      - name: Verify referenced C1 release and bundle digest
+        id: c1
+        env:
+          GH_TOKEN: ${{ github.token }}
+          C1_TAG: ${{ steps.consumed.outputs.tag }}
+          EXPECTED_SNAPSHOT: ${{ steps.consumed.outputs.snapshot_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_json="$(gh api "repos/FredericP555/carburantscorse1/releases/tags/$C1_TAG")"
+          digest="$(jq -r '[.assets[] | select(.name=="official_13_20.csv.gz")][0].digest // ""' <<<"$release_json")"
+          test -n "$digest"
+          normalized="${digest#sha256:}"
+          test "$normalized" = "$EXPECTED_SNAPSHOT"
+          echo "bundle_digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "Verified C1 release: $C1_TAG"
+          echo "C1 shared bundle digest: $digest"
+
+      - name: Prove C2 business success on public Pages
+        env:
+          C1_TAG: ${{ steps.consumed.outputs.tag }}
+          C1_BUNDLE_DIGEST: ${{ steps.c1.outputs.bundle_digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/verify_c2_business_success.py \
+            --expected-data data.json \
+            --expected-summary homepage-summary.json \
+            --data-url https://fredericp555.github.io/carburantscorse2/data.json \
+            --summary-url https://fredericp555.github.io/carburantscorse2/homepage-summary.json \
+            --commit "$(git rev-parse HEAD)" \
+            --c1-release-tag "$C1_TAG" \
+            --c1-bundle-digest "$C1_BUNDLE_DIGEST" \
+            --output outputs/c2-business-success.json \
+            --timeout-seconds 300 \
+            --interval-seconds 5
+
+      - name: Write business-success summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f outputs/c2-business-success.json ]; then
+            python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          r=json.loads(Path('outputs/c2-business-success.json').read_text(encoding='utf-8'))
+          print('## C2 business success')
+          print(f"- Status: **{r.get('status')}**")
+          print(f"- Data through: **{r.get('data_through')}**")
+          print(f"- C2 main commit: `{r.get('commit')}`")
+          print(f"- C2 data.json SHA-256: `{r.get('pages_data_sha256')}`")
+          print(f"- C2 homepage-summary SHA-256: `{r.get('pages_summary_sha256')}`")
+          print(f"- Consumed C1 release: `{r.get('c1_release_tag')}`")
+          print(f"- Consumed C1 snapshot SHA-256: `{r.get('c1_snapshot_sha256')}`")
+          print(f"- Pages checks: {r.get('attempts', 1)} attempt(s)")
+          PY
+          else
+            echo '## C2 business success' >> "$GITHUB_STEP_SUMMARY"
+            echo '- Status: **NOT PROVEN**' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload business-success receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c2-business-success-receipt
+          path: outputs/c2-business-success.json
+          if-no-files-found: ignore
+          retention-days: 30
