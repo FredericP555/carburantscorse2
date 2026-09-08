@@ -76,6 +76,10 @@ jobs:
           print('Dry-run self-test:', dry_run)
           PY
 
+      - name: Checkout current C2 content for receipt validation
+        if: steps.clock.outputs.selected == 'true'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
       - name: Evaluate latest C1 release against C2 business success
         if: steps.clock.outputs.selected == 'true'
         id: state
@@ -121,6 +125,19 @@ jobs:
             --json status \
             --jq '[.[] | select(.status != "completed")] | length')
 
+          pages_capture_ok=true
+          cache="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          if ! curl --fail --location --silent --show-error --retry 2 \
+               "https://fredericp555.github.io/carburantscorse2/data.json?a4c_retry=$cache" \
+               -o /tmp/c2-pages-data.json; then
+            pages_capture_ok=false
+          fi
+          if ! curl --fail --location --silent --show-error --retry 2 \
+               "https://fredericp555.github.io/carburantscorse2/homepage-summary.json?a4c_retry=$cache" \
+               -o /tmp/c2-pages-summary.json; then
+            pages_capture_ok=false
+          fi
+
           business_run=""
           rm -rf /tmp/c2-business-receipts
           mkdir -p /tmp/c2-business-receipts
@@ -133,9 +150,13 @@ jobs:
                  --name c2-business-success-receipt \
                  --dir "$dir" >/dev/null 2>&1; then
               receipt="$dir/c2-business-success.json"
-              if [ -f "$receipt" ] && jq -e --arg tag "$tag" \
-                   '.status == "business-success" and .c1_release_tag == $tag and .pages_data_sha256 == .expected_data_sha256 and .pages_summary_sha256 == .expected_summary_sha256 and .c1_snapshot_sha256 == .c1_release_bundle_sha256' \
-                   "$receipt" >/dev/null; then
+              if [ "$pages_capture_ok" = true ] && [ -f "$receipt" ] && \
+                 python scripts/validate_current_c2_receipt.py \
+                   --receipt "$receipt" \
+                   --expected-tag "$tag" \
+                   --pages-data-file /tmp/c2-pages-data.json \
+                   --pages-summary-file /tmp/c2-pages-summary.json \
+                   >/dev/null 2>&1; then
                 business_run="$run_id"
                 break
               fi
@@ -150,7 +171,7 @@ jobs:
 
           if [ -n "$business_run" ]; then
             action="none"
-            reason="latest C1 release already has proven C2 business success"
+            reason="latest C1 release has business success that still matches current C2 repository and Pages content"
           elif [ "$active_update" -gt 0 ] || [ "$active_verify" -gt 0 ]; then
             action="wait"
             reason="C2 production or end-to-end verification is already active"
@@ -162,7 +183,7 @@ jobs:
             reason="C2 local C1 provenance does not match the referenced C1 release asset"
           else
             action="repair-publication"
-            reason="C2 content already consumes the latest C1 release, but Pages business success is not proven"
+            reason="C2 content already consumes the latest C1 release, but no still-current Pages business success is proven"
           fi
 
           echo "action=$action" >> "$GITHUB_OUTPUT"
@@ -214,7 +235,7 @@ jobs:
             echo "- C1 published at: ${{ steps.state.outputs.release_published }}"
             echo "- C1 release in C2 data.json: ${{ steps.state.outputs.data_c1_release || 'none' }}"
             echo "- C1 release in homepage summary: ${{ steps.state.outputs.summary_c1_release || 'none' }}"
-            echo "- Matching business-success run: ${{ steps.state.outputs.business_run || 'none' }}"
+            echo "- Matching current business-success run: ${{ steps.state.outputs.business_run || 'none' }}"
             echo "- Decision: ${{ steps.state.outputs.action || 'not evaluated' }}"
             echo "- Dry-run self-test: ${{ steps.clock.outputs.dry_run == 'true' }}"
             echo "- Reason: ${{ steps.state.outputs.reason }}"
