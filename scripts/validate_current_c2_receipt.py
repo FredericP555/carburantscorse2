@@ -51,6 +51,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--expected-tag", required=True)
     p.add_argument("--current-data", default="data.json")
     p.add_argument("--current-summary", default="homepage-summary.json")
+    p.add_argument("--pages-data-file")
+    p.add_argument("--pages-summary-file")
     p.add_argument("--data-url", default=business.DEFAULT_DATA_URL)
     p.add_argument("--summary-url", default=business.DEFAULT_SUMMARY_URL)
     return p.parse_args()
@@ -61,11 +63,17 @@ def main() -> None:
     receipt = json.loads(Path(args.receipt).read_text(encoding="utf-8"))
     current_data = Path(args.current_data).read_bytes()
     current_summary = Path(args.current_summary).read_bytes()
-    stamp = int(time.time() * 1000)
-    pages_data, pages_summary = business.fetch_pair(
-        business._cache_bust(args.data_url, stamp),
-        business._cache_bust(args.summary_url, stamp),
-    )
+    if bool(args.pages_data_file) != bool(args.pages_summary_file):
+        raise ValueError("both --pages-data-file and --pages-summary-file are required together")
+    if args.pages_data_file:
+        pages_data = Path(args.pages_data_file).read_bytes()
+        pages_summary = Path(args.pages_summary_file).read_bytes()
+    else:
+        stamp = int(time.time() * 1000)
+        pages_data, pages_summary = business.fetch_pair(
+            business._cache_bust(args.data_url, stamp),
+            business._cache_bust(args.summary_url, stamp),
+        )
     validate_current_receipt(
         receipt,
         expected_tag=args.expected_tag,
