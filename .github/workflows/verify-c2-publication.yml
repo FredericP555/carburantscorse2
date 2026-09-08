@@ -1,3 +1,4 @@
+# P2-9 final public business-success verification trigger; no logic change.
 name: Verify C2 publication end-to-end
 
 on:
