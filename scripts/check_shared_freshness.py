@@ -4,8 +4,8 @@
 The weekly C2 job depends on independent freshness signals:
 1. the GitHub Release itself must be recent (pipeline freshness);
 2. the official stock's global max_date must not be stale or move backwards;
-3. Gazole and SP95 must each be fresh in the snapshot actually decoded from the pinned C1
-   release, so one fresh fuel cannot hide another stale fuel.
+3. Gazole, SP95 and E10 must each be fresh in the snapshot actually decoded from the pinned
+   C1 release, so one fresh fuel cannot hide another stale fuel.
 
 The per-fuel dates are derived from decoded release rows, then persisted into the candidate
 metadata before promotion. This makes subsequent runs able to detect a per-fuel regression.
@@ -23,7 +23,7 @@ from typing import Any
 from a4c_common.shared_release import load_shared_observations
 from a4c_common.source_freshness import max_date_by_fuel
 
-REQUIRED_FRESHNESS_FUELS = ("Gazole", "SP95")
+REQUIRED_FRESHNESS_FUELS = ("Gazole", "SP95", "E10")
 DEFAULT_SHARED_META = Path("outputs/ufip/c1_shared_meta.json")
 
 
@@ -301,8 +301,6 @@ def main() -> None:
     if report["failures"]:
         raise SystemExit(1)
 
-    # Persist the decoded per-fuel dates only after the freshness contract has passed. The
-    # promotion step later publishes this candidate, enabling per-fuel regression checks next run.
     candidate_path.write_text(
         json.dumps(candidate, ensure_ascii=False, separators=(",", ":")),
         encoding="utf-8",
