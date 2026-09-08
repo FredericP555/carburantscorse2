@@ -4,10 +4,11 @@ from __future__ import annotations
 from datetime import date
 import json
 from pathlib import Path
+from urllib.parse import quote
 
 import pandas as pd
 
-from a4c_common.shared_release import download_shared_rotterdam_assets, load_shared_observations
+from a4c_common import shared_release
 from carburantscorse2.publication import build_gap_series, build_publication_state, load_bdr_categories
 from scripts import v2_event_guards
 from scripts.build_v2_production_candidate import (
@@ -23,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TARGET = date(2026, 8, 24)
 OLD_TAG = "a4c-v2-shared-20260824T232328Z-32788829663"
 CURRENT_TAG = "a4c-v2-shared-20260908T011056Z-34175476841"
-PREFIX = "a4c-v2-shared-"
+REPOSITORY = "FredericP555/carburantscorse1"
 
 
 def frozen_rows():
@@ -44,20 +45,42 @@ def frozen_rows():
     return found
 
 
-def recompute(tag: str, label: str):
-    audit_root = ROOT / "outputs" / "audit-h02" / label
-    registry_path = audit_root / "corse_station_brands.json"
-    tag_path = audit_root / "shared_release_tag.txt"
-    download_shared_rotterdam_assets(
-        audit_root,
-        tag_prefix=PREFIX,
-        release_tag=tag,
-        registry_output=registry_path,
-        tag_output=tag_path,
-    )
-    meta = json.loads((audit_root / "c1_shared_meta.json").read_text(encoding="utf-8"))
+def raw_release(tag: str):
+    """Read one immutable historical C1 release as published, not through today's stricter contract.
+
+    We still validate the historical snapshot bytes against that release's own manifest and decode
+    the manifest semantically. This avoids falsely rejecting the 24-Aug release only because later
+    C1 contracts added Rotterdam metadata fields that did not exist yet.
+    """
+    release_url = f"https://api.github.com/repos/{REPOSITORY}/releases/tags/{quote(tag, safe='')}"
+    release = shared_release._request_json(release_url)
+    if str(release.get("tag_name") or "") != tag or release.get("draft"):
+        raise RuntimeError(f"Historical release lookup mismatch: {tag}")
+
+    meta_bytes = shared_release._request_bytes(shared_release._asset_url(release, shared_release.META_ASSET))
+    meta = json.loads(meta_bytes.decode("utf-8"))
+    if meta.get("schema") != shared_release.SCHEMA:
+        raise RuntimeError(f"Unexpected historical snapshot schema: {meta.get('schema')!r}")
+
+    data_bytes = shared_release._request_bytes(shared_release._asset_url(release, shared_release.DATA_ASSET), timeout=180)
     years = sorted(int(y) for y in meta.get("years", []))
-    observations, source = load_shared_observations(years, tag_prefix=PREFIX, release_tag=tag)
+    observations = shared_release._decode_snapshot(data_bytes, meta, years)
+
+    brands_bytes = shared_release._request_bytes(shared_release._asset_url(release, shared_release.CORSE_BRANDS_ASSET))
+    brands = json.loads(brands_bytes.decode("utf-8"))
+    if brands.get("schema") != shared_release.CORSE_BRANDS_SCHEMA:
+        raise RuntimeError(f"Unexpected Corsica-brand schema in {tag}: {brands.get('schema')!r}")
+
+    source = {
+        "sha256": meta.get("sha256"),
+        "shared_source_max_date": meta.get("max_date"),
+        "bouclier": meta.get("bouclier"),
+    }
+    return release, meta, observations, brands, source
+
+
+def recompute(tag: str):
+    _release, meta, observations, brands, source = raw_release(tag)
 
     legacy = load_bdr_categories(LEGACY_BDR)
     resolver = _bdr_category_resolver(legacy, load_registry(BDR_REGISTRY))
@@ -67,13 +90,12 @@ def recompute(tag: str, label: str):
         bdr_category_resolver=resolver,
     )
     bouclier = source.get("bouclier") or meta.get("bouclier")
-    corse_stations = json.loads(registry_path.read_text(encoding="utf-8"))["stations"]
     guards = v2_event_guards.EventGuards.from_release(tag, metadata=meta)
     state, evaluation = _evaluate_v2(
         state,
         bouclier=bouclier,
         event_guards=guards,
-        corse_stations=corse_stations,
+        corse_stations=brands["stations"],
         start=SWITCH_DAY,
         end=TARGET,
     )
@@ -118,18 +140,34 @@ def recompute(tag: str, label: str):
     }
 
 
+def relevant_frozen(frozen):
+    wanted = {
+        "DATA/sp95/sp95/daily/all": "SP95_vs_SP95_all",
+        "DATA/sp95/sp95/daily/reseau": "SP95_vs_SP95_network",
+        "DATA/sp95/e10/daily/all": "SP95_vs_E10_all",
+        "DATA/sp95/e10/daily/reseau": "SP95_vs_E10_network",
+    }
+    out = {}
+    for path, row in frozen:
+        for prefix, key in wanted.items():
+            if path.startswith(prefix + "/"):
+                out[key] = row
+    return out
+
+
 def main():
     frozen = frozen_rows()
-    print("=== FROZEN C2 ROWS ON 2026-08-24 ===")
-    for path, row in frozen:
-        print(path, json.dumps(row, ensure_ascii=False, sort_keys=True))
+    frozen4 = relevant_frozen(frozen)
+    print("=== FROZEN FOUR C2 SP95 ROWS ON 2026-08-24 ===")
+    for key, row in frozen4.items():
+        print(key, json.dumps(row, ensure_ascii=False, sort_keys=True))
 
-    old = recompute(OLD_TAG, "old")
-    current = recompute(CURRENT_TAG, "current")
+    old = recompute(OLD_TAG)
+    current = recompute(CURRENT_TAG)
 
     print("=== RECOMPUTED FOUR SP95 GAPS ===")
     for key in old["outputs"]:
-        print(key, "old=", old["outputs"][key], "current=", current["outputs"][key])
+        print(key, "frozen=", frozen4.get(key), "old=", old["outputs"][key], "current=", current["outputs"][key])
 
     print("=== SOURCE METADATA ===")
     print("old", old["tag"], old["source_sha256"], old["source_max_date"])
@@ -148,7 +186,7 @@ def main():
 
     out = {
         "target_date": TARGET.isoformat(),
-        "frozen_rows": [{"path": p, "row": r} for p, r in frozen],
+        "frozen_four": frozen4,
         "old": {k: v for k, v in old.items() if k != "sample"},
         "current": {k: v for k, v in current.items() if k != "sample"},
         "station_day_differences": [
