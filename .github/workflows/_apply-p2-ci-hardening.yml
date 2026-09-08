@@ -115,7 +115,6 @@ jobs:
           ]
           (root / '.github' / 'dependabot.yml').write_text('\n'.join(dependabot_lines) + '\n', encoding='utf-8')
 
-          # This migration workflow must not survive the migration commit.
           Path('.github/workflows/_apply-p2-ci-hardening.yml').unlink()
           PY
 
