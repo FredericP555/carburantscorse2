@@ -100,9 +100,10 @@ class CiSupplyChainContracts(unittest.TestCase):
         failures = []
         for path in workflow_files():
             text = path.read_text(encoding="utf-8")
-            if "weekly-audit" in text or "business-success-receipt" in text:
-                if "retention-days: 90" not in text:
-                    failures.append(path.name)
+            uploads_artifact = "actions/upload-artifact@" in text
+            names_production_evidence = "weekly-audit" in text or "business-success-receipt" in text
+            if uploads_artifact and names_production_evidence and "retention-days: 90" not in text:
+                failures.append(path.name)
         self.assertEqual(failures, [], f"production evidence below 90-day contract: {failures}")
 
     def test_dependabot_maintains_pip_and_github_actions(self):
