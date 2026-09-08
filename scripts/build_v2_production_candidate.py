@@ -93,6 +93,19 @@ def _last_complete_sunday(day: date) -> date:
     return day - timedelta(days=(day.weekday() + 1) % 7)
 
 
+def _publication_guard_start(baseline_last: date, target_end: date) -> date:
+    """Start fail-closed BDR classification checks on days that can alter publication.
+
+    Existing C2 daily history is append-only once V2 is active. A recent unknown category on an
+    already-published day must therefore be reported by historical audit, not block a new run that
+    cannot rewrite that day. If there is no append, this date is after ``target_end`` and the guard
+    naturally evaluates an empty publication window.
+    """
+    if target_end < baseline_last:
+        raise ValueError("target_end cannot precede baseline_last")
+    return max(SWITCH_DAY, baseline_last + timedelta(days=1))
+
+
 def _merged_bdr_categories() -> dict[str, str]:
     """Compatibility view; date-aware production uses ``_bdr_category_resolver`` below."""
     categories = load_bdr_categories(LEGACY_BDR)
@@ -252,12 +265,13 @@ def main() -> None:
     missing=sum(len(v["missing_replacements"]) for v in report_series.values())
     if missing: raise RuntimeError(f"V2 candidate has {missing} missing replacement date(s)")
     observed=pd.read_csv(ROTTERDAM_OBSERVED); ufip_last=None if observed.empty else str(pd.to_datetime(observed["date"]).max().date())
-    unknown=unknown_recent_bdr_stations(v2_state,since=pd.Timestamp(max(SWITCH_DAY,target_end-timedelta(days=30))))
-    new_meta=deepcopy(baseline_meta); new_meta.update({"generated_at":pd.Timestamp.now(tz="UTC").isoformat(),"publication_mode":"v2-append-only" if already_active else "v2-controlled-transition","baseline_source":"data.json","previous_daily_cutoff":baseline_last.isoformat(),"requested_daily_target_end":requested_end.isoformat(),"daily_target_end":target_end.isoformat(),"weekly_complete_through":weekly_end.isoformat(),"official_source_max_date":source_max.isoformat(),"official_ingestion_source":source.get("kind"),"official_shared_release_tag":args.release_tag,"official_shared_release_published_at":source.get("release_published_at"),"official_shared_sha256":source.get("sha256"),"official_shared_source_max_date":source.get("shared_source_max_date"),"bouclier":bouclier,"ufip_last_observed_date":ufip_last,"unknown_recent_bdr_stations":unknown,"bdr_category_policy":{"legacy_frozen_through":"2026-09-07","temporal_from":"2026-09-08","registry":"config/bdr_station_brands.json"},"v2":{"active":True,"version":"A4C-V2-2026-07-23","daily_switch_date":SWITCH_DAY.isoformat(),"weekly_switch_date":WEEKLY_SWITCH.isoformat(),"history_before_switch_preserved":True,"weekly_overlap_2026_07_20_preserved":True,"controlled_transition_applied":not already_active or bool((baseline_meta.get("v2") or {}).get("controlled_transition_applied")),"c1_release_tag":args.release_tag,"event_reopening_rule":"open rupture -> later same-fuel declaration; open closure -> later any-fuel station declaration; explicit end wins"}})
+    perimeter_guard_from=_publication_guard_start(baseline_last,target_end)
+    unknown=unknown_recent_bdr_stations(v2_state,since=pd.Timestamp(perimeter_guard_from))
+    new_meta=deepcopy(baseline_meta); new_meta.update({"generated_at":pd.Timestamp.now(tz="UTC").isoformat(),"publication_mode":"v2-append-only" if already_active else "v2-controlled-transition","baseline_source":"data.json","previous_daily_cutoff":baseline_last.isoformat(),"requested_daily_target_end":requested_end.isoformat(),"daily_target_end":target_end.isoformat(),"weekly_complete_through":weekly_end.isoformat(),"official_source_max_date":source_max.isoformat(),"official_ingestion_source":source.get("kind"),"official_shared_release_tag":args.release_tag,"official_shared_release_published_at":source.get("release_published_at"),"official_shared_sha256":source.get("sha256"),"official_shared_source_max_date":source.get("shared_source_max_date"),"bouclier":bouclier,"ufip_last_observed_date":ufip_last,"unknown_recent_bdr_stations":unknown,"bdr_perimeter_guard_from":perimeter_guard_from.isoformat(),"bdr_category_policy":{"legacy_frozen_through":"2026-09-07","temporal_from":"2026-09-08","registry":"config/bdr_station_brands.json"},"v2":{"active":True,"version":"A4C-V2-2026-07-23","daily_switch_date":SWITCH_DAY.isoformat(),"weekly_switch_date":WEEKLY_SWITCH.isoformat(),"history_before_switch_preserved":True,"weekly_overlap_2026_07_20_preserved":True,"controlled_transition_applied":not already_active or bool((baseline_meta.get("v2") or {}).get("controlled_transition_applied")),"c1_release_tag":args.release_tag,"event_reopening_rule":"open rupture -> later same-fuel declaration; open closure -> later any-fuel station declaration; explicit end wins"}})
     candidate["meta"]=new_meta
     output=ROOT/args.output; summary_path=ROOT/args.summary; output.parent.mkdir(parents=True,exist_ok=True); summary_path.parent.mkdir(parents=True,exist_ok=True)
     output.write_text(json.dumps(candidate,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
-    summary={"status":"v2-production-candidate","production_modified":False,"initial_transition":allow_transition,"daily_switch_date":SWITCH_DAY.isoformat(),"weekly_switch_date":WEEKLY_SWITCH.isoformat(),"target_end":target_end.isoformat(),"weekly_end":weekly_end.isoformat(),"c1_release_tag":args.release_tag,"series":report_series,"rewritten_rows_total":sum(v["rewritten_rows"] for v in report_series.values()),"added_rows_total":sum(v["added_rows"] for v in report_series.values()),"missing_replacements_total":missing,"engine":engine,"official_event_guards":guards.audit(),"bdr_resolution":resolution,"unknown_recent_bdr_stations":unknown}
+    summary={"status":"v2-production-candidate","production_modified":False,"initial_transition":allow_transition,"daily_switch_date":SWITCH_DAY.isoformat(),"weekly_switch_date":WEEKLY_SWITCH.isoformat(),"target_end":target_end.isoformat(),"weekly_end":weekly_end.isoformat(),"c1_release_tag":args.release_tag,"series":report_series,"rewritten_rows_total":sum(v["rewritten_rows"] for v in report_series.values()),"added_rows_total":sum(v["added_rows"] for v in report_series.values()),"missing_replacements_total":missing,"engine":engine,"official_event_guards":guards.audit(),"bdr_resolution":resolution,"bdr_perimeter_guard_from":perimeter_guard_from.isoformat(),"unknown_recent_bdr_stations":unknown}
     summary_path.write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding="utf-8"); print(json.dumps(summary,ensure_ascii=False,indent=2))
 
 if __name__ == "__main__": main()
