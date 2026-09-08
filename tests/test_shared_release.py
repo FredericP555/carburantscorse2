@@ -6,6 +6,7 @@ import hashlib
 import io
 import os
 from collections import Counter
+from datetime import date
 from unittest.mock import patch
 import unittest
 
@@ -18,6 +19,7 @@ from a4c_common.shared_release import (
     _request_headers,
     _select_shared_release,
 )
+from a4c_common.source_freshness import max_date_by_fuel
 
 
 FIELDS = [
@@ -124,6 +126,18 @@ class SharedReleaseTests(unittest.TestCase):
         bad_meta["rows"] = 4
         with self.assertRaises(RuntimeError):
             _decode_snapshot(payload, bad_meta, [2026])
+
+    def test_per_fuel_max_dates_are_derived_from_decoded_rows(self):
+        rows = [
+            {"fuel": "Gazole", "date": date(2026, 8, 22)},
+            {"fuel": "Gazole", "date": date(2026, 8, 23)},
+            {"fuel": "SP95", "date": date(2026, 8, 21)},
+            {"fuel": "E10", "date": date(2026, 8, 23)},
+        ]
+        self.assertEqual(
+            max_date_by_fuel(rows),
+            {"E10": "2026-08-23", "Gazole": "2026-08-23", "SP95": "2026-08-21"},
+        )
 
 
 if __name__ == "__main__":

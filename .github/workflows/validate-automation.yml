@@ -63,6 +63,15 @@ jobs:
           python scripts/build_v2_production_candidate.py
           --tag-prefix "$C1_V2_TAG_PREFIX"
           --release-tag "${{ steps.c1.outputs.release_tag }}"
+      - name: Exercise decoded per-fuel freshness contract
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          python -m scripts.check_shared_freshness
+          --candidate outputs/v2-production-candidate.json
+          --baseline data.json
+          --max-release-age-hours 100000
+          --max-source-age-days 100000
       - name: Exercise V2 append-only promotion guard
         run: python scripts/promote_v2_candidate.py
       - name: Upload candidate and audit summary
