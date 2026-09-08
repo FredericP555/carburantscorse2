@@ -8,6 +8,7 @@ import pandas as pd
 from a4c_common.shared_release import _validate_rotterdam_contract
 from carburantscorse2.publication import build_publication_state
 from scripts.build_homepage_summary import _reconcile_gap_series
+from scripts.build_v2_production_candidate import _publication_guard_start
 from scripts.resolve_new_bdr_station_brands import classification_for_day, ids_to_fetch
 
 
@@ -56,6 +57,16 @@ class TemporalBdrCategoryTests(unittest.TestCase):
         categories = dict(zip(state["date"].dt.date, state["category"]))
         self.assertEqual(categories[date(2026, 9, 7)], "network")
         self.assertEqual(categories[date(2026, 9, 8)], "gms")
+
+    def test_perimeter_guard_starts_at_first_new_append_day(self):
+        self.assertEqual(
+            _publication_guard_start(date(2026, 9, 6), date(2026, 9, 7)),
+            date(2026, 9, 7),
+        )
+        self.assertEqual(
+            _publication_guard_start(date(2026, 9, 7), date(2026, 9, 7)),
+            date(2026, 9, 8),
+        )
 
 
 class HomepageReconciliationTests(unittest.TestCase):
