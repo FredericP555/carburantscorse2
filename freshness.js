@@ -239,6 +239,107 @@
     return true;
   }
 
+  function installC2AuditUiFixes(){
+    if(window.__a4cC2AuditUiFixesInstalled)return true;
+
+    function dateOnlyLocalTs(value){
+      if(typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)){
+        const [y,m,d]=value.split('-').map(Number);
+        return new Date(y,m-1,d,12,0,0,0).getTime();
+      }
+      return new Date(value).getTime();
+    }
+
+    function visibleRowsForCurrentPeriod(raw){
+      if(!Array.isArray(raw)||!raw.length)return [];
+      const pairs=raw.map(row=>({row,ts:dateOnlyLocalTs(row&&row.date)})).filter(item=>Number.isFinite(item.ts));
+      if(!pairs.length)return [];
+      let minTs=Math.min(...pairs.map(item=>item.ts));
+      const maxTs=Math.max(...pairs.map(item=>item.ts));
+      if(typeof usePeriodSlider==='function'&&usePeriodSlider()){
+        const totalMonths=Math.round((maxTs-minTs)/(30.44*DAY_MS));
+        const months=typeof currentMonths==='number'?currentMonths:totalMonths;
+        if(months<totalMonths){
+          const cut=new Date(maxTs);
+          cut.setMonth(cut.getMonth()-months);
+          minTs=Math.max(minTs,cut.getTime());
+        }
+      }
+      return pairs.filter(item=>item.ts>=minTs&&item.ts<=maxTs).map(item=>item.row);
+    }
+
+    function signed2(v){
+      const n=Number(v);
+      if(!Number.isFinite(n))return '-';
+      return (n>=0?'+':'')+n.toFixed(2)+' c/L HT';
+    }
+
+    function maxRow(rows,field,start,end){
+      const vals=(rows||[]).filter(r=>
+        (!start||r.date>=start)&&(!end||r.date<=end)&&Number.isFinite(Number(r[field]))
+      );
+      return vals.length?vals.reduce((best,r)=>Number(r[field])>Number(best[field])?r:best):null;
+    }
+
+    const patchedTs=function(s){return dateOnlyLocalTs(s);};
+    if(typeof ts==='function')ts=patchedTs;
+    window.ts=patchedTs;
+
+    const patchedSetStats=function(px,raw){
+      const rows=visibleRowsForCurrentPeriod(raw);
+      const vals=rows.map(d=>Number(d.ecart)).filter(Number.isFinite);
+      const moy=document.getElementById(px+'-moy');
+      const min=document.getElementById(px+'-min');
+      const max=document.getElementById(px+'-max');
+      if(!vals.length){
+        if(moy)moy.textContent='-';
+        if(min)min.textContent='-';
+        if(max)max.textContent='-';
+        return;
+      }
+      const mean=vals.reduce((a,b)=>a+b,0)/vals.length;
+      if(moy)moy.textContent=signed2(mean);
+      if(min)min.textContent=signed2(Math.min(...vals));
+      if(max)max.textContent=signed2(Math.max(...vals));
+    };
+    if(typeof setStats==='function')setStats=patchedSetStats;
+    window.setStats=patchedSetStats;
+
+    if(typeof buildSp95PriceAnalysis==='function'&&!buildSp95PriceAnalysis.__a4cDynamicSp95Record){
+      const baseSp95=buildSp95PriceAnalysis;
+      const marker='<p style="color:#991b1b;font-weight:600">';
+      const patchedSp95PriceAnalysis=function(){
+        const html=baseSp95();
+        const weekly=DATA&&DATA.sp95&&DATA.sp95.sp95&&DATA.sp95.sp95.weekly&&Array.isArray(DATA.sp95.sp95.weekly.all)?DATA.sp95.sp95.weekly.all:[];
+        const sanctionPeak=maxRow(weekly,'ecart','2025-11-17','2025-12-31');
+        if(!sanctionPeak)return html;
+        const through2025Peak=maxRow(weekly,'ecart',null,'2025-12-31');
+        const overallPeak=maxRow(weekly,'ecart');
+        const wasRecord=!!(through2025Peak&&sanctionPeak.date===through2025Peak.date&&Math.abs(Number(sanctionPeak.ecart)-Number(through2025Peak.ecart))<1e-9);
+        let text=`Comme pour le Gazole, dans les semaines suivant la sanction du 17 novembre 2025, l'écart SP95 a atteint <strong>${signed2(sanctionPeak.ecart).replace(' c/L HT','')} c/L HT</strong> la semaine du <strong>${frDate(sanctionPeak.date)}</strong>${wasRecord?' — alors son niveau le plus élevé depuis 2022':''}.`;
+        if(overallPeak&&Number(overallPeak.ecart)>Number(sanctionPeak.ecart)+1e-9){
+          text+=` Ce niveau a depuis été dépassé : <strong>${signed2(overallPeak.ecart).replace(' c/L HT','')} c/L HT</strong> la semaine du <strong>${frDate(overallPeak.date)}</strong>.`;
+        }else if(wasRecord){
+          text+=' Ce record n’a pas été dépassé depuis.';
+        }
+        text+=' Les données observées dans les semaines suivant la décision ne montrent donc aucun effet correctif immédiat.';
+        const paragraph=`${marker}${text}</p>`;
+        const pos=html.lastIndexOf(marker);
+        return pos>=0?html.slice(0,pos)+paragraph:html+paragraph;
+      };
+      patchedSp95PriceAnalysis.__a4cDynamicSp95Record=true;
+      buildSp95PriceAnalysis=patchedSp95PriceAnalysis;
+      window.buildSp95PriceAnalysis=patchedSp95PriceAnalysis;
+      if(typeof ANALYSES!=='undefined'&&ANALYSES&&typeof ANALYSES==='object'){
+        ANALYSES.sp95=patchedSp95PriceAnalysis();
+      }
+    }
+
+    window.A4C_UI_AUDIT={dateOnlyLocalTs,visibleRowsForCurrentPeriod};
+    window.__a4cC2AuditUiFixesInstalled=true;
+    return true;
+  }
+
   function ensureBadge(){
     let badge=document.getElementById('a4c-freshness-badge');
     if(badge)return badge;
@@ -279,8 +380,6 @@
       if(start){
         const end=addDays(start,6);
         if(isMarginView()&&end){
-          // Align the margin badge with the price view: once a guarded weekly
-          // margin exists, display the covered end date in the same compact form.
           badge.textContent=`Données au ${frDate(end)}`;
           freshnessDate=end;
         }else if(end&&sourceMax>=end){
@@ -300,8 +399,6 @@
     badge.className=age==null?'warn':age<=3?'fresh':age<=7?'warn':'stale';
   }
 
-  // La vue marge est nécessairement hebdomadaire. Mémoriser la granularité
-  // choisie pour la vue prix afin de la restaurer quand on quitte la marge.
   let lastPriceGran=(typeof currentGran!=='undefined'&&currentGran==='weekly')?'weekly':'daily';
   document.addEventListener('click',function(e){
     const t=e.target&&e.target.closest&&e.target.closest('#btn-daily,#btn-weekly,#btn-prix,#btn-marge,#btn-sp');
@@ -324,6 +421,7 @@
   enableC2PeriodSliderEverywhere();
   installC2AdaptiveAxis();
   installDynamicMarginRecord();
+  installC2AuditUiFixes();
   window.A4C_updateFreshnessBadge=updateFreshnessBadge;
   document.addEventListener('click',function(e){
     const t=e.target&&e.target.closest&&e.target.closest('[data-res],[data-carbu],#btn-daily,#btn-weekly,#btn-prix,#btn-marge,#btn-gz,#btn-sp,#btn-sp95ref,#btn-e10ref');
@@ -333,12 +431,11 @@
     enableC2PeriodSliderEverywhere();
     installC2AdaptiveAxis();
     installDynamicMarginRecord();
+    installC2AuditUiFixes();
     let tries=0;
     const timer=setInterval(function(){
       tries++;
       updateFreshnessBadge();
-      // Les séries historiques embarquées peuvent s'arrêter au 6 juin 2026.
-      // Attendre les métadonnées de data.json avant de considérer le badge à jour.
       if(hasCurrentC2Metadata()||tries>300)clearInterval(timer);
     },100);
   });
