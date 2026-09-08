@@ -61,6 +61,10 @@ jobs:
           print('Dry-run self-test:', dry_run)
           PY
 
+      - name: Checkout current C2 content for receipt validation
+        if: steps.clock.outputs.selected == 'true'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
       - name: Evaluate C2 business publication state
         if: steps.clock.outputs.selected == 'true'
         id: state
@@ -136,6 +140,19 @@ jobs:
 
           business_run=""
           if [ -n "$latest_today" ]; then
+            pages_capture_ok=true
+            cache="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+            if ! curl --fail --location --silent --show-error --retry 2 \
+                 "https://fredericp555.github.io/carburantscorse2/data.json?a4c_watchdog=$cache" \
+                 -o /tmp/c2-pages-data.json; then
+              pages_capture_ok=false
+            fi
+            if ! curl --fail --location --silent --show-error --retry 2 \
+                 "https://fredericp555.github.io/carburantscorse2/homepage-summary.json?a4c_watchdog=$cache" \
+                 -o /tmp/c2-pages-summary.json; then
+              pages_capture_ok=false
+            fi
+
             rm -rf /tmp/c2-business-receipts
             mkdir -p /tmp/c2-business-receipts
             while read -r run_id; do
@@ -147,9 +164,13 @@ jobs:
                    --name c2-business-success-receipt \
                    --dir "$dir" >/dev/null 2>&1; then
                 receipt="$dir/c2-business-success.json"
-                if [ -f "$receipt" ] && jq -e --arg tag "$latest_today" \
-                     '.status == "business-success" and .c1_release_tag == $tag and .pages_data_sha256 == .expected_data_sha256 and .pages_summary_sha256 == .expected_summary_sha256 and .c1_snapshot_sha256 == .c1_release_bundle_sha256' \
-                     "$receipt" >/dev/null; then
+                if [ "$pages_capture_ok" = true ] && [ -f "$receipt" ] && \
+                   python scripts/validate_current_c2_receipt.py \
+                     --receipt "$receipt" \
+                     --expected-tag "$latest_today" \
+                     --pages-data-file /tmp/c2-pages-data.json \
+                     --pages-summary-file /tmp/c2-pages-summary.json \
+                     >/dev/null 2>&1; then
                   business_run="$run_id"
                   break
                 fi
@@ -168,7 +189,7 @@ jobs:
             reason="no validated C1 release exists today; C2 has no new weekly input to process"
           elif [ -n "$business_run" ]; then
             action="none"
-            reason="C2 business success is proven for today's latest C1 release: $latest_today (verifier run $business_run)"
+            reason="C2 business success is proven for today's latest C1 release and still matches current repository/Pages content: $latest_today (verifier run $business_run)"
           elif [ "$active_update" -gt 0 ] || [ "$active_verify" -gt 0 ]; then
             action="wait"
             reason="C2 production or end-to-end verification is still active"
@@ -180,7 +201,7 @@ jobs:
             reason="C2 local C1 provenance is inconsistent with the referenced release asset"
           else
             action="repair-publication"
-            reason="C2 repository content is current, but no end-to-end receipt proves both public Pages files"
+            reason="C2 repository content is current, but no still-current end-to-end receipt proves both public Pages files"
           fi
 
           echo "action=$action" >> "$GITHUB_OUTPUT"
@@ -232,7 +253,7 @@ jobs:
             echo "- Latest C1 release today: ${{ steps.state.outputs.c1_release_today || 'none' }}"
             echo "- C1 release in C2 data.json: ${{ steps.state.outputs.data_c1_release || 'none' }}"
             echo "- C1 release in homepage summary: ${{ steps.state.outputs.summary_c1_release || 'none' }}"
-            echo "- Matching business-success run: ${{ steps.state.outputs.business_run || 'none' }}"
+            echo "- Matching current business-success run: ${{ steps.state.outputs.business_run || 'none' }}"
             echo "- Active full C2 runs: ${{ steps.state.outputs.active_updates || '0' }}"
             echo "- Active C2 business verifiers: ${{ steps.state.outputs.active_verifiers || '0' }}"
             echo "- Decision: ${{ steps.state.outputs.action || 'not evaluated' }}"
