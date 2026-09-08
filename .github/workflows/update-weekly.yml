@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: carburantscorse2-weekly
+  group: c2-main-writers
   cancel-in-progress: false
 
 env:
@@ -108,7 +108,11 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
+
+      - name: Capture writer base SHA
+        if: steps.gate.outputs.run == 'true'
+        run: echo "WRITER_BASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
       - name: Set up Python
         if: steps.gate.outputs.run == 'true'
@@ -238,12 +242,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data.json config/bdr_station_brands.json homepage-summary.json
           if git diff --cached --quiet; then
             echo "No C2 repository publication commit required."
             exit 0
+          fi
+
+          git fetch origin "+refs/heads/${GITHUB_REF_NAME:-main}:refs/remotes/origin/${GITHUB_REF_NAME:-main}"
+          remote_sha=$(git rev-parse "origin/${GITHUB_REF_NAME:-main}")
+          if [ "$remote_sha" != "$WRITER_BASE_SHA" ]; then
+            echo "Main advanced while this writer was running: base=$WRITER_BASE_SHA remote=$remote_sha" >&2
+            exit 1
           fi
 
           staged=$(git diff --cached --name-only)
@@ -255,6 +264,8 @@ jobs:
           else
             msg="Refresh homepage fuel summary"
           fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "$msg"
           git push origin "HEAD:${GITHUB_REF_NAME}"
 
