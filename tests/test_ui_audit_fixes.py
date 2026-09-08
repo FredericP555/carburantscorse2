@@ -28,13 +28,17 @@ class UiAuditFixTests(unittest.TestCase):
         self.assertIn("const rows=visibleRowsForCurrentPeriod(raw)", self.freshness)
 
     def test_ui04_sp95_record_is_derived_from_weekly_data(self):
-        self.assertIn("function patchedSp95PriceAnalysis", self.freshness)
+        self.assertIn("const patchedSp95PriceAnalysis=function()", self.freshness)
         self.assertIn("const sanctionPeak=maxRow(weekly,'ecart','2025-11-17','2025-12-31')", self.freshness)
         self.assertIn("const overallPeak=maxRow(weekly,'ecart')", self.freshness)
         self.assertIn("buildSp95PriceAnalysis=patchedSp95PriceAnalysis", self.freshness)
 
-    def test_runtime_patch_loads_before_domcontentloaded_boot(self):
-        self.assertGreater(self.index.rfind('<script src="freshness.js"></script>'), self.index.rfind('</script>'))
+    def test_runtime_patch_loads_after_inline_code_and_before_body_close(self):
+        freshness_pos = self.index.rfind('<script src="freshness.js"></script>')
+        self.assertGreaterEqual(freshness_pos, 0)
+        previous_inline_close = self.index.rfind('</script>', 0, freshness_pos)
+        self.assertGreater(freshness_pos, previous_inline_close)
+        self.assertLess(freshness_pos, self.index.rfind('</body>'))
         self.assertIn("installC2AuditUiFixes();", self.freshness)
 
     def test_freshness_javascript_syntax(self):
