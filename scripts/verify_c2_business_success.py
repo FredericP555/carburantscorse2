@@ -53,19 +53,35 @@ def _hex_digest(raw: str, label: str) -> str:
     return value
 
 
+def _cutoffs(daily_raw, weekly_raw, label: str) -> tuple[str, str]:
+    daily = _iso(daily_raw, f"{label}.daily")
+    weekly = _iso(weekly_raw, f"{label}.weekly")
+    if date.fromisoformat(weekly) > date.fromisoformat(daily):
+        raise BusinessSuccessError(
+            f"{label}: weekly cutoff {weekly} cannot be after daily cutoff {daily}"
+        )
+    return daily, weekly
+
+
 def _data_contract(blob: bytes, label: str) -> dict:
     obj = _json(blob, label)
     meta = obj.get("meta") or {}
-    daily = _iso(meta.get("daily_target_end"), f"{label}.meta.daily_target_end")
-    weekly = _iso(meta.get("weekly_complete_through"), f"{label}.meta.weekly_complete_through")
-    if daily != weekly:
-        raise BusinessSuccessError(f"{label}: daily cutoff {daily} != weekly cutoff {weekly}")
+    daily, weekly = _cutoffs(
+        meta.get("daily_target_end"),
+        meta.get("weekly_complete_through"),
+        f"{label}.meta",
+    )
     tag = str(meta.get("official_shared_release_tag") or "")
     v2_tag = str(((meta.get("v2") or {}).get("c1_release_tag")) or "")
     if not tag or tag != v2_tag:
         raise BusinessSuccessError(f"{label}: inconsistent C1 release tags {tag!r} / {v2_tag!r}")
     snapshot = _hex_digest(meta.get("official_shared_sha256"), f"{label}.meta.official_shared_sha256")
-    return {"through": daily, "c1_release_tag": tag, "c1_snapshot_sha256": snapshot}
+    return {
+        "daily_through": daily,
+        "weekly_through": weekly,
+        "c1_release_tag": tag,
+        "c1_snapshot_sha256": snapshot,
+    }
 
 
 def _summary_contract(blob: bytes, label: str) -> dict:
@@ -73,15 +89,21 @@ def _summary_contract(blob: bytes, label: str) -> dict:
     if obj.get("schema") != "a4c-homepage-summary-v1":
         raise BusinessSuccessError(f"{label}: unexpected schema {obj.get('schema')!r}")
     source = obj.get("source") or {}
-    daily = _iso(source.get("daily_data_through"), f"{label}.source.daily_data_through")
-    weekly = _iso(source.get("weekly_data_through"), f"{label}.source.weekly_data_through")
-    if daily != weekly:
-        raise BusinessSuccessError(f"{label}: daily cutoff {daily} != weekly cutoff {weekly}")
+    daily, weekly = _cutoffs(
+        source.get("daily_data_through"),
+        source.get("weekly_data_through"),
+        f"{label}.source",
+    )
     tag = str(source.get("c1_release_tag") or "")
     if not tag:
         raise BusinessSuccessError(f"{label}: missing source.c1_release_tag")
     snapshot = _hex_digest(source.get("c1_snapshot_sha256"), f"{label}.source.c1_snapshot_sha256")
-    return {"through": daily, "c1_release_tag": tag, "c1_snapshot_sha256": snapshot}
+    return {
+        "daily_through": daily,
+        "weekly_through": weekly,
+        "c1_release_tag": tag,
+        "c1_snapshot_sha256": snapshot,
+    }
 
 
 def evaluate_publication(
@@ -138,7 +160,8 @@ def evaluate_publication(
         "commit": expected_commit,
         "data_url": data_url,
         "summary_url": summary_url,
-        "data_through": expected_d["through"],
+        "data_through": expected_d["daily_through"],
+        "weekly_through": expected_d["weekly_through"],
         "c1_release_tag": expected_d["c1_release_tag"],
         "c1_snapshot_sha256": expected_d["c1_snapshot_sha256"],
         "c1_release_bundle_sha256": release_digest,
