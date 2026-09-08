@@ -16,10 +16,10 @@ from a4c_common.shared_release import (
     SCHEMA,
     _asset_url,
     _decode_snapshot,
-    _max_date_by_fuel,
     _request_headers,
     _select_shared_release,
 )
+from a4c_common.source_freshness import max_date_by_fuel
 
 
 FIELDS = [
@@ -135,7 +135,7 @@ class SharedReleaseTests(unittest.TestCase):
             {"fuel": "E10", "date": date(2026, 8, 23)},
         ]
         self.assertEqual(
-            _max_date_by_fuel(rows),
+            max_date_by_fuel(rows),
             {"E10": "2026-08-23", "Gazole": "2026-08-23", "SP95": "2026-08-21"},
         )
 
