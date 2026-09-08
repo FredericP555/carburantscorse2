@@ -7,7 +7,9 @@ Initial activation performs the agreed controlled transition only:
 - complete weekly series and Gazole margins switch from 2026-07-27;
 - future runs are append-only once ``meta.v2.active`` is present.
 
-The builder never writes data.json directly. Promotion is a separate guarded step.
+Station-brand/category changes are date-aware. The legacy BDR category period stays frozen and a
+newly verified brand applies only from its verification date. The builder never writes data.json
+directly. Promotion is a separate guarded step.
 """
 from __future__ import annotations
 
@@ -29,7 +31,14 @@ from a4c_common.shared_release import download_shared_rotterdam_assets, load_sha
 from carburantscorse2 import r2_guard_v2, reliability_policy_v2, shield_phase_v2
 from carburantscorse2.publication import build_gap_series, build_publication_state, load_bdr_categories, unknown_recent_bdr_stations
 from carburantscorse2.publication_margin import build_margin_series
-from scripts.resolve_new_bdr_station_brands import DEFAULT_REGISTRY as BDR_REGISTRY, load_registry, resolve_from_observations, resolved_categories
+from scripts.resolve_new_bdr_station_brands import (
+    DEFAULT_REGISTRY as BDR_REGISTRY,
+    _entry_for_day as bdr_entry_for_day,
+    classification_for_day,
+    load_registry,
+    resolve_from_observations,
+    resolved_categories,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 PARIS = ZoneInfo("Europe/Paris")
@@ -85,10 +94,17 @@ def _last_complete_sunday(day: date) -> date:
 
 
 def _merged_bdr_categories() -> dict[str, str]:
+    """Compatibility view; date-aware production uses ``_bdr_category_resolver`` below."""
     categories = load_bdr_categories(LEGACY_BDR)
     for sid, category in resolved_categories(load_registry(BDR_REGISTRY)).items():
         categories.setdefault(str(sid), category)
     return categories
+
+
+def _bdr_category_resolver(legacy: dict[str, str], registry: dict):
+    def resolve(station_id: str, day: pd.Timestamp) -> str | None:
+        return classification_for_day(str(station_id), pd.Timestamp(day).date(), legacy, registry)
+    return resolve
 
 
 def _recent_bdr_observations(observations: list[dict], days: int = 30) -> list[dict]:
@@ -151,9 +167,9 @@ def _evaluate_v2(state: pd.DataFrame, *, bouclier: dict, event_guards, corse_sta
         gazole_cap=gp.cap if gp else None; sp95_cap=sp.cap if sp else None
         department=str(row.department)
         if department == "20":
-            region_kind="corsica"; territory_r2="corsica"; is_total=classify_registry_entry(corse_stations.get(sid)) == TOTAL; territory_label="Corse"
+            region_kind="corsica"; territory_r2="corsica"; is_total=classify_registry_entry(corse_stations.get(sid),on_date=day) == TOTAL; territory_label="Corse"
         else:
-            region_kind="mainland"; territory_r2="bdr"; entry=bdr_entries.get(sid) if isinstance(bdr_entries,dict) else None; is_total=_is_total_brand((entry or {}).get("enseigne") if isinstance(entry,dict) else None); territory_label="BdR"
+            region_kind="mainland"; territory_r2="bdr"; raw_entry=bdr_entries.get(sid) if isinstance(bdr_entries,dict) else None; entry=bdr_entry_for_day(raw_entry,day); is_total=_is_total_brand((entry or {}).get("enseigne") if isinstance(entry,dict) else None); territory_label="BdR"
         r2_verdict=None; age=reliability_policy_v2.age_days(last_declared,day); both_capped=at_cap(gazole_price,gazole_cap) and at_cap(sp95_price,sp95_cap)
         if fuel in PRINCIPAL_FUELS and age is not None and age >= reliability_policy_v2.NORMAL_MAX_AGE_DAYS and both_capped:
             r2_calls += 1
@@ -206,10 +222,12 @@ def main() -> None:
     bouclier=source.get("bouclier") or meta.get("bouclier")
     if not isinstance(bouclier,dict): raise RuntimeError("Pinned C1 release has no shield metadata")
 
-    legacy=load_bdr_categories(LEGACY_BDR); resolution=_resolve_bdr(observations,legacy); categories=_merged_bdr_categories()
-    state=build_publication_state(pd.DataFrame(observations),global_end=pd.Timestamp(target_end),bdr_categories=categories)
+    legacy=load_bdr_categories(LEGACY_BDR); resolution=_resolve_bdr(observations,legacy)
+    registry=load_registry(BDR_REGISTRY); resolver=_bdr_category_resolver(legacy,registry)
+    state=build_publication_state(pd.DataFrame(observations),global_end=pd.Timestamp(target_end),bdr_category_resolver=resolver)
     stale_ids=_candidate_stale_bdr_ids(state,bouclier,SWITCH_DAY,target_end); resolution["stale_total_candidates"]=_resolve_stale_bdr_candidates(observations,stale_ids,legacy)
-    categories=_merged_bdr_categories(); state=build_publication_state(pd.DataFrame(observations),global_end=pd.Timestamp(target_end),bdr_categories=categories)
+    registry=load_registry(BDR_REGISTRY); resolver=_bdr_category_resolver(legacy,registry)
+    state=build_publication_state(pd.DataFrame(observations),global_end=pd.Timestamp(target_end),bdr_category_resolver=resolver)
 
     from scripts.v2_event_guards import EventGuards
     guards=EventGuards.from_release(args.release_tag,metadata=meta)
@@ -235,7 +253,7 @@ def main() -> None:
     if missing: raise RuntimeError(f"V2 candidate has {missing} missing replacement date(s)")
     observed=pd.read_csv(ROTTERDAM_OBSERVED); ufip_last=None if observed.empty else str(pd.to_datetime(observed["date"]).max().date())
     unknown=unknown_recent_bdr_stations(v2_state,since=pd.Timestamp(max(SWITCH_DAY,target_end-timedelta(days=30))))
-    new_meta=deepcopy(baseline_meta); new_meta.update({"generated_at":pd.Timestamp.now(tz="UTC").isoformat(),"publication_mode":"v2-append-only" if already_active else "v2-controlled-transition","baseline_source":"data.json","previous_daily_cutoff":baseline_last.isoformat(),"requested_daily_target_end":requested_end.isoformat(),"daily_target_end":target_end.isoformat(),"weekly_complete_through":weekly_end.isoformat(),"official_source_max_date":source_max.isoformat(),"official_ingestion_source":source.get("kind"),"official_shared_release_tag":args.release_tag,"official_shared_release_published_at":source.get("release_published_at"),"official_shared_sha256":source.get("sha256"),"official_shared_source_max_date":source.get("shared_source_max_date"),"bouclier":bouclier,"ufip_last_observed_date":ufip_last,"unknown_recent_bdr_stations":unknown,"v2":{"active":True,"version":"A4C-V2-2026-07-23","daily_switch_date":SWITCH_DAY.isoformat(),"weekly_switch_date":WEEKLY_SWITCH.isoformat(),"history_before_switch_preserved":True,"weekly_overlap_2026_07_20_preserved":True,"controlled_transition_applied":not already_active or bool((baseline_meta.get("v2") or {}).get("controlled_transition_applied")),"c1_release_tag":args.release_tag,"event_reopening_rule":"open rupture -> later same-fuel declaration; open closure -> later any-fuel station declaration; explicit end wins"}})
+    new_meta=deepcopy(baseline_meta); new_meta.update({"generated_at":pd.Timestamp.now(tz="UTC").isoformat(),"publication_mode":"v2-append-only" if already_active else "v2-controlled-transition","baseline_source":"data.json","previous_daily_cutoff":baseline_last.isoformat(),"requested_daily_target_end":requested_end.isoformat(),"daily_target_end":target_end.isoformat(),"weekly_complete_through":weekly_end.isoformat(),"official_source_max_date":source_max.isoformat(),"official_ingestion_source":source.get("kind"),"official_shared_release_tag":args.release_tag,"official_shared_release_published_at":source.get("release_published_at"),"official_shared_sha256":source.get("sha256"),"official_shared_source_max_date":source.get("shared_source_max_date"),"bouclier":bouclier,"ufip_last_observed_date":ufip_last,"unknown_recent_bdr_stations":unknown,"bdr_category_policy":{"legacy_frozen_through":"2026-09-07","temporal_from":"2026-09-08","registry":"config/bdr_station_brands.json"},"v2":{"active":True,"version":"A4C-V2-2026-07-23","daily_switch_date":SWITCH_DAY.isoformat(),"weekly_switch_date":WEEKLY_SWITCH.isoformat(),"history_before_switch_preserved":True,"weekly_overlap_2026_07_20_preserved":True,"controlled_transition_applied":not already_active or bool((baseline_meta.get("v2") or {}).get("controlled_transition_applied")),"c1_release_tag":args.release_tag,"event_reopening_rule":"open rupture -> later same-fuel declaration; open closure -> later any-fuel station declaration; explicit end wins"}})
     candidate["meta"]=new_meta
     output=ROOT/args.output; summary_path=ROOT/args.summary; output.parent.mkdir(parents=True,exist_ok=True); summary_path.parent.mkdir(parents=True,exist_ok=True)
     output.write_text(json.dumps(candidate,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
