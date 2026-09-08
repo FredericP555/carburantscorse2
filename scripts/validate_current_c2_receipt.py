@@ -7,7 +7,10 @@ import json
 from pathlib import Path
 import time
 
-from scripts import verify_c2_business_success as business
+try:
+    from scripts import verify_c2_business_success as business
+except ImportError:  # direct execution as python scripts/validate_current_c2_receipt.py
+    import verify_c2_business_success as business
 
 
 def validate_current_receipt(
