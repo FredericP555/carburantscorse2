@@ -17,7 +17,7 @@ class MainWriterWorkflowContracts(unittest.TestCase):
             text = (WORKFLOWS / name).read_text(encoding="utf-8")
             self.assertIn("WRITER_BASE_SHA", text, name)
             self.assertIn("git fetch origin", text, name)
-            self.assertIn("origin/${GITHUB_REF_NAME:-main}", text, name)
+            self.assertIn("refs/remotes/origin/", text, name)
             self.assertIn("Main advanced while this writer was running", text, name)
 
     def test_freshness_badge_workflow_is_read_only(self):
