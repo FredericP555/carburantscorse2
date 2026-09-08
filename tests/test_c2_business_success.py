@@ -7,11 +7,18 @@ import unittest
 from scripts import verify_c2_business_success as business
 
 
-def data_payload(tag="c1-tag", snap="a" * 64, through="2026-09-06", marker=1) -> bytes:
+def data_payload(
+    tag="c1-tag",
+    snap="a" * 64,
+    through="2026-09-06",
+    weekly_through=None,
+    marker=1,
+) -> bytes:
+    weekly_through = through if weekly_through is None else weekly_through
     return json.dumps({
         "meta": {
             "daily_target_end": through,
-            "weekly_complete_through": through,
+            "weekly_complete_through": weekly_through,
             "official_shared_release_tag": tag,
             "official_shared_sha256": snap,
             "v2": {"c1_release_tag": tag},
@@ -20,14 +27,21 @@ def data_payload(tag="c1-tag", snap="a" * 64, through="2026-09-06", marker=1) ->
     }, separators=(",", ":")).encode()
 
 
-def summary_payload(tag="c1-tag", snap="a" * 64, through="2026-09-06", marker=1) -> bytes:
+def summary_payload(
+    tag="c1-tag",
+    snap="a" * 64,
+    through="2026-09-06",
+    weekly_through=None,
+    marker=1,
+) -> bytes:
+    weekly_through = through if weekly_through is None else weekly_through
     return json.dumps({
         "schema": "a4c-homepage-summary-v1",
         "source": {
             "c1_release_tag": tag,
             "c1_snapshot_sha256": snap,
             "daily_data_through": through,
-            "weekly_data_through": through,
+            "weekly_data_through": weekly_through,
         },
         "marker": marker,
     }, separators=(",", ":")).encode()
@@ -49,8 +63,32 @@ class C2BusinessSuccessTests(unittest.TestCase):
         self.assertEqual(receipt["c1_release_tag"], "c1-tag")
         self.assertEqual(receipt["c1_snapshot_sha256"], "a" * 64)
         self.assertEqual(receipt["data_through"], "2026-09-06")
+        self.assertEqual(receipt["weekly_through"], "2026-09-06")
         self.assertEqual(receipt["expected_data_sha256"], receipt["pages_data_sha256"])
         self.assertEqual(receipt["expected_summary_sha256"], receipt["pages_summary_sha256"])
+
+    def test_daily_may_be_ahead_of_last_complete_week(self):
+        data = data_payload(through="2026-09-07", weekly_through="2026-09-06")
+        summary = summary_payload(through="2026-09-07", weekly_through="2026-09-06")
+        receipt = business.evaluate_publication(
+            data, summary, data, summary,
+            expected_commit="c2commit",
+            data_url="d", summary_url="s",
+            c1_release_tag="c1-tag",
+            c1_bundle_digest="sha256:" + "a" * 64,
+        )
+        self.assertEqual(receipt["data_through"], "2026-09-07")
+        self.assertEqual(receipt["weekly_through"], "2026-09-06")
+
+    def test_weekly_cutoff_cannot_be_after_daily_cutoff(self):
+        data = data_payload(through="2026-09-06", weekly_through="2026-09-07")
+        summary = summary_payload(through="2026-09-06", weekly_through="2026-09-07")
+        with self.assertRaises(business.BusinessSuccessError):
+            business.evaluate_publication(
+                data, summary, data, summary,
+                expected_commit="x", data_url="d", summary_url="s",
+                c1_release_tag="c1-tag", c1_bundle_digest="sha256:" + "a" * 64,
+            )
 
     def test_stale_pages_data_fails(self):
         expected = data_payload(marker=2)
@@ -94,17 +132,6 @@ class C2BusinessSuccessTests(unittest.TestCase):
                 data_payload(), summary_payload(), data_payload(), summary_payload(),
                 expected_commit="x", data_url="d", summary_url="s",
                 c1_release_tag="c1-tag", c1_bundle_digest="sha256:" + "b" * 64,
-            )
-
-    def test_data_daily_and_weekly_cutoffs_must_match(self):
-        raw = json.loads(data_payload())
-        raw["meta"]["weekly_complete_through"] = "2026-08-30"
-        bad = json.dumps(raw, separators=(",", ":")).encode()
-        with self.assertRaises(business.BusinessSuccessError):
-            business.evaluate_publication(
-                bad, summary_payload(), bad, summary_payload(),
-                expected_commit="x", data_url="d", summary_url="s",
-                c1_release_tag="c1-tag", c1_bundle_digest="sha256:" + "a" * 64,
             )
 
 
