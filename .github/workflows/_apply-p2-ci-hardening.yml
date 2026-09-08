@@ -63,55 +63,57 @@ jobs:
                   text = text.replace('retention-days: 30', 'retention-days: 90')
               path.write_text(text, encoding='utf-8')
 
-          lock = '''# A4C CI lock for CPython 3.12.14 on ubuntu-24.04.
-# Exact versions captured from the validated September 2026 CI environment.
-beautifulsoup4==4.15.0
-certifi==2026.7.22
-charset-normalizer==3.5.1
-et_xmlfile==2.0.0
-idna==3.19
-numpy==2.5.3
-openpyxl==3.1.5
-pandas==2.3.1
-python-dateutil==2.9.0.post0
-pytz==2026.3.post1
-requests==2.34.2
-six==1.17.0
-soupsieve==2.9.2
-typing_extensions==4.16.0
-tzdata==2026.3
-urllib3==2.7.0
-'''
-          (root / 'requirements.lock.txt').write_text(lock, encoding='utf-8')
+          lock_lines = [
+              '# A4C CI lock for CPython 3.12.14 on ubuntu-24.04.',
+              '# Exact versions captured from the validated September 2026 CI environment.',
+              'beautifulsoup4==4.15.0',
+              'certifi==2026.7.22',
+              'charset-normalizer==3.5.1',
+              'et_xmlfile==2.0.0',
+              'idna==3.19',
+              'numpy==2.5.3',
+              'openpyxl==3.1.5',
+              'pandas==2.3.1',
+              'python-dateutil==2.9.0.post0',
+              'pytz==2026.3.post1',
+              'requests==2.34.2',
+              'six==1.17.0',
+              'soupsieve==2.9.2',
+              'typing_extensions==4.16.0',
+              'tzdata==2026.3',
+              'urllib3==2.7.0',
+          ]
+          (root / 'requirements.lock.txt').write_text('\n'.join(lock_lines) + '\n', encoding='utf-8')
 
-          dependabot = '''version: 2
-updates:
-  - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "04:00"
-      timezone: "Europe/Paris"
-    open-pull-requests-limit: 5
-    groups:
-      python-dependencies:
-        patterns:
-          - "*"
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "04:15"
-      timezone: "Europe/Paris"
-    open-pull-requests-limit: 5
-    groups:
-      github-actions:
-        patterns:
-          - "*"
-'''
-          (root / '.github' / 'dependabot.yml').write_text(dependabot, encoding='utf-8')
+          dependabot_lines = [
+              'version: 2',
+              'updates:',
+              '  - package-ecosystem: "pip"',
+              '    directory: "/"',
+              '    schedule:',
+              '      interval: "weekly"',
+              '      day: "monday"',
+              '      time: "04:00"',
+              '      timezone: "Europe/Paris"',
+              '    open-pull-requests-limit: 5',
+              '    groups:',
+              '      python-dependencies:',
+              '        patterns:',
+              '          - "*"',
+              '  - package-ecosystem: "github-actions"',
+              '    directory: "/"',
+              '    schedule:',
+              '      interval: "weekly"',
+              '      day: "monday"',
+              '      time: "04:15"',
+              '      timezone: "Europe/Paris"',
+              '    open-pull-requests-limit: 5',
+              '    groups:',
+              '      github-actions:',
+              '        patterns:',
+              '          - "*"',
+          ]
+          (root / '.github' / 'dependabot.yml').write_text('\n'.join(dependabot_lines) + '\n', encoding='utf-8')
 
           # This migration workflow must not survive the migration commit.
           Path('.github/workflows/_apply-p2-ci-hardening.yml').unlink()
