@@ -318,7 +318,11 @@
         const wasRecord=!!(through2025Peak&&sanctionPeak.date===through2025Peak.date&&Math.abs(Number(sanctionPeak.ecart)-Number(through2025Peak.ecart))<1e-9);
         let text=`Comme pour le Gazole, dans les semaines suivant la sanction du 17 novembre 2025, l'écart SP95 a atteint <strong>${signed2(sanctionPeak.ecart).replace(' c/L HT','')} c/L HT</strong> la semaine du <strong>${frDate(sanctionPeak.date)}</strong>${wasRecord?' — alors son niveau le plus élevé depuis 2022':''}.`;
         if(overallPeak&&Number(overallPeak.ecart)>Number(sanctionPeak.ecart)+1e-9){
-          text+=` Ce niveau a depuis été dépassé : <strong>${signed2(overallPeak.ecart).replace(' c/L HT','')} c/L HT</strong> la semaine du <strong>${frDate(overallPeak.date)}</strong>.`;
+          if(overallPeak.date>sanctionPeak.date){
+            text+=` Ce niveau a ensuite été dépassé : <strong>${signed2(overallPeak.ecart).replace(' c/L HT','')} c/L HT</strong> la semaine du <strong>${frDate(overallPeak.date)}</strong>.`;
+          }else if(overallPeak.date<sanctionPeak.date){
+            text+=` Un niveau plus élevé avait déjà été observé auparavant : <strong>${signed2(overallPeak.ecart).replace(' c/L HT','')} c/L HT</strong> la semaine du <strong>${frDate(overallPeak.date)}</strong>.`;
+          }
         }else if(wasRecord){
           text+=' Ce record n’a pas été dépassé depuis.';
         }
@@ -337,6 +341,137 @@
 
     window.A4C_UI_AUDIT={dateOnlyLocalTs,visibleRowsForCurrentPeriod};
     window.__a4cC2AuditUiFixesInstalled=true;
+    return true;
+  }
+
+  function validateDashboardPayload(payload){
+    const requiredRows=[
+      payload&&payload.DATA&&payload.DATA.gazole&&payload.DATA.gazole.sp95&&payload.DATA.gazole.sp95.daily&&payload.DATA.gazole.sp95.daily.all,
+      payload&&payload.DATA&&payload.DATA.sp95&&payload.DATA.sp95.sp95&&payload.DATA.sp95.sp95.daily&&payload.DATA.sp95.sp95.daily.all,
+      payload&&payload.DATA&&payload.DATA.sp95&&payload.DATA.sp95.e10&&payload.DATA.sp95.e10.daily&&payload.DATA.sp95.e10.daily.all,
+      payload&&payload.MARGES_GZ&&payload.MARGES_GZ.all
+    ];
+    if(requiredRows.some(rows=>!Array.isArray(rows)||!rows.length)){
+      throw new Error('structure data.json invalide: séries obligatoires absentes');
+    }
+    const meta=payload&&payload.meta;
+    if(!meta||!meta.official_source_max_date||!meta.daily_target_end){
+      throw new Error('structure data.json invalide: métadonnées de fraîcheur absentes');
+    }
+    const shield=meta.bouclier;
+    for(const fuel of ['Gazole','SP95']){
+      const node=shield&&shield[fuel];
+      if(!node||!Array.isArray(node.ranges)||!Array.isArray(node.phases)){
+        throw new Error(`structure data.json invalide: bouclier ${fuel} absent`);
+      }
+    }
+    return true;
+  }
+
+  function installLowHeightLandscapeFix(){
+    if(document.getElementById('a4c-c2-low-height-style'))return;
+    const style=document.createElement('style');
+    style.id='a4c-c2-low-height-style';
+    style.textContent=`
+      @media (min-width:701px) and (max-height:520px){
+        html,body{height:auto!important;min-height:100%!important;overflow-x:hidden!important;overflow-y:auto!important}
+        body{display:block!important}
+        #analyse-panel{max-height:130px!important}
+        #controls{position:sticky;top:0;z-index:12}
+        #charts-area{display:block!important;min-height:auto!important;overflow:visible!important}
+        .chart-row{height:280px!important;min-height:280px!important;display:flex!important;flex:none!important}
+        .canvas-wrap{min-height:245px!important;flex:1 1 auto!important;overflow:hidden!important}
+        #stats-bar,#credits{position:static!important}
+      }
+      .a4c-source-failed #a4c-freshness-badge{display:none!important}
+      .a4c-source-failed #controls,.a4c-source-failed #periode-slider{pointer-events:none;opacity:.55}
+      .a4c-source-failed #charts-area>.chart-row{display:none!important}
+      #a4c-source-error{margin:18px;padding:16px;border:1px solid #fecaca;border-radius:8px;background:#fef2f2;color:#991b1b;font:600 14px/1.45 system-ui,sans-serif}
+      #a4c-source-error small{display:block;margin-top:6px;font-weight:400;color:#7f1d1d}
+    `;
+    document.head.appendChild(style);
+  }
+
+  function showDashboardSourceFailure(err){
+    window.A4C_DATA_SOURCE_FAILED=true;
+    window.A4C_DATA_META={};
+    document.documentElement.classList.add('a4c-source-failed');
+    if(document.body)document.body.classList.add('a4c-source-failed');
+    const panel=document.getElementById('analyse-panel');
+    if(panel){
+      panel.innerHTML='<strong>Données courantes indisponibles.</strong> Le tableau de bord ne présente pas de données historiques embarquées comme si elles étaient à jour.';
+    }
+    const shield=document.getElementById('bouclier-info');
+    if(shield)shield.innerHTML='<strong>Statut du bouclier indisponible :</strong> la source courante data.json n’a pas pu être validée.';
+    const area=document.getElementById('charts-area');
+    if(area&&!document.getElementById('a4c-source-error')){
+      const box=document.createElement('div');
+      box.id='a4c-source-error';
+      box.setAttribute('role','alert');
+      box.innerHTML='Impossible de charger les données courantes.<small>Aucun graphique ancien n’est affiché en secours silencieux. Réessayez plus tard.</small>';
+      area.appendChild(box);
+    }
+    ['s1-moy','s1-min','s1-max','s2-moy','s2-min','s2-max'].forEach(id=>{
+      const el=document.getElementById(id); if(el)el.textContent='-';
+    });
+    console.error('A4C: data.json indisponible ou invalide; affichage courant neutralisé.',err);
+  }
+
+  function installDashboardSourceGuard(){
+    if(window.__a4cDashboardSourceGuardInstalled)return true;
+    const guardedLoad=async function(){
+      try{
+        const response=await fetch('./data.json',{cache:'no-store'});
+        if(!response.ok)throw new Error('HTTP '+response.status);
+        const payload=await response.json();
+        validateDashboardPayload(payload);
+        DATA=payload.DATA;
+        MARGES_GZ=payload.MARGES_GZ;
+        window.A4C_DATA_META=payload.meta||{};
+        window.A4C_DATA_SOURCE_FAILED=false;
+        return true;
+      }catch(err){
+        showDashboardSourceFailure(err);
+        return false;
+      }
+    };
+    loadDashboardData=guardedLoad;
+    window.loadDashboardData=guardedLoad;
+
+    if(typeof buildCharts==='function'){
+      const baseBuildCharts=buildCharts;
+      buildCharts=function(){
+        if(window.A4C_DATA_SOURCE_FAILED)return;
+        return baseBuildCharts.apply(this,arguments);
+      };
+      window.buildCharts=buildCharts;
+    }
+    if(typeof updateAnalyse==='function'){
+      const baseUpdateAnalyse=updateAnalyse;
+      updateAnalyse=function(){
+        if(window.A4C_DATA_SOURCE_FAILED)return;
+        return baseUpdateAnalyse.apply(this,arguments);
+      };
+      window.updateAnalyse=updateAnalyse;
+    }
+    if(typeof syncDynamicPeriodLabels==='function'){
+      const baseSyncDynamicPeriodLabels=syncDynamicPeriodLabels;
+      syncDynamicPeriodLabels=function(){
+        if(window.A4C_DATA_SOURCE_FAILED)return;
+        return baseSyncDynamicPeriodLabels.apply(this,arguments);
+      };
+      window.syncDynamicPeriodLabels=syncDynamicPeriodLabels;
+    }
+    if(typeof syncPeriodSliderRange==='function'){
+      const baseSyncPeriodSliderRange=syncPeriodSliderRange;
+      syncPeriodSliderRange=function(){
+        if(window.A4C_DATA_SOURCE_FAILED)return;
+        return baseSyncPeriodSliderRange.apply(this,arguments);
+      };
+      window.syncPeriodSliderRange=syncPeriodSliderRange;
+    }
+    window.A4C_SOURCE_AUDIT={validateDashboardPayload,showDashboardSourceFailure};
+    window.__a4cDashboardSourceGuardInstalled=true;
     return true;
   }
 
@@ -371,6 +506,7 @@
     return badge;
   }
   function updateFreshnessBadge(){
+    if(window.A4C_DATA_SOURCE_FAILED)return;
     const badge=ensureBadge(); if(!badge)return;
     const sourceMax=sourceMaxDate();
     if(!sourceMax){badge.textContent='Fraîcheur indisponible';badge.className='warn';return;}
@@ -422,6 +558,8 @@
   installC2AdaptiveAxis();
   installDynamicMarginRecord();
   installC2AuditUiFixes();
+  installLowHeightLandscapeFix();
+  installDashboardSourceGuard();
   window.A4C_updateFreshnessBadge=updateFreshnessBadge;
   document.addEventListener('click',function(e){
     const t=e.target&&e.target.closest&&e.target.closest('[data-res],[data-carbu],#btn-daily,#btn-weekly,#btn-prix,#btn-marge,#btn-gz,#btn-sp,#btn-sp95ref,#btn-e10ref');
@@ -432,11 +570,13 @@
     installC2AdaptiveAxis();
     installDynamicMarginRecord();
     installC2AuditUiFixes();
+    installLowHeightLandscapeFix();
+    installDashboardSourceGuard();
     let tries=0;
     const timer=setInterval(function(){
       tries++;
       updateFreshnessBadge();
-      if(hasCurrentC2Metadata()||tries>300)clearInterval(timer);
+      if(window.A4C_DATA_SOURCE_FAILED||hasCurrentC2Metadata()||tries>300)clearInterval(timer);
     },100);
   });
 })();
