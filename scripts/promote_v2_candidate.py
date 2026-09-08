@@ -21,19 +21,6 @@ ROOT = Path(__file__).resolve().parents[1]
 DAILY_SWITCH = date(2026, 7, 23)
 WEEKLY_SWITCH = date(2026, 7, 27)
 REQUIRED_BOUCLIER_FUELS = ("Gazole", "SP95")
-REQUIRED_BOUCLIER_FIELDS = (
-    "ranges",
-    "phases",
-    "current_active",
-    "current_active_since",
-    "current_cap",
-    "evaluated_through",
-    "latest_total_stations",
-    "latest_non_total_stations",
-    "latest_at_cap_count",
-    "latest_non_total_p75",
-    "rule",
-)
 
 
 def _fail(message: str) -> None:
@@ -98,6 +85,12 @@ def _validate_dates(name: str, rows: list[dict]) -> list[date]:
 
 
 def _validate_bouclier_contract(meta: dict, *, source_max: date, target_end: date) -> None:
+    """Validate the shield structure C2 actually consumes.
+
+    Current published C2 history predates some later C1 metadata enrichment, so optional
+    fields are validated when present but are not retroactively required. The hard contract
+    here is the C1-owned shield object, both principal fuel nodes and their effective ranges.
+    """
     bmeta = meta.get("bouclier")
     if not isinstance(bmeta, dict):
         _fail("missing bouclier metadata")
@@ -105,15 +98,17 @@ def _validate_bouclier_contract(meta: dict, *, source_max: date, target_end: dat
         node = bmeta.get(fuel)
         if not isinstance(node, dict):
             _fail(f"missing bouclier metadata for {fuel}")
-        for field in REQUIRED_BOUCLIER_FIELDS:
-            if field not in node:
-                _fail(f"bouclier.{fuel}.{field} missing")
+        if "ranges" not in node:
+            _fail(f"bouclier.{fuel}.ranges missing")
         ranges = node["ranges"]
-        phases = node["phases"]
         if not isinstance(ranges, list):
             _fail(f"bouclier.{fuel}.ranges is not a list")
-        if not isinstance(phases, list):
+        phases = node.get("phases")
+        if phases is not None and not isinstance(phases, list):
             _fail(f"bouclier.{fuel}.phases is not a list")
+        if "current_active" in node and not isinstance(node["current_active"], bool):
+            _fail(f"bouclier.{fuel}.current_active is not boolean")
+
         previous_end = None
         for index, item in enumerate(ranges):
             if not isinstance(item, dict):
@@ -127,11 +122,15 @@ def _validate_bouclier_contract(meta: dict, *, source_max: date, target_end: dat
             if end > source_max:
                 _fail(f"bouclier.{fuel}: range ends after official source max date")
             previous_end = end
-        evaluated = _as_date(node["evaluated_through"], f"bouclier.{fuel}.evaluated_through")
-        if evaluated > source_max:
-            _fail(f"bouclier.{fuel}.evaluated_through exceeds official source max date")
-        if evaluated < target_end:
-            _fail(f"bouclier.{fuel}.evaluated_through predates daily_target_end")
+
+        if node.get("evaluated_through") is not None:
+            evaluated = _as_date(
+                node["evaluated_through"], f"bouclier.{fuel}.evaluated_through"
+            )
+            if evaluated > source_max:
+                _fail(f"bouclier.{fuel}.evaluated_through exceeds official source max date")
+            if evaluated < target_end:
+                _fail(f"bouclier.{fuel}.evaluated_through predates daily_target_end")
 
 
 def _validate_visible_metadata(meta: dict, summary: dict) -> tuple[date, date, date]:
