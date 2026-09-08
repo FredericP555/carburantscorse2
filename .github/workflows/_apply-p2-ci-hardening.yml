@@ -1,0 +1,131 @@
+name: One-off apply P2 CI hardening
+
+on:
+  push:
+    branches: [fix/p2-ci-supply-chain-hardening]
+    paths:
+      - '.github/workflows/_apply-p2-ci-hardening.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12.14'
+
+      - name: Apply deterministic CI policy to repository workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path('.')
+          wfdir = root / '.github' / 'workflows'
+          pins = {
+              'actions/checkout@v4': 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4',
+              'actions/setup-python@v5': 'actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5',
+              'actions/upload-artifact@v4': 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4',
+          }
+
+          for path in sorted({*wfdir.glob('*.yml'), *wfdir.glob('*.yaml')}):
+              text = path.read_text(encoding='utf-8')
+              for old, new in pins.items():
+                  text = text.replace(old, new)
+              text = text.replace('runs-on: ubuntu-latest', 'runs-on: ubuntu-24.04')
+              text = text.replace("python-version: '3.12'", "python-version: '3.12.14'")
+              text = text.replace('python-version: "3.12"', 'python-version: "3.12.14"')
+              text = text.replace(
+                  'pip install -r requirements.txt',
+                  'python -m pip install --disable-pip-version-check -r requirements.lock.txt',
+              )
+              lines = text.splitlines()
+              rebuilt = []
+              for i, line in enumerate(lines):
+                  rebuilt.append(line)
+                  if line.strip() == 'cache: pip':
+                      next_line = lines[i + 1].strip() if i + 1 < len(lines) else ''
+                      if next_line != 'cache-dependency-path: requirements.lock.txt':
+                          indent = line[: len(line) - len(line.lstrip())]
+                          rebuilt.append(indent + 'cache-dependency-path: requirements.lock.txt')
+              text = '\n'.join(rebuilt) + ('\n' if text.endswith('\n') else '')
+              if path.name.startswith('verify-'):
+                  text = text.replace('  actions: read\n', '')
+              if 'weekly-audit' in text or 'business-success-receipt' in text:
+                  text = text.replace('retention-days: 30', 'retention-days: 90')
+              path.write_text(text, encoding='utf-8')
+
+          lock = '''# A4C CI lock for CPython 3.12.14 on ubuntu-24.04.
+# Exact versions captured from the validated September 2026 CI environment.
+beautifulsoup4==4.15.0
+certifi==2026.7.22
+charset-normalizer==3.5.1
+et_xmlfile==2.0.0
+idna==3.19
+numpy==2.5.3
+openpyxl==3.1.5
+pandas==2.3.1
+python-dateutil==2.9.0.post0
+pytz==2026.3.post1
+requests==2.34.2
+six==1.17.0
+soupsieve==2.9.2
+typing_extensions==4.16.0
+tzdata==2026.3
+urllib3==2.7.0
+'''
+          (root / 'requirements.lock.txt').write_text(lock, encoding='utf-8')
+
+          dependabot = '''version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 5
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:15"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+'''
+          (root / '.github' / 'dependabot.yml').write_text(dependabot, encoding='utf-8')
+
+          # This migration workflow must not survive the migration commit.
+          Path('.github/workflows/_apply-p2-ci-hardening.yml').unlink()
+          PY
+
+          python -m unittest tests.test_ci_supply_chain_contracts -v
+
+      - name: Commit hardened CI configuration to the PR branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git status --short
+          git commit -m "Harden CI supply chain and reproducibility"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
