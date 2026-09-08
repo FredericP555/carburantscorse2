@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 """Build a public, read-only weekly summary from the production C2 dataset.
 
-This script is deliberately downstream of the production pipeline:
-- it never writes or promotes ``data.json``;
-- it reuses the exact C1 release pinned in production ``data.json``;
-- it reuses the existing C2 V2 eligibility engine;
-- it validates its latest published gaps against ``data.json`` before writing output.
-
-The resulting ``homepage-summary.json`` is intended for lightweight consumers such as
-fpoletti.fr. A failure here must never block or roll back C1/C2 production.
+The summary reuses the exact C1 release pinned in production ``data.json`` and the same V2
+eligibility engine. Recomputed station levels/counts are diagnostics, but every gap exposed by
+the summary is reconciled to canonical ``data.json`` so a later source revision cannot silently
+make the homepage disagree with the frozen/append-only public chart.
 """
 from __future__ import annotations
 
@@ -23,16 +19,19 @@ from typing import Any
 import pandas as pd
 
 from a4c_common.shared_release import download_shared_rotterdam_assets, load_shared_observations
-from carburantscorse2.publication import build_publication_state
+from carburantscorse2.publication import build_publication_state, load_bdr_categories
 from scripts.build_v2_production_candidate import (
+    BDR_REGISTRY,
     C1_META,
     CORSE_REGISTRY,
+    LEGACY_BDR,
     ROOT,
     SWITCH_DAY,
     WEEKLY_SWITCH,
+    _bdr_category_resolver,
     _evaluate_v2,
-    _merged_bdr_categories,
 )
+from scripts.resolve_new_bdr_station_brands import load_registry
 from scripts.v2_event_guards import EventGuards
 
 TAG_PREFIX = "a4c-v2-shared-"
@@ -184,19 +183,41 @@ def _published_series(data: dict, fuel: str, granularity: str, scope: str) -> li
     return data["DATA"][key][ref][granularity][published_scope]
 
 
-def _assert_gap_match(data: dict, fuel: str, granularity: str, scope: str, generated: list[dict]) -> None:
-    published = {str(row["date"]): float(row["ecart"]) for row in _published_series(data, fuel, granularity, scope)}
-    for row in generated[-2:]:
+def _reconcile_gap_series(
+    data: dict,
+    fuel: str,
+    granularity: str,
+    scope: str,
+    generated: list[dict],
+) -> tuple[list[dict], list[dict]]:
+    """Use published gaps as canonical values while retaining recomputed diagnostic levels."""
+    published = {
+        str(row["date"]): float(row["ecart"])
+        for row in _published_series(data, fuel, granularity, scope)
+    }
+    reconciled: list[dict] = []
+    adjustments: list[dict] = []
+    for source_row in generated:
+        row = deepcopy(source_row)
         day = str(row["date"])
         if day not in published:
-            raise RuntimeError(f"Summary {fuel}/{granularity}/{scope} date {day} is absent from published data.json")
-        actual = float(row["gap_ht_c_l"])
-        expected = published[day]
-        if abs(actual - expected) > 0.005:
             raise RuntimeError(
-                f"Summary gap mismatch for {fuel}/{granularity}/{scope}/{day}: "
-                f"summary={actual:.2f} published={expected:.2f}"
+                f"Summary {fuel}/{granularity}/{scope} date {day} is absent from published data.json"
             )
+        recomputed = float(row["gap_ht_c_l"])
+        canonical = float(published[day])
+        if abs(recomputed - canonical) > 0.005:
+            adjustments.append({
+                "fuel": fuel,
+                "granularity": granularity,
+                "scope": scope,
+                "date": day,
+                "recomputed_gap_ht_c_l": round(recomputed, 4),
+                "published_gap_ht_c_l": round(canonical, 4),
+            })
+        row["gap_ht_c_l"] = round(canonical, 2)
+        reconciled.append(row)
+    return reconciled, adjustments
 
 
 def _margin_summary(data: dict, group: str) -> dict:
@@ -244,11 +265,12 @@ def build_summary(data: dict) -> dict:
     if source_max < target_end:
         raise RuntimeError(f"Pinned C1 release is older than published C2 data: {source_max} < {target_end}")
 
-    categories = _merged_bdr_categories()
+    legacy = load_bdr_categories(LEGACY_BDR)
+    registry = load_registry(BDR_REGISTRY)
     state = build_publication_state(
         pd.DataFrame(observations),
         global_end=pd.Timestamp(target_end),
-        bdr_categories=categories,
+        bdr_category_resolver=_bdr_category_resolver(legacy, registry),
     )
     bouclier = source.get("bouclier") or c1_meta.get("bouclier")
     if not isinstance(bouclier, dict):
@@ -266,6 +288,7 @@ def build_summary(data: dict) -> dict:
     )
 
     fuels: dict[str, dict] = {}
+    reconciliations: list[dict] = []
     for fuel in FUELS:
         fuels[fuel] = {}
         for scope in SCOPES:
@@ -285,8 +308,10 @@ def build_summary(data: dict) -> dict:
                 through=weekly_end,
                 lookback_days=430,
             )
-            _assert_gap_match(data, fuel, "daily", scope, daily)
-            _assert_gap_match(data, fuel, "weekly", scope, weekly)
+            daily, daily_adjustments = _reconcile_gap_series(data, fuel, "daily", scope, daily)
+            weekly, weekly_adjustments = _reconcile_gap_series(data, fuel, "weekly", scope, weekly)
+            reconciliations.extend(daily_adjustments)
+            reconciliations.extend(weekly_adjustments)
             fuels[fuel][scope] = {
                 "daily": _comparison_metrics(daily),
                 "weekly": _comparison_metrics(weekly),
@@ -313,7 +338,10 @@ def build_summary(data: dict) -> dict:
     unknown = list(meta.get("unknown_recent_bdr_stations") or [])
     if unknown:
         warnings.append(f"unknown_recent_bdr_stations={len(unknown)}")
+    if reconciliations:
+        warnings.append(f"source_revision_reconciliations={len(reconciliations)}")
 
+    rotterdam = source.get("rotterdam") or c1_meta.get("rotterdam") or {}
     return {
         "schema": SCHEMA,
         "generated_at": meta.get("generated_at"),
@@ -326,6 +354,9 @@ def build_summary(data: dict) -> dict:
             "c1_release_published_at": meta.get("official_shared_release_published_at"),
             "c1_snapshot_sha256": meta.get("official_shared_sha256"),
             "ufip_last_observed_date": meta.get("ufip_last_observed_date"),
+            "ufip_reference_source": rotterdam.get("reference_source"),
+            "ufip_unit": rotterdam.get("unit"),
+            "ufip_smoothing": rotterdam.get("smoothing"),
         },
         "methodology": {
             "v2_version": v2.get("version"),
@@ -334,6 +365,11 @@ def build_summary(data: dict) -> dict:
             "history_through_2026_07_22_preserved": bool(v2.get("history_before_switch_preserved")),
             "weekly_overlap_2026_07_20_preserved": bool(v2.get("weekly_overlap_2026_07_20_preserved")),
             "comparison_default": "network",
+            "gap_authority": "data.json is canonical for every exposed gap; recomputed levels/counts are diagnostics",
+            "bdr_category_policy": meta.get("bdr_category_policy") or {
+                "legacy_frozen_through": "2026-09-07",
+                "temporal_from": "2026-09-08",
+            },
         },
         "fuels": fuels,
         "shield": deepcopy(meta.get("bouclier") or {}),
@@ -346,6 +382,8 @@ def build_summary(data: dict) -> dict:
             "unknown_recent_bdr_station_ids": unknown,
             "r2_calls": int(engine.get("r2_calls", 0)),
             "r2_unavailable": int(engine.get("r2_unavailable", 0)),
+            "source_revision_reconciliation_count": len(reconciliations),
+            "source_revision_reconciliations_recent": reconciliations[-20:],
             "warnings": warnings,
         },
     }

@@ -15,19 +15,18 @@ Recovered publication behaviour for current-period prices:
   strictly between the two declarations is excluded (not merely days after the threshold);
 - after a station's final declaration, it becomes inactive only after the threshold;
 - threshold: 30 days BDR, 150 days Corse;
-- HT station-day value is rounded to 4 decimals before aggregation (needed for exact
-  reproduction of the published 2026 values);
+- HT station-day value is rounded to 4 decimals before aggregation;
 - minimum published sample: 5 Corsica stations and 10 BDR stations;
 - weekly values are station-day means over Monday-Sunday weeks, not means of daily gaps.
 
-Historical 2022 publication also contains manually corrected aberrant values and
-brand-specific discount neutralisation. Those historical values stay frozen; this module
-is intended for exact continuation of the current-period (2026+) publication profile.
+Historical publication remains frozen. A date-aware BDR category resolver may be supplied for
+new publication days so a later brand change can apply prospectively without changing legacy
+station categories for already-published dates.
 """
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterable
+from typing import Callable, Iterable
 
 import pandas as pd
 
@@ -83,12 +82,14 @@ def build_publication_state(
     *,
     global_end: pd.Timestamp,
     bdr_categories: dict[str, str] | None = None,
+    bdr_category_resolver: Callable[[str, pd.Timestamp], str | None] | None = None,
 ) -> pd.DataFrame:
     """Expand station observations to the daily state used for publication.
 
-    An out-of-band price is *not* auto-corrected. It remains flagged and is excluded
-    until the next declaration. Historical manual corrections stay in the frozen legacy
-    history rather than being guessed by an automated job.
+    An out-of-band price is *not* auto-corrected. It remains flagged and is excluded until the
+    next declaration. ``bdr_category_resolver`` takes precedence over a static mapping and may
+    return a category for each station/day, allowing prospective temporal classifications while
+    preserving the frozen legacy period.
     """
     daily = deduplicate_daily(daily_observations)
     if daily.empty:
@@ -139,7 +140,16 @@ def build_publication_state(
             | frame["station_inactive"]
         )
         frame["territory"] = "Corse" if department == "20" else "Bouches-du-Rhone"
-        frame["category"] = "network" if department == "20" else frame["station_id"].map(bdr_categories or {}).fillna("unknown")
+        if department == "20":
+            frame["category"] = "network"
+        elif bdr_category_resolver is not None:
+            station_id = str(group.loc[0, "station_id"])
+            frame["category"] = [
+                bdr_category_resolver(station_id, pd.Timestamp(day)) or "unknown"
+                for day in frame["date"]
+            ]
+        else:
+            frame["category"] = frame["station_id"].map(bdr_categories or {}).fillna("unknown")
         frame["price_ht"] = (frame["price"] / VAT_DIVISOR[department]).round(4)
         pieces.append(frame)
 
@@ -170,10 +180,9 @@ def build_gap_series(
 ) -> list[dict]:
     """Build one published gap series.
 
-    ``bdr_scope='network'`` uses the frozen published station-category registry.
-    Eligibility for the historical network view follows the published implementation:
-    the 10-station guard is checked on the corresponding all-BDR reference sample,
-    before the network-only mean is calculated.
+    ``bdr_scope='network'`` uses the station category already attached to each station-day. The
+    10-station publication guard is checked on the corresponding all-BDR reference sample before
+    the network-only mean is calculated.
     """
     bdr_fuel = bdr_fuel or corsica_fuel
     reliable = state[state["eligible_publication"]].copy()
@@ -230,5 +239,5 @@ def validate_recent_bdr_perimeter(state: pd.DataFrame, *, since: pd.Timestamp) -
 
 
 def unknown_recent_bdr_stations(state: pd.DataFrame, *, since: pd.Timestamp) -> list[str]:
-    """Production alias: an incomplete recent BDR perimeter is now a hard stop."""
+    """Production alias: an incomplete recent BDR perimeter is a hard stop."""
     return validate_recent_bdr_perimeter(state, since=since)
