@@ -65,6 +65,26 @@ def _asset_url(release: dict, name: str) -> str:
     raise RuntimeError(f"Release {release.get('tag_name')} has no asset {name}")
 
 
+def _validate_rotterdam_contract(rotterdam: dict) -> None:
+    """Reject a C1 release whose Rotterdam semantics no longer match the A4C method."""
+    if not isinstance(rotterdam, dict) or rotterdam.get("single_download") is not True:
+        raise RuntimeError("C1 shared release has no canonical Rotterdam metadata")
+    required = {
+        "reference_source": "Thomson-Reuters",
+        "unit": "EUR/L",
+        "smoothing": "5-day moving average",
+        "value_column": "rotterdam_eur_l",
+    }
+    for field, expected in required.items():
+        actual = rotterdam.get(field)
+        if actual != expected:
+            raise RuntimeError(
+                f"C1 Rotterdam contract mismatch for {field}: expected={expected!r} actual={actual!r}"
+            )
+    if "ufip" not in str(rotterdam.get("provider") or "").casefold():
+        raise RuntimeError("C1 Rotterdam contract does not identify UFIP as provider")
+
+
 def _release_and_metadata(*, repository: str = DEFAULT_REPOSITORY, tag_prefix: str = DEFAULT_TAG_PREFIX, release_tag: str | None = None) -> tuple[dict, dict]:
     if release_tag:
         url = f"https://api.github.com/repos/{repository}/releases/tags/{quote(release_tag, safe='')}"
@@ -82,6 +102,7 @@ def _release_and_metadata(*, repository: str = DEFAULT_REPOSITORY, tag_prefix: s
     metadata = json.loads(_request_bytes(_asset_url(release, META_ASSET)).decode("utf-8"))
     if metadata.get("schema") != SCHEMA:
         raise RuntimeError(f"Unexpected shared snapshot schema: {metadata.get('schema')!r}")
+    _validate_rotterdam_contract(metadata.get("rotterdam"))
     return release, metadata
 
 
@@ -194,8 +215,7 @@ def download_shared_rotterdam_assets(output_dir: str | Path = "outputs/ufip", *,
     if not selected_tag:
         raise RuntimeError("Selected C1 release has no tag")
     rotterdam = metadata.get("rotterdam")
-    if not isinstance(rotterdam, dict) or not rotterdam.get("single_download"):
-        raise RuntimeError("C1 shared release has no canonical Rotterdam metadata")
+    _validate_rotterdam_contract(rotterdam)
     observed_name = str(rotterdam.get("observed_asset") or ROTTERDAM_OBSERVED_ASSET)
     daily_name = str(rotterdam.get("daily_asset") or ROTTERDAM_DAILY_ASSET)
     observed_bytes = _request_bytes(_asset_url(release, observed_name), timeout=120)
