@@ -14,7 +14,6 @@ on:
 
 permissions:
   contents: read
-  actions: read
 
 concurrency:
   group: c2-business-success
@@ -22,7 +21,7 @@ concurrency:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Require successful upstream production workflow
@@ -36,15 +35,15 @@ jobs:
           test "$UPSTREAM_CONCLUSION" = "success"
 
       - name: Checkout current C2 production main
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: main
           fetch-depth: 1
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
-          python-version: '3.12'
+          python-version: '3.12.14'
 
       - name: Test C2 business-success contract
         run: python -m unittest tests.test_c2_business_success -v
@@ -131,9 +130,9 @@ jobs:
 
       - name: Upload business-success receipt
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: c2-business-success-receipt
           path: outputs/c2-business-success.json
           if-no-files-found: ignore
-          retention-days: 30
+          retention-days: 90
