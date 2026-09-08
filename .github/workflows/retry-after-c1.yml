@@ -44,9 +44,7 @@ jobs:
           from zoneinfo import ZoneInfo
 
           event = os.environ.get('EVENT_NAME', '')
-          # One-shot operational activation for the P2-9 migration. Reverted immediately
-          # after this push dispatches the current-main production workflow.
-          dry_run = False
+          dry_run = event == 'push'
           if event in {'workflow_dispatch', 'push'}:
               selected = True
           else:
