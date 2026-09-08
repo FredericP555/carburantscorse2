@@ -1,0 +1,1 @@
+P2 step 9 scope: keep published history frozen; temporalize brand/category changes only prospectively; reconcile homepage gaps to canonical data.json; require explicit UFIP unit/source/smoothing metadata.
