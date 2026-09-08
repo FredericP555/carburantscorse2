@@ -17,10 +17,14 @@ import json
 import math
 from pathlib import Path
 
+try:
+    from scripts import c2_bouclier_contract
+except ImportError:  # direct execution as python scripts/promote_v2_candidate.py
+    import c2_bouclier_contract
+
 ROOT = Path(__file__).resolve().parents[1]
 DAILY_SWITCH = date(2026, 7, 23)
 WEEKLY_SWITCH = date(2026, 7, 27)
-REQUIRED_BOUCLIER_FUELS = ("Gazole", "SP95")
 
 
 def _fail(message: str) -> None:
@@ -85,52 +89,12 @@ def _validate_dates(name: str, rows: list[dict]) -> list[date]:
 
 
 def _validate_bouclier_contract(meta: dict, *, source_max: date, target_end: date) -> None:
-    """Validate the shield structure C2 actually consumes.
-
-    Current published C2 history predates some later C1 metadata enrichment, so optional
-    fields are validated when present but are not retroactively required. The hard contract
-    here is the C1-owned shield object, both principal fuel nodes and their effective ranges.
-    """
-    bmeta = meta.get("bouclier")
-    if not isinstance(bmeta, dict):
-        _fail("missing bouclier metadata")
-    for fuel in REQUIRED_BOUCLIER_FUELS:
-        node = bmeta.get(fuel)
-        if not isinstance(node, dict):
-            _fail(f"missing bouclier metadata for {fuel}")
-        if "ranges" not in node:
-            _fail(f"bouclier.{fuel}.ranges missing")
-        ranges = node["ranges"]
-        if not isinstance(ranges, list):
-            _fail(f"bouclier.{fuel}.ranges is not a list")
-        phases = node.get("phases")
-        if phases is not None and not isinstance(phases, list):
-            _fail(f"bouclier.{fuel}.phases is not a list")
-        if "current_active" in node and not isinstance(node["current_active"], bool):
-            _fail(f"bouclier.{fuel}.current_active is not boolean")
-
-        previous_end = None
-        for index, item in enumerate(ranges):
-            if not isinstance(item, dict):
-                _fail(f"bouclier.{fuel}.ranges[{index}] is not an object")
-            start = _as_date(item.get("d1"), f"bouclier.{fuel}.ranges[{index}].d1")
-            end = _as_date(item.get("d2"), f"bouclier.{fuel}.ranges[{index}].d2")
-            if start > end:
-                _fail(f"bouclier.{fuel}: inverted range {item!r}")
-            if previous_end is not None and start <= previous_end:
-                _fail(f"bouclier.{fuel}: overlapping/unordered ranges")
-            if end > source_max:
-                _fail(f"bouclier.{fuel}: range ends after official source max date")
-            previous_end = end
-
-        if node.get("evaluated_through") is not None:
-            evaluated = _as_date(
-                node["evaluated_through"], f"bouclier.{fuel}.evaluated_through"
-            )
-            if evaluated > source_max:
-                _fail(f"bouclier.{fuel}.evaluated_through exceeds official source max date")
-            if evaluated < target_end:
-                _fail(f"bouclier.{fuel}.evaluated_through predates daily_target_end")
+    try:
+        c2_bouclier_contract.validate_bouclier_contract(
+            meta, source_max=source_max, target_end=target_end
+        )
+    except ValueError as exc:
+        _fail(str(exc))
 
 
 def _validate_visible_metadata(meta: dict, summary: dict) -> tuple[date, date, date]:
