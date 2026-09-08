@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Network regression against the data currently embedded in index.html.
+"""Network regression against the canonical history published in data.json.
 
 The check uses the current official annual archives and the live UFIP custom export to
 reconstruct the values already published through 2026-06-06. It protects the dashboard
-history before the updater is allowed to append new dates.
+history before the updater is allowed to append new dates. The publication reference is
+``data.json``; ``index.html`` is only a loader/view and is never treated as a data source.
 """
 from __future__ import annotations
 
 from datetime import date
 import json
-import re
 from pathlib import Path
 
 import pandas as pd
@@ -25,13 +25,19 @@ DAILY_START = "2026-01-01"
 WEEKLY_START = "2026-01-05"  # avoids the partial week beginning 2025-12-29
 
 
-def parse_js_object(name: str, html: str) -> dict:
-    match = re.search(rf"const\s+{re.escape(name)}=(.*?);\n", html, flags=re.S)
-    if not match:
-        raise RuntimeError(f"Cannot find const {name} in index.html")
-    raw = match.group(1)
-    quoted = re.sub(r"([{,])\s*([A-Za-z_][A-Za-z0-9_]*)\s*:", r'\1"\2":', raw)
-    return json.loads(quoted)
+def load_published_reference(path: Path) -> tuple[dict, dict]:
+    """Load the immutable comparison reference from canonical published JSON."""
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"Cannot load published regression reference {path}") from exc
+    data = payload.get("DATA")
+    margins = payload.get("MARGES_GZ")
+    if not isinstance(data, dict) or not data:
+        raise RuntimeError(f"Published regression reference {path} has no DATA object")
+    if not isinstance(margins, dict) or not margins:
+        raise RuntimeError(f"Published regression reference {path} has no MARGES_GZ object")
+    return data, margins
 
 
 def trim(rows: list[dict], start: str, end: str) -> list[dict]:
@@ -54,9 +60,7 @@ def compare(label: str, actual: list[dict], expected: list[dict], start: str) ->
 
 
 def main() -> None:
-    html = (ROOT / "index.html").read_text(encoding="utf-8")
-    embedded = parse_js_object("DATA", html)
-    embedded_margins = parse_js_object("MARGES_GZ", html)
+    published, published_margins = load_published_reference(ROOT / "data.json")
 
     observations = []
     for year in (2025, 2026):
@@ -90,7 +94,7 @@ def main() -> None:
             bdr_scope=scope,
             granularity="daily",
         )
-        compare(f"{label} daily", daily, embedded[key][ref]["daily"][group], DAILY_START)
+        compare(f"{label} daily", daily, published[key][ref]["daily"][group], DAILY_START)
         weekly = build_gap_series(
             state,
             corsica_fuel=corsica_fuel,
@@ -98,7 +102,7 @@ def main() -> None:
             bdr_scope=scope,
             granularity="weekly",
         )
-        compare(f"{label} weekly", weekly, embedded[key][ref]["weekly"][group], WEEKLY_START)
+        compare(f"{label} weekly", weekly, published[key][ref]["weekly"][group], WEEKLY_START)
 
     print("Published 2026 price regression: PASS")
 
@@ -111,9 +115,9 @@ def main() -> None:
     margin_state = state[state["date"] >= pd.Timestamp("2026-01-01")].copy()
 
     margin_all = build_margin_series(margin_state, rot_daily, bdr_scope="all")
-    compare("Gazole margin / toutes BDR", margin_all, embedded_margins["all"], WEEKLY_START)
+    compare("Gazole margin / toutes BDR", margin_all, published_margins["all"], WEEKLY_START)
     margin_network = build_margin_series(margin_state, rot_daily, bdr_scope="network")
-    compare("Gazole margin / réseau BDR", margin_network, embedded_margins["reseau"], WEEKLY_START)
+    compare("Gazole margin / réseau BDR", margin_network, published_margins["reseau"], WEEKLY_START)
     print("Published 2026 margin regression: PASS")
 
 
