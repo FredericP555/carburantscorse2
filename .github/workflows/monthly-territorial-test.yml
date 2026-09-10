@@ -6,6 +6,9 @@ on:
       - add-corse-station-geography-2026
     paths:
       - .github/workflows/monthly-territorial-test.yml
+      - scripts/build_monthly_territorial.py
+      - scripts/audit_monthly_territorial.py
+      - config/corse_station_geography_2026.csv
 
 permissions:
   contents: write
@@ -62,11 +65,18 @@ jobs:
           print('\n'.join(lines))
           PY
 
+      - name: Audit station freshness and robust within-EPCI spreads
+        run: PYTHONPATH=. python scripts/audit_monthly_territorial.py --month 2026-08
+
       - name: Commit test outputs on feature branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f outputs/monthly-territories-2026-08.json outputs/monthly-territories-2026-08-summary.md
+          git add -f \
+            outputs/monthly-territories-2026-08.json \
+            outputs/monthly-territories-2026-08-summary.md \
+            outputs/monthly-territories-2026-08-audit.json \
+            outputs/monthly-territories-2026-08-audit.md
           git diff --cached --quiet && exit 0
           git commit -m "Add August 2026 territorial test outputs"
           git push origin HEAD:add-corse-station-geography-2026
