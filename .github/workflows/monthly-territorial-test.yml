@@ -69,7 +69,7 @@ jobs:
       - name: Install current C2 dependencies
         run: python -m pip install --disable-pip-version-check -r requirements.lock.txt
 
-      - name: Merge current Corsica station geography additions for test
+      - name: Prepare complete Corsica station geography for test
         run: |
           python - <<'PY'
           import pandas as pd
@@ -77,15 +77,18 @@ jobs:
           base = Path('config/corse_station_geography_2026.csv')
           additions = Path('config/corse_station_geography_2026_additions.csv')
           a = pd.read_csv(base, dtype=str)
-          b = pd.read_csv(additions, dtype=str)
-          overlap = sorted(set(a.station_id) & set(b.station_id))
-          if overlap:
-              raise SystemExit(f'Geography additions already present in base: {overlap}')
-          merged = pd.concat([a, b], ignore_index=True).sort_values('station_id')
-          if merged.station_id.duplicated().any():
-              raise SystemExit('Duplicate station_id after geography merge')
-          merged.to_csv(base, index=False)
-          print(f'Runtime geography: {len(merged)} stations, {merged.epci_siren.nunique()} EPCI')
+          if additions.exists():
+              b = pd.read_csv(additions, dtype=str)
+              overlap = sorted(set(a.station_id) & set(b.station_id))
+              if overlap:
+                  raise SystemExit(f'Geography additions already present in base: {overlap}')
+              a = pd.concat([a, b], ignore_index=True).sort_values('station_id')
+              a.to_csv(base, index=False)
+          if a.station_id.duplicated().any():
+              raise SystemExit('Duplicate station_id in geography')
+          if a.epci_siren.nunique() != 19:
+              raise SystemExit(f'Expected 19 EPCI, got {a.epci_siren.nunique()}')
+          print(f'Runtime geography: {len(a)} stations, {a.epci_siren.nunique()} EPCI')
           PY
 
       - name: Build August 2026 with the C2 V2 engine and C2-pinned C1 release
@@ -186,12 +189,22 @@ jobs:
           print('\n'.join(lines))
           PY
 
-      - name: Commit only the isolated August test outputs
+      - name: Consolidate verified geography additions on feature branch
+        run: |
+          if [ -f config/corse_station_geography_2026_additions.csv ]; then
+            rm config/corse_station_geography_2026_additions.csv
+            echo "Verified additions are now part of the 126-row runtime geography and will be committed into the base registry."
+          else
+            echo "No separate geography additions remain."
+          fi
+
+      - name: Commit only the isolated August test outputs and feature geography
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm -f outputs/monthly-territories-2026-08-audit.json outputs/monthly-territories-2026-08-audit.md 2>/dev/null || true
           git add -f \
+            config/corse_station_geography_2026.csv \
             outputs/monthly-territories-2026-08.json \
             outputs/monthly-territories-2026-08-summary.md \
             outputs/monthly-widget-browser-smoke-2026-08.json \
@@ -199,6 +212,7 @@ jobs:
             outputs/calvi-balagne-sp95-2026-08-audit.md \
             outputs/monthly-territorial-coverage-2026-08-audit.json \
             outputs/monthly-territorial-coverage-2026-08-audit.md
+          git add -u config/corse_station_geography_2026_additions.csv 2>/dev/null || true
           git diff --cached --quiet && exit 0
-          git commit -m "Browser-test August monthly widget on desktop and mobile"
+          git commit -m "Consolidate 126-station geography and browser-test August widget"
           git push origin HEAD:add-corse-station-geography-2026
