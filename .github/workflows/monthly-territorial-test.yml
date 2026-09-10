@@ -9,6 +9,8 @@ on:
       - scripts/build_monthly_territorial.py
       - scripts/audit_epci_monthly.py
       - scripts/audit_monthly_territorial_coverage.py
+      - scripts/validate_monthly_widget_contract.py
+      - widgets/bilan-territorial/index.html
       - config/corse_station_geography_2026.csv
       - config/corse_station_geography_2026_additions.csv
 
@@ -94,6 +96,12 @@ jobs:
           --c2-data /tmp/c2-main-data.json
           --output outputs/monthly-territories-2026-08.json
 
+      - name: Validate widget/data contract
+        run: >-
+          PYTHONPATH=. python scripts/validate_monthly_widget_contract.py
+          --data outputs/monthly-territories-2026-08.json
+          --widget widgets/bilan-territorial/index.html
+
       - name: Audit Calvi Balagne SP95 station by station
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -145,7 +153,7 @@ jobs:
               c = data['corse_vs_bdr'][fuel][scope]
               lines.append(f"Corse/BdR {scope} : {c['gap_ht_cpl']:+.2f} c/L HT ; {c['gap_ttc_cpl']:+.2f} c/L TTC ; jours valides {c['valid_days']}.")
             lines.append('')
-            lines.append('| EPCI | Prix moyen | vs Corse | Dispersion moyennes stations | Stations | Couverture | Classable |')
+            lines.append('| EPCI | Prix moyen | vs Corse | Dispersion moyennes stations | Stations | Couverture temporelle échantillon | Classable |')
             lines.append('|---|---:|---:|---:|---:|---:|:---:|')
             for r in sorted(fr, key=lambda x: x['epci_nom']):
               lines.append(f"| {r['epci_nom']} | {r['mean_eur_l']:.4f} | {r['vs_corse_cpl']:+.2f} c/L | {r['station_mean_spread_cpl']:.2f} c/L | {r['n_stations']} | {100*r['coverage_ratio']:.1f} % | {'oui' if r['rankable'] else 'non'} |")
@@ -170,5 +178,5 @@ jobs:
             outputs/monthly-territorial-coverage-2026-08-audit.json \
             outputs/monthly-territorial-coverage-2026-08-audit.md
           git diff --cached --quiet && exit 0
-          git commit -m "Recheck August coverage with 126-station geography"
+          git commit -m "Validate August monthly widget against C2 V2 data"
           git push origin HEAD:add-corse-station-geography-2026
