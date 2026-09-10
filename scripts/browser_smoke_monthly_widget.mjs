@@ -23,7 +23,13 @@ check(url,'--url is required');
 
 const executablePath=browserPath();
 const browser=await chromium.launch({headless:true, executablePath, args:['--no-sandbox','--disable-dev-shm-usage']});
-const report={schema:'a4c-monthly-widget-browser-smoke-v1',url,browser:await browser.version(),executablePath,tests:{}};
+const report={schema:'a4c-monthly-widget-browser-smoke-v2',url,browser:await browser.version(),executablePath,tests:{}};
+
+async function noPageOverflow(page, label){
+  const x=await page.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,innerWidth:window.innerWidth}));
+  check(x.scrollWidth<=x.innerWidth+1,`${label}: page has horizontal overflow (${x.scrollWidth}>${x.innerWidth})`);
+  return x;
+}
 
 async function baseChecks(page, mode){
   await page.goto(url,{waitUntil:'networkidle'});
@@ -31,9 +37,31 @@ async function baseChecks(page, mode){
   check((await page.locator('#error').innerText()).trim()==='',`${mode}: error panel is not empty`);
   check((await page.locator('#period').innerText()).toLowerCase().includes('août 2026'),`${mode}: period does not identify August 2026`);
   check(await page.locator('#epci option').count()===19,`${mode}: expected 19 EPCI for Gazole`);
-  const overflow=await page.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,innerWidth:window.innerWidth}));
-  check(overflow.scrollWidth<=overflow.innerWidth+1,`${mode}: page has horizontal overflow (${overflow.scrollWidth}>${overflow.innerWidth})`);
-  return overflow;
+  return await noPageOverflow(page,mode);
+}
+
+async function exerciseAllEpci(page, mode){
+  const out={};
+  for(const fuelName of ['Gazole','SP95']){
+    await page.click(`[data-fuel="${fuelName}"]`);
+    const options=await page.locator('#epci option').evaluateAll(els=>els.map(e=>({value:e.value,label:e.textContent||''})));
+    check(options.length===19,`${mode}/${fuelName}: expected 19 EPCI options`);
+    let limited=0;
+    for(const option of options){
+      await page.selectOption('#epci',option.value);
+      const texts=await Promise.all(['mean','change','vsCorse','range','sample'].map(id=>page.locator(`#${id}`).innerText()));
+      check(!texts[0].includes('—') && !texts[0].includes('NaN'),`${mode}/${fuelName}/${option.label}: invalid monthly mean`);
+      check(!texts[1].includes('NaN') && !texts[2].includes('NaN') && !texts[3].includes('NaN'),`${mode}/${fuelName}/${option.label}: NaN in indicator`);
+      check(texts[4].includes('station-jours') && texts[4].includes('couverture temporelle de l’échantillon'),`${mode}/${fuelName}/${option.label}: sample note incomplete`);
+      check(await page.locator('#localities tr').count()>0,`${mode}/${fuelName}/${option.label}: locality table is empty`);
+      if(await page.locator('#limited').isVisible()) limited++;
+      await noPageOverflow(page,`${mode}/${fuelName}/${option.label}`);
+    }
+    const expectedLimited=fuelName==='Gazole'?2:3;
+    check(limited===expectedLimited,`${mode}/${fuelName}: expected ${expectedLimited} hors-classement EPCI, got ${limited}`);
+    out[fuelName]={epciTested:options.length,horsClassement:limited};
+  }
+  return out;
 }
 
 {
@@ -49,8 +77,9 @@ async function baseChecks(page, mode){
   check(layout.cards===4,'desktop: cards are not in four columns');
   check(layout.controls===2,'desktop: controls are not in two columns');
 
+  const exhaustive=await exerciseAllEpci(page,'desktop');
+
   await page.click('[data-fuel="SP95"]');
-  check(await page.locator('#epci option').count()===19,'desktop: expected 19 EPCI for SP95');
   check(await page.locator('[data-fuel="SP95"]').getAttribute('aria-pressed')==='true','desktop: SP95 aria-pressed not updated');
   await page.selectOption('#epci','242020105');
   check(await page.locator('#limited').isVisible(),'desktop: Calvi Balagne SP95 limited notice is not visible');
@@ -76,7 +105,7 @@ async function baseChecks(page, mode){
   const calcAll=await page.locator('#calcResult').innerText();
   check(calcAll!==calcNetwork,'desktop: BDR scope change did not change calculator result');
 
-  report.tests.desktop={ok:true,overflow,layout,calviSample,calviRange,compare,calcNetwork,calcAll};
+  report.tests.desktop={ok:true,overflow,layout,exhaustive,calviSample,calviRange,compare,calcNetwork,calcAll};
   await context.close();
 }
 
@@ -96,22 +125,30 @@ async function baseChecks(page, mode){
   check(layout.cards===1,'mobile: cards are not stacked in one column');
   check(layout.controls===1,'mobile: controls are not stacked in one column');
   check(layout.wrapWidth<=390,'mobile: wrapper exceeds viewport');
-  check(layout.fuelButtonHeights.every(h=>h>=40),'mobile: fuel buttons are too short for touch');
+  check(layout.fuelButtonHeights.every(h=>h>=44),'mobile: fuel buttons are below 44px touch target');
 
   await page.click('[data-fuel="SP95"]');
   await page.selectOption('#epci','242020105');
   check(await page.locator('#limited').isVisible(),'mobile: Calvi Balagne SP95 limited notice is not visible');
   const mobileSample=await page.locator('#sample').innerText();
   check(mobileSample.includes('62,9 %'),'mobile: Calvi temporal coverage missing');
-  const after=await page.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,innerWidth:window.innerWidth}));
-  check(after.scrollWidth<=after.innerWidth+1,`mobile: interaction introduced horizontal overflow (${after.scrollWidth}>${after.innerWidth})`);
 
-  report.tests.mobile={ok:true,overflow,layout,mobileSample,after};
+  await page.selectOption('#compareA','200038958');
+  await page.selectOption('#compareB','200073104');
+  const longCompare=await page.locator('#compareResult').innerText();
+  check(longCompare.includes("CC de la Pieve de l'Ornano et du Taravo"),'mobile: long EPCI comparison did not render');
+  await page.fill('#litres','70');
+  const mobileCalc=await page.locator('#calcResult').innerText();
+  check(mobileCalc.includes('70 L') && !mobileCalc.includes('NaN'),'mobile: calculator did not render cleanly');
+  const after=await noPageOverflow(page,'mobile after long labels and calculator');
+
+  report.tests.mobile={ok:true,overflow,layout,mobileSample,longCompare,mobileCalc,after};
   await context.close();
 }
 
 await browser.close();
 report.ok=true;
-fs.mkdirSync(new URL('.',`file://${process.cwd()}/${output}`).pathname,{recursive:true});
+const parent=output.includes('/')?output.slice(0,output.lastIndexOf('/')):'.';
+fs.mkdirSync(parent,{recursive:true});
 fs.writeFileSync(output,JSON.stringify(report,null,2)+'\n','utf8');
 console.log(JSON.stringify(report,null,2));
