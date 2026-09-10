@@ -9,16 +9,13 @@ modify build_monthly_territorial.py, data.json, or WordPress.
 from __future__ import annotations
 
 import argparse
-from collections import Counter
 from datetime import date
 import json
 from pathlib import Path
-from unittest.mock import patch
 
 import pandas as pd
 
 from a4c_common.shared_release import download_shared_rotterdam_assets, load_shared_observations
-from carburantscorse2 import reliability_policy_v2
 from carburantscorse2.publication import build_publication_state, load_bdr_categories
 from scripts.build_monthly_territorial import load_c2_reference, load_geography, month_bounds
 from scripts.build_v2_production_candidate import (
@@ -133,9 +130,26 @@ def main() -> None:
         geo[["station_id", "epci_siren", "epci_nom", "commune", "localite"]],
         on="station_id", how="left", validate="many_to_one"
     )
-    if month_state["epci_siren"].isna().any():
-        missing = sorted(month_state.loc[month_state["epci_siren"].isna(), "station_id"].astype(str).unique())
-        raise RuntimeError(f"Missing geography for station(s): {missing}")
+
+    missing_geography: list[dict] = []
+    missing_mask = month_state["epci_siren"].isna()
+    if missing_mask.any():
+        missing_state = month_state[missing_mask].copy()
+        for sid, group in missing_state.groupby("station_id", sort=True):
+            sample = group.sort_values("date").iloc[-1]
+            missing_geography.append({
+                "station_id": str(sid),
+                "cp": str(sample.get("cp", "")),
+                "city": str(sample.get("city", "")),
+                "address": str(sample.get("address", "")),
+                "latitude": None if pd.isna(sample.get("latitude")) else float(sample.get("latitude")),
+                "longitude": None if pd.isna(sample.get("longitude")) else float(sample.get("longitude")),
+                "fuels_in_month_state": sorted(group["fuel"].astype(str).unique().tolist()),
+                "eligible_fuels_in_month": sorted(group.loc[group["eligible_publication"], "fuel"].astype(str).unique().tolist()),
+            })
+        print("WARNING: geography registry is missing current Corsica station(s):")
+        print(json.dumps(missing_geography, ensure_ascii=False, indent=2))
+        month_state = month_state[~missing_mask].copy()
 
     days_total = int((end - start).days + 1)
     rows = []
@@ -150,12 +164,6 @@ def main() -> None:
             retained_days = int(len(eligible))
             possible_days = len(known_ids) * days_total
             contributor_possible = len(contributing_ids) * days_total
-            reason_counts = Counter()
-            for row in state.itertuples(index=False):
-                if bool(row.eligible_publication):
-                    continue
-                # Re-run just this station-day through the V2 evaluator is unnecessary here;
-                # the detailed Calvi audit already verifies reasons. This audit focuses on coverage.
             rows.append({
                 "epci_siren": str(epci_siren),
                 "epci_nom": epci_nom,
@@ -186,6 +194,7 @@ def main() -> None:
             "definition": "known_fuel_stations = geography-registry stations with at least one declaration of that fuel on or before month end; effective coverage = retained C2 V2 station-days / (known fuel stations × calendar days)",
             "warning": "Diagnostic only. These wider-coverage metrics do not yet change rankability thresholds.",
             "engine_r2_unavailable": engine.get("r2_unavailable"),
+            "missing_geography": missing_geography,
         },
         "epci": rows,
     }
@@ -197,6 +206,12 @@ def main() -> None:
         f"# Audit de couverture territoriale — {args.month}",
         "",
         "Diagnostic uniquement : aucun seuil de classement n'est modifié.",
+    ]
+    if missing_geography:
+        lines += ["", "## Stations à rattacher au registre géographique", ""]
+        for item in missing_geography:
+            lines.append(f"- {item['station_id']} — {item['city']} — {item['address']} — CP {item['cp']}")
+    lines += [
         "",
         "| EPCI | Carburant | Stations connues | Stations contributrices | Couverture stations | Couverture effective | Couverture temporelle contributrices |",
         "|---|---|---:|---:|---:|---:|---:|",
