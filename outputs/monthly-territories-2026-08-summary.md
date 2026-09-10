@@ -11,7 +11,7 @@ Plus bas : CC de Fium'Orbu Castellu 2.2116 €/L ; plus haut : CC du Centre Cors
 Corse/BdR all : +12.47 c/L HT ; +1.09 c/L TTC ; jours valides 31.
 Corse/BdR network : +10.39 c/L HT ; -1.40 c/L TTC ; jours valides 31.
 
-| EPCI | Prix moyen | vs Corse | Dispersion moyennes stations | Stations | Couverture | Classable |
+| EPCI | Prix moyen | vs Corse | Dispersion moyennes stations | Stations | Couverture temporelle échantillon | Classable |
 |---|---:|---:|---:|---:|---:|:---:|
 | CA de Bastia | 2.2474 | +0.84 c/L | 1.29 c/L | 14 | 100.0 % | oui |
 | CA du Pays Ajaccien | 2.2142 | -2.48 c/L | 15.33 c/L | 19 | 100.0 % | oui |
@@ -39,7 +39,7 @@ Plus bas : CC de Fium'Orbu Castellu 1.9904 €/L ; plus haut : CC de la Castagni
 Corse/BdR all : +6.10 c/L HT ; -5.18 c/L TTC ; jours valides 31.
 Corse/BdR network : +4.55 c/L HT ; -7.04 c/L TTC ; jours valides 31.
 
-| EPCI | Prix moyen | vs Corse | Dispersion moyennes stations | Stations | Couverture | Classable |
+| EPCI | Prix moyen | vs Corse | Dispersion moyennes stations | Stations | Couverture temporelle échantillon | Classable |
 |---|---:|---:|---:|---:|---:|:---:|
 | CA de Bastia | 2.0416 | +2.35 c/L | 10.00 c/L | 11 | 92.1 % | oui |
 | CA du Pays Ajaccien | 1.9953 | -2.27 c/L | 19.03 c/L | 19 | 95.1 % | oui |
