@@ -10,6 +10,7 @@ on:
       - scripts/audit_epci_monthly.py
       - scripts/audit_monthly_territorial_coverage.py
       - config/corse_station_geography_2026.csv
+      - config/corse_station_geography_2026_additions.csv
 
 permissions:
   contents: write
@@ -64,6 +65,25 @@ jobs:
 
       - name: Install current C2 dependencies
         run: python -m pip install --disable-pip-version-check -r requirements.lock.txt
+
+      - name: Merge current Corsica station geography additions for test
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          from pathlib import Path
+          base = Path('config/corse_station_geography_2026.csv')
+          additions = Path('config/corse_station_geography_2026_additions.csv')
+          a = pd.read_csv(base, dtype=str)
+          b = pd.read_csv(additions, dtype=str)
+          overlap = sorted(set(a.station_id) & set(b.station_id))
+          if overlap:
+              raise SystemExit(f'Geography additions already present in base: {overlap}')
+          merged = pd.concat([a, b], ignore_index=True).sort_values('station_id')
+          if merged.station_id.duplicated().any():
+              raise SystemExit('Duplicate station_id after geography merge')
+          merged.to_csv(base, index=False)
+          print(f'Runtime geography: {len(merged)} stations, {merged.epci_siren.nunique()} EPCI')
+          PY
 
       - name: Build August 2026 with the C2 V2 engine and C2-pinned C1 release
         env:
@@ -150,5 +170,5 @@ jobs:
             outputs/monthly-territorial-coverage-2026-08-audit.json \
             outputs/monthly-territorial-coverage-2026-08-audit.md
           git diff --cached --quiet && exit 0
-          git commit -m "Audit August territorial coverage before changing thresholds"
+          git commit -m "Recheck August coverage with 126-station geography"
           git push origin HEAD:add-corse-station-geography-2026
