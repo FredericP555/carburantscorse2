@@ -1,0 +1,73 @@
+name: Monthly territorial test
+
+on:
+  push:
+    branches:
+      - add-corse-station-geography-2026
+    paths:
+      - .github/workflows/monthly-territorial-test.yml
+
+permissions:
+  contents: write
+
+jobs:
+  august-2026:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: add-corse-station-geography-2026
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build August 2026 territorial dataset
+        run: python scripts/build_monthly_territorial.py --month 2026-08 --output outputs/monthly-territories-2026-08.json
+
+      - name: Build audit summary
+        run: |
+          python - <<'PY'
+          import json
+          from collections import defaultdict
+          from pathlib import Path
+
+          p = Path('outputs/monthly-territories-2026-08.json')
+          data = json.loads(p.read_text(encoding='utf-8'))
+          rows = data['epci']
+          fuels = sorted({r['fuel'] for r in rows})
+          lines = ['# Contrôle territorial — août 2026', '']
+          lines.append(f"Registre géographique : {data['meta']['geography_rows']} stations ; {data['meta']['epci_count_registry']} EPCI.")
+          lines.append(f"Source officielle disponible jusqu'au : {data['meta']['source_max_date']}.")
+          lines.append('')
+
+          for fuel in fuels:
+              fr = [r for r in rows if r['fuel'] == fuel]
+              rankable = [r for r in fr if r['rankable']]
+              limited = [r for r in fr if not r['rankable']]
+              lines.append(f"## {fuel}")
+              lines.append(f"EPCI présents : {len(fr)} ; classables : {len(rankable)} ; hors classement : {len(limited)}.")
+              lines.append('')
+              lines.append('| EPCI | Stations | Jours couverts | Couverture | Classable |')
+              lines.append('|---|---:|---:|---:|:---:|')
+              for r in sorted(fr, key=lambda x: x['epci_nom']):
+                  lines.append(f"| {r['epci_nom']} | {r['n_stations']} | {r['n_days_covered']} | {100*r['coverage_ratio']:.1f} % | {'oui' if r['rankable'] else 'non'} |")
+              lines.append('')
+
+          Path('outputs/monthly-territories-2026-08-summary.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          print('\n'.join(lines))
+          PY
+
+      - name: Commit test outputs on feature branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add outputs/monthly-territories-2026-08.json outputs/monthly-territories-2026-08-summary.md
+          git diff --cached --quiet && exit 0
+          git commit -m "Add August 2026 territorial test outputs"
+          git push origin HEAD:add-corse-station-geography-2026
