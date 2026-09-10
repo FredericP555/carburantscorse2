@@ -6,6 +6,7 @@ on:
       - add-corse-station-geography-2026
     paths:
       - .github/workflows/monthly-territorial-test.yml
+      - scripts/check_monthly_readiness.py
       - scripts/build_monthly_territorial.py
       - scripts/audit_epci_monthly.py
       - scripts/audit_monthly_territorial_coverage.py
@@ -89,6 +90,54 @@ jobs:
           if a.epci_siren.nunique() != 19:
               raise SystemExit(f'Expected 19 EPCI, got {a.epci_siren.nunique()}')
           print(f'Runtime geography: {len(a)} stations, {a.epci_siren.nunique()} EPCI')
+          PY
+
+      - name: Check August monthly readiness after successful C2 state
+        run: >-
+          PYTHONPATH=. python scripts/check_monthly_readiness.py
+          --month 2026-08
+          --as-of 2026-09-11
+          --c2-data /tmp/c2-main-data.json
+          --output outputs/monthly-readiness-2026-08.json
+          --fail-if-not-ready
+
+      - name: Verify readiness guard blocks incomplete, stale and finalized cases
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/readiness
+          python scripts/check_monthly_readiness.py \
+            --month 2026-08 --as-of 2026-08-31 \
+            --c2-data /tmp/c2-main-data.json \
+            --output /tmp/readiness/incomplete.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          src=json.loads(Path('/tmp/c2-main-data.json').read_text())
+          meta=src.setdefault('meta',{})
+          meta['daily_target_end']='2026-08-31'
+          meta['official_shared_source_max_date']='2026-08-31'
+          Path('/tmp/readiness/stale-c2.json').write_text(json.dumps(src), encoding='utf-8')
+          PY
+          python scripts/check_monthly_readiness.py \
+            --month 2026-08 --as-of 2026-09-11 \
+            --c2-data /tmp/readiness/stale-c2.json \
+            --output /tmp/readiness/stale.json
+          mkdir -p /tmp/readiness/receipts
+          printf '{"month":"2026-08"}\n' >/tmp/readiness/receipts/2026-08.json
+          python scripts/check_monthly_readiness.py \
+            --month 2026-08 --as-of 2026-09-11 \
+            --c2-data /tmp/c2-main-data.json \
+            --receipt-dir /tmp/readiness/receipts \
+            --output /tmp/readiness/finalized.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          for name in ('incomplete','stale','finalized'):
+              p=Path('/tmp/readiness')/f'{name}.json'
+              d=json.loads(p.read_text())
+              if d['ready']:
+                  raise SystemExit(f'{name} scenario was incorrectly marked ready')
+              print(name, 'correctly blocked:', [c['key'] for c in d['checks'] if not c['ok']])
           PY
 
       - name: Build August 2026 with the C2 V2 engine and C2-pinned C1 release
@@ -189,22 +238,13 @@ jobs:
           print('\n'.join(lines))
           PY
 
-      - name: Consolidate verified geography additions on feature branch
-        run: |
-          if [ -f config/corse_station_geography_2026_additions.csv ]; then
-            rm config/corse_station_geography_2026_additions.csv
-            echo "Verified additions are now part of the 126-row runtime geography and will be committed into the base registry."
-          else
-            echo "No separate geography additions remain."
-          fi
-
       - name: Commit only the isolated August test outputs and feature geography
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm -f outputs/monthly-territories-2026-08-audit.json outputs/monthly-territories-2026-08-audit.md 2>/dev/null || true
           git add -f \
             config/corse_station_geography_2026.csv \
+            outputs/monthly-readiness-2026-08.json \
             outputs/monthly-territories-2026-08.json \
             outputs/monthly-territories-2026-08-summary.md \
             outputs/monthly-widget-browser-smoke-2026-08.json \
@@ -212,7 +252,6 @@ jobs:
             outputs/calvi-balagne-sp95-2026-08-audit.md \
             outputs/monthly-territorial-coverage-2026-08-audit.json \
             outputs/monthly-territorial-coverage-2026-08-audit.md
-          git add -u config/corse_station_geography_2026_additions.csv 2>/dev/null || true
           git diff --cached --quiet && exit 0
-          git commit -m "Consolidate 126-station geography and browser-test August widget"
+          git commit -m "Validate August readiness guard and monthly prototype"
           git push origin HEAD:add-corse-station-geography-2026
