@@ -28,13 +28,12 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Build August 2026 territorial dataset
-        run: python scripts/build_monthly_territorial.py --month 2026-08 --output outputs/monthly-territories-2026-08.json
+        run: PYTHONPATH=. python scripts/build_monthly_territorial.py --month 2026-08 --output outputs/monthly-territories-2026-08.json
 
       - name: Build audit summary
         run: |
           python - <<'PY'
           import json
-          from collections import defaultdict
           from pathlib import Path
 
           p = Path('outputs/monthly-territories-2026-08.json')
