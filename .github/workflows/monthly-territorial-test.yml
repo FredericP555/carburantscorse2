@@ -8,6 +8,7 @@ on:
       - .github/workflows/monthly-territorial-test.yml
       - scripts/build_monthly_territorial.py
       - scripts/audit_epci_monthly.py
+      - scripts/audit_monthly_territorial_coverage.py
       - config/corse_station_geography_2026.csv
 
 permissions:
@@ -85,6 +86,16 @@ jobs:
           --output outputs/calvi-balagne-sp95-2026-08-audit.json
           --markdown outputs/calvi-balagne-sp95-2026-08-audit.md
 
+      - name: Audit territorial coverage across all EPCI
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          PYTHONPATH=. python scripts/audit_monthly_territorial_coverage.py
+          --month 2026-08
+          --c2-data /tmp/c2-main-data.json
+          --output outputs/monthly-territorial-coverage-2026-08-audit.json
+          --markdown outputs/monthly-territorial-coverage-2026-08-audit.md
+
       - name: Build August conformance summary
         run: |
           python - <<'PY'
@@ -135,7 +146,9 @@ jobs:
             outputs/monthly-territories-2026-08.json \
             outputs/monthly-territories-2026-08-summary.md \
             outputs/calvi-balagne-sp95-2026-08-audit.json \
-            outputs/calvi-balagne-sp95-2026-08-audit.md
+            outputs/calvi-balagne-sp95-2026-08-audit.md \
+            outputs/monthly-territorial-coverage-2026-08-audit.json \
+            outputs/monthly-territorial-coverage-2026-08-audit.md
           git diff --cached --quiet && exit 0
-          git commit -m "Audit Calvi Balagne SP95 for August 2026"
+          git commit -m "Audit August territorial coverage before changing thresholds"
           git push origin HEAD:add-corse-station-geography-2026
