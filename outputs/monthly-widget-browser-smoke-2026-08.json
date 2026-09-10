@@ -1,0 +1,51 @@
+{
+  "schema": "a4c-monthly-widget-browser-smoke-v1",
+  "url": "http://127.0.0.1:8765/widgets/bilan-territorial/index.html?data=/outputs/monthly-territories-2026-08.json",
+  "browser": "152.0.7977.82",
+  "executablePath": "/usr/bin/google-chrome",
+  "tests": {
+    "desktop": {
+      "ok": true,
+      "overflow": {
+        "scrollWidth": 1365,
+        "innerWidth": 1365
+      },
+      "layout": {
+        "cards": 4,
+        "controls": 2,
+        "cardWidth": 244.5,
+        "wrapWidth": 1050
+      },
+      "calviSample": "2 stations contributrices • 2 communes • 39 station-jours • couverture temporelle de l’échantillon : 62,9 %",
+      "calviRange": "1,999 → 1,999 €/L",
+      "compare": "CA de Bastia : 2,042 €/L • CA du Pays Ajaccien : 1,995 €/L • écart A − B : +4,63 c/L",
+      "calcNetwork": "Volume estimé : 70 L • écart TTC : -7,04 c/L, soit 4,93 € de coût moyen inférieur en Corse sur ce volume • écart HT analytique : +4,55 c/L.",
+      "calcAll": "Volume estimé : 70 L • écart TTC : -5,18 c/L, soit 3,63 € de coût moyen inférieur en Corse sur ce volume • écart HT analytique : +6,1 c/L."
+    },
+    "mobile": {
+      "ok": true,
+      "overflow": {
+        "scrollWidth": 390,
+        "innerWidth": 390
+      },
+      "layout": {
+        "cards": 1,
+        "controls": 1,
+        "bodyWidth": 390,
+        "wrapWidth": 374,
+        "fuelButtonHeights": [
+          44,
+          44
+        ],
+        "tableViewportWidth": 344,
+        "tableScrollWidth": 514
+      },
+      "mobileSample": "2 stations contributrices • 2 communes • 39 station-jours • couverture temporelle de l’échantillon : 62,9 %",
+      "after": {
+        "scrollWidth": 390,
+        "innerWidth": 390
+      }
+    }
+  },
+  "ok": true
+}
