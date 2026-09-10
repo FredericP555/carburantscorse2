@@ -7,7 +7,6 @@ on:
     paths:
       - .github/workflows/monthly-territorial-test.yml
       - scripts/build_monthly_territorial.py
-      - scripts/audit_monthly_territorial.py
       - config/corse_station_geography_2026.csv
 
 permissions:
@@ -15,68 +14,111 @@ permissions:
 
 jobs:
   august-2026:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - name: Checkout branch
+      - name: Checkout feature branch
         uses: actions/checkout@v4
         with:
           ref: add-corse-station-geography-2026
+          fetch-depth: 0
+
+      - name: Overlay current C2 production engine for the test only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          echo "C2_MAIN_SHA=$(git rev-parse origin/main)" >> "$GITHUB_ENV"
+          files=(
+            a4c_common/corse_brand.py
+            a4c_common/price_math.py
+            a4c_common/shared_release.py
+            a4c_common/source_freshness.py
+            carburantscorse2/margins.py
+            carburantscorse2/publication.py
+            carburantscorse2/publication_margin.py
+            carburantscorse2/r2_guard_v2.py
+            carburantscorse2/reliability_policy_v2.py
+            carburantscorse2/rotterdam_calibration_v2.py
+            carburantscorse2/shield_phase_v2.py
+            scripts/build_v2_production_candidate.py
+            scripts/resolve_new_bdr_station_brands.py
+            scripts/v2_event_guards.py
+            config/bdr_categories_published_2026-06-06.csv
+            config/bdr_station_brand_corrections.csv
+            config/bdr_station_brands.json
+            requirements.lock.txt
+          )
+          for p in "${files[@]}"; do
+            mkdir -p "$(dirname "$p")"
+            git show "origin/main:$p" > "$p"
+          done
+          git show origin/main:data.json > /tmp/c2-main-data.json
+          echo "Runtime engine pinned to C2 main $(git rev-parse origin/main)"
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.12.14'
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Install current C2 dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements.lock.txt
 
-      - name: Build August 2026 territorial dataset
-        run: PYTHONPATH=. python scripts/build_monthly_territorial.py --month 2026-08 --output outputs/monthly-territories-2026-08.json
+      - name: Build August 2026 with the C2 V2 engine and C2-pinned C1 release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          PYTHONPATH=. python scripts/build_monthly_territorial.py
+          --month 2026-08
+          --c2-data /tmp/c2-main-data.json
+          --output outputs/monthly-territories-2026-08.json
 
-      - name: Build audit summary
+      - name: Build August conformance summary
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
 
-          p = Path('outputs/monthly-territories-2026-08.json')
-          data = json.loads(p.read_text(encoding='utf-8'))
+          data = json.loads(Path('outputs/monthly-territories-2026-08.json').read_text(encoding='utf-8'))
           rows = data['epci']
-          fuels = sorted({r['fuel'] for r in rows})
-          lines = ['# Contrôle territorial — août 2026', '']
-          lines.append(f"Registre géographique : {data['meta']['geography_rows']} stations ; {data['meta']['epci_count_registry']} EPCI.")
-          lines.append(f"Source officielle disponible jusqu'au : {data['meta']['source_max_date']}.")
+          meta = data['meta']
+          lines = ['# Contrôle territorial C2 V2 — août 2026', '']
+          lines.append(f"Moteur : {meta['c2_engine']} ; C2 main : {meta['c2_main_sha_runtime']}.")
+          lines.append(f"Release C1 épinglée par C2 : {meta['c1_release_tag']}.")
+          lines.append(f"Source officielle disponible jusqu'au : {meta['source_max_date']}.")
+          lines.append(f"Registre géographique : {meta['geography_rows']} stations ; {meta['epci_count_registry']} EPCI.")
           lines.append('')
 
-          for fuel in fuels:
-              fr = [r for r in rows if r['fuel'] == fuel]
-              rankable = [r for r in fr if r['rankable']]
-              limited = [r for r in fr if not r['rankable']]
-              lines.append(f"## {fuel}")
-              lines.append(f"EPCI présents : {len(fr)} ; classables : {len(rankable)} ; hors classement : {len(limited)}.")
-              lines.append('')
-              lines.append('| EPCI | Stations | Jours couverts | Couverture | Classable |')
-              lines.append('|---|---:|---:|---:|:---:|')
-              for r in sorted(fr, key=lambda x: x['epci_nom']):
-                  lines.append(f"| {r['epci_nom']} | {r['n_stations']} | {r['n_days_covered']} | {100*r['coverage_ratio']:.1f} % | {'oui' if r['rankable'] else 'non'} |")
-              lines.append('')
+          for fuel in ('Gazole', 'SP95'):
+            fr = [r for r in rows if r['fuel'] == fuel]
+            rankable = [r for r in fr if r['rankable']]
+            limited = [r for r in fr if not r['rankable']]
+            ranked = sorted(rankable, key=lambda r: r['mean_eur_l'])
+            lines += [f"## {fuel}", f"EPCI présents : {len(fr)} ; classables : {len(rankable)} ; hors classement : {len(limited)}."]
+            if ranked:
+              lo, hi = ranked[0], ranked[-1]
+              lines.append(f"Plus bas : {lo['epci_nom']} {lo['mean_eur_l']:.4f} €/L ; plus haut : {hi['epci_nom']} {hi['mean_eur_l']:.4f} €/L ; écart {(hi['mean_eur_l']-lo['mean_eur_l'])*100:.2f} c/L.")
+            for scope in ('all', 'network'):
+              c = data['corse_vs_bdr'][fuel][scope]
+              lines.append(f"Corse/BdR {scope} : {c['gap_ht_cpl']:+.2f} c/L HT ; {c['gap_ttc_cpl']:+.2f} c/L TTC ; jours valides {c['valid_days']}.")
+            lines.append('')
+            lines.append('| EPCI | Prix moyen | vs Corse | Dispersion moyennes stations | Stations | Couverture | Classable |')
+            lines.append('|---|---:|---:|---:|---:|---:|:---:|')
+            for r in sorted(fr, key=lambda x: x['epci_nom']):
+              lines.append(f"| {r['epci_nom']} | {r['mean_eur_l']:.4f} | {r['vs_corse_cpl']:+.2f} c/L | {r['station_mean_spread_cpl']:.2f} c/L | {r['n_stations']} | {100*r['coverage_ratio']:.1f} % | {'oui' if r['rankable'] else 'non'} |")
+            lines.append('')
 
+          audit = data.get('internal_audit', {}).get('engine', {})
+          lines += ['## Contrôle moteur', f"Station-jours évalués par la politique V2 : {audit.get('evaluate_station_days')}.", f"R2 indisponible : {audit.get('r2_unavailable')}."]
           Path('outputs/monthly-territories-2026-08-summary.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
           print('\n'.join(lines))
           PY
 
-      - name: Audit station freshness and robust within-EPCI spreads
-        run: PYTHONPATH=. python scripts/audit_monthly_territorial.py --month 2026-08
-
-      - name: Commit test outputs on feature branch
+      - name: Commit only the isolated August test outputs
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f \
-            outputs/monthly-territories-2026-08.json \
-            outputs/monthly-territories-2026-08-summary.md \
-            outputs/monthly-territories-2026-08-audit.json \
-            outputs/monthly-territories-2026-08-audit.md
+          git rm -f outputs/monthly-territories-2026-08-audit.json outputs/monthly-territories-2026-08-audit.md 2>/dev/null || true
+          git add -f outputs/monthly-territories-2026-08.json outputs/monthly-territories-2026-08-summary.md
           git diff --cached --quiet && exit 0
-          git commit -m "Add August 2026 territorial test outputs"
+          git commit -m "Regenerate August territorial test with C2 V2 engine"
           git push origin HEAD:add-corse-station-geography-2026
