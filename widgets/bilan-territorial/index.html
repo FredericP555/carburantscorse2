@@ -14,12 +14,12 @@
   label{font-size:.84rem;font-weight:700;color:#344054;display:block;margin-bottom:6px}
   select,input{width:100%;padding:10px 12px;border:1px solid #cfd4dc;border-radius:10px;background:#fff;font-size:1rem}
   .fuel-buttons{display:flex;gap:8px}.fuel-buttons button{flex:1;padding:10px 12px;border:1px solid #cfd4dc;background:#fff;border-radius:10px;font-weight:700;cursor:pointer}.fuel-buttons button.active{background:#172033;color:#fff;border-color:#172033}
-  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0 10px}.card{border:1px solid #e3e6eb;border-radius:12px;padding:14px;background:#fbfcfd}.card .k{font-size:.78rem;color:#667085}.card .v{font-size:1.35rem;font-weight:800;margin-top:5px}.note{font-size:.84rem;color:#667085;margin:6px 0 18px}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0 10px}.card{border:1px solid #e3e6eb;border-radius:12px;padding:14px;background:#fbfcfd}.card .k{font-size:.78rem;color:#667085}.card .v{font-size:1.35rem;font-weight:800;margin-top:5px}.card .s{font-size:.72rem;color:#667085;margin-top:4px}.note{font-size:.84rem;color:#667085;margin:6px 0 18px}
   .limited{display:none;margin:10px 0;padding:10px 12px;border-radius:10px;background:#fff6e5;border:1px solid #f1cf8a;font-size:.9rem}
   section{border-top:1px solid #eaecf0;padding-top:18px;margin-top:18px}h2{font-size:1.1rem;margin:0 0 12px}
   table{width:100%;border-collapse:collapse;font-size:.9rem}th,td{text-align:left;padding:8px;border-bottom:1px solid #eaecf0}th{color:#667085;font-size:.78rem;text-transform:uppercase;letter-spacing:.02em}
   .compare{display:grid;grid-template-columns:1fr 1fr;gap:12px}.compare-result{margin-top:12px;padding:14px;border-radius:12px;background:#f7f9fc;border:1px solid #e3e6eb;font-weight:650}
-  .calc-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}.calc-result{margin-top:12px;padding:14px;border:1px solid #e3e6eb;border-radius:12px;background:#fbfcfd}.muted{color:#667085;font-size:.82rem}.error{padding:14px;border:1px solid #f1b5b5;background:#fff3f3;border-radius:10px;color:#8c1d1d}
+  .calc-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}.calc-scope{margin:0 0 12px;max-width:420px}.calc-result{margin-top:12px;padding:14px;border:1px solid #e3e6eb;border-radius:12px;background:#fbfcfd}.muted{color:#667085;font-size:.82rem}.error{padding:14px;border:1px solid #f1b5b5;background:#fff3f3;border-radius:10px;color:#8c1d1d}
   @media(max-width:760px){.controls,.compare,.calc-grid{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}}
   @media(max-width:460px){body{padding:8px}.wrap{padding:14px}.cards{grid-template-columns:1fr}}
 </style>
@@ -34,9 +34,9 @@
     <div class="controls">
       <div>
         <label>Carburant</label>
-        <div class="fuel-buttons">
-          <button type="button" data-fuel="Gazole" class="active">Gazole</button>
-          <button type="button" data-fuel="SP95">SP95</button>
+        <div class="fuel-buttons" role="group" aria-label="Choisir le carburant">
+          <button type="button" data-fuel="Gazole" class="active" aria-pressed="true">Gazole</button>
+          <button type="button" data-fuel="SP95" aria-pressed="false">SP95</button>
         </div>
       </div>
       <div>
@@ -45,19 +45,19 @@
       </div>
     </div>
 
-    <div id="limited" class="limited"></div>
+    <div id="limited" class="limited" role="status"></div>
     <div class="cards">
       <div class="card"><div class="k">Prix moyen du mois</div><div class="v" id="mean">—</div></div>
       <div class="card"><div class="k">Évolution vs mois précédent</div><div class="v" id="change">—</div></div>
       <div class="card"><div class="k">Écart à la moyenne Corse</div><div class="v" id="vsCorse">—</div></div>
-      <div class="card"><div class="k">Fourchette observée</div><div class="v" id="range">—</div></div>
+      <div class="card"><div class="k">Écart entre stations du territoire</div><div class="v" id="range">—</div><div class="s">moyennes mensuelles des stations retenues</div></div>
     </div>
     <p class="note" id="sample"></p>
 
     <section>
       <h2>Localités du territoire</h2>
       <div style="overflow:auto"><table>
-        <thead><tr><th>Localité</th><th>Commune</th><th>Prix moyen</th><th>Min.</th><th>Max.</th><th>Stations</th></tr></thead>
+        <thead><tr><th>Localité</th><th>Commune</th><th>Prix moyen</th><th>Moy. station la plus basse</th><th>Moy. station la plus haute</th><th>Stations</th></tr></thead>
         <tbody id="localities"></tbody>
       </table></div>
     </section>
@@ -68,37 +68,45 @@
         <div><label for="compareA">Territoire A</label><select id="compareA"></select></div>
         <div><label for="compareB">Territoire B</label><select id="compareB"></select></div>
       </div>
-      <div class="compare-result" id="compareResult">—</div>
+      <div class="compare-result" id="compareResult" aria-live="polite">—</div>
     </section>
 
     <section>
       <h2>Estimer ce que représente l’écart Corse / Bouches-du-Rhône</h2>
+      <div class="calc-scope">
+        <label for="bdrScope">Référence Bouches-du-Rhône</label>
+        <select id="bdrScope">
+          <option value="network" selected>Stations de réseau</option>
+          <option value="all">Ensemble des stations hors autoroutes</option>
+        </select>
+      </div>
       <div class="calc-grid">
         <div><label for="litres">Litres consommés dans le mois</label><input id="litres" type="number" min="0" step="1" placeholder="ex. 70"></div>
         <div><label for="km">Ou kilomètres parcourus</label><input id="km" type="number" min="0" step="10" placeholder="ex. 900"></div>
-        <div><label for="consumption">Consommation (L/100 km)</label><input id="consumption" type="number" min="0" step="0.1" placeholder="ex. 6.2"></div>
+        <div><label for="consumption">Consommation (L/100 km)</label><input id="consumption" type="number" min="0" step="0.1" placeholder="ex. 6,2"></div>
       </div>
-      <div class="calc-result" id="calcResult">Renseignez directement un volume en litres, ou un kilométrage et une consommation.</div>
-      <p class="muted">Estimation fondée sur les moyennes du mois. L’écart TTC correspond à l’écart de prix moyen observé à la pompe ; l’écart HT est présenté séparément. Ce calcul ne reconstitue pas la facture réelle de l’utilisateur.</p>
+      <div class="calc-result" id="calcResult" aria-live="polite">Renseignez directement un volume en litres, ou un kilométrage et une consommation.</div>
+      <p class="muted">Estimation fondée sur les moyennes du mois. Pour l’effet sur le budget de l’automobiliste, le calcul utilise l’écart TTC observé à la pompe. L’écart HT reste affiché comme indicateur analytique. Le résultat peut être positif ou négatif selon le mois et le périmètre choisis.</p>
     </section>
   </div>
 </div>
 <script>
 (() => {
   const q = new URLSearchParams(location.search);
-  const dataUrl = q.get('data') || 'monthly-territories.json';
+  const dataUrl = q.get('data') || '../../outputs/monthly-territories-2026-08.json';
   let DATA = null;
   let fuel = 'Gazole';
   const $ = id => document.getElementById(id);
   const eur = v => v == null ? '—' : Number(v).toLocaleString('fr-FR',{minimumFractionDigits:3,maximumFractionDigits:3})+' €/L';
   const cpl = v => v == null ? '—' : (Number(v)>0?'+':'')+Number(v).toLocaleString('fr-FR',{minimumFractionDigits:1,maximumFractionDigits:2})+' c/L';
+  const pct = v => v == null ? '—' : (100*Number(v)).toLocaleString('fr-FR',{maximumFractionDigits:1})+' %';
   const monthLabel = iso => new Intl.DateTimeFormat('fr-FR',{month:'long',year:'numeric'}).format(new Date(iso+'T12:00:00'));
 
   function epciRows(){ return DATA.epci.filter(r => r.fuel === fuel); }
   function currentRow(){ return epciRows().find(r => r.epci_siren === $('epci').value); }
   function fillSelect(sel, rows){
     const old = sel.value;
-    sel.innerHTML = rows.map(r => `<option value="${r.epci_siren}">${r.epci_nom}</option>`).join('');
+    sel.innerHTML = rows.slice().sort((a,b)=>a.epci_nom.localeCompare(b.epci_nom,'fr')).map(r => `<option value="${r.epci_siren}">${r.epci_nom}${r.rankable?'':' — hors classement'}</option>`).join('');
     if ([...sel.options].some(o=>o.value===old)) sel.value=old;
   }
   function renderMain(){
@@ -110,10 +118,11 @@
     $('mean').textContent = eur(r.mean_eur_l);
     $('change').textContent = cpl(r.change_vs_previous_month_cpl);
     $('vsCorse').textContent = cpl(r.vs_corse_cpl);
-    $('range').textContent = `${eur(r.observed_min_eur_l).replace(' €/L','')} → ${eur(r.observed_max_eur_l)}`;
-    $('sample').textContent = `${r.n_stations} station${r.n_stations>1?'s':''} retenue${r.n_stations>1?'s':''} • ${r.n_communes} commune${r.n_communes>1?'s':''} • ${r.n_station_days} station-jours`;
+    const lo=r.station_mean_min_eur_l, hi=r.station_mean_max_eur_l;
+    $('range').textContent = lo==null||hi==null ? '—' : `${eur(lo).replace(' €/L','')} → ${eur(hi)}`;
+    $('sample').textContent = `${r.n_stations} station${r.n_stations>1?'s':''} contributrice${r.n_stations>1?'s':''} • ${r.n_communes} commune${r.n_communes>1?'s':''} • ${r.n_station_days} station-jours • couverture temporelle de l’échantillon : ${pct(r.coverage_ratio)}`;
     $('limited').style.display = r.rankable ? 'none' : 'block';
-    $('limited').textContent = r.rankable ? '' : 'Échantillon limité : ce territoire est affiché mais exclu des classements entre intercommunalités.';
+    $('limited').textContent = r.rankable ? '' : 'Données disponibles, mais territoire hors classement inter-EPCI pour ce carburant et ce mois : l’échantillon ne franchit pas les seuils statistiques retenus.';
     renderLocalities(r.epci_siren);
     renderCompare();
     renderCalc();
@@ -121,7 +130,7 @@
   function renderLocalities(epci){
     const rows = DATA.localities.filter(r => r.fuel===fuel && r.epci_siren===epci)
       .sort((a,b)=>a.localite.localeCompare(b.localite,'fr'));
-    $('localities').innerHTML = rows.length ? rows.map(r => `<tr><td>${r.localite}</td><td>${r.commune}</td><td>${eur(r.mean_eur_l)}</td><td>${eur(r.observed_min_eur_l)}</td><td>${eur(r.observed_max_eur_l)}</td><td>${r.n_stations}</td></tr>`).join('') : '<tr><td colspan="6">Aucune donnée</td></tr>';
+    $('localities').innerHTML = rows.length ? rows.map(r => `<tr><td>${r.localite}</td><td>${r.commune}</td><td>${eur(r.mean_eur_l)}</td><td>${eur(r.station_mean_min_eur_l)}</td><td>${eur(r.station_mean_max_eur_l)}</td><td>${r.n_stations}</td></tr>`).join('') : '<tr><td colspan="6">Aucune donnée retenue pour ce mois.</td></tr>';
   }
   function renderCompare(){
     const rows = epciRows();
@@ -131,7 +140,7 @@
     const a=rows.find(r=>r.epci_siren===$('compareA').value), b=rows.find(r=>r.epci_siren===$('compareB').value);
     if(!a||!b){$('compareResult').textContent='—';return;}
     const d=(Number(a.mean_eur_l)-Number(b.mean_eur_l))*100;
-    const warning=(!a.rankable||!b.rankable)?' • comparaison indicative : au moins un échantillon est limité':'';
+    const warning=(!a.rankable||!b.rankable)?' • comparaison descriptive : au moins un des deux territoires est hors classement inter-EPCI':'';
     $('compareResult').textContent=`${a.epci_nom} : ${eur(a.mean_eur_l)} • ${b.epci_nom} : ${eur(b.mean_eur_l)} • écart A − B : ${cpl(d)}${warning}`;
   }
   function inferredLitres(){
@@ -142,22 +151,26 @@
   }
   function renderCalc(){
     const litres=inferredLitres();
-    const cmp=DATA.corse_vs_bdr[fuel];
+    const scope=$('bdrScope').value;
+    const cmp=((DATA.corse_vs_bdr||{})[fuel]||{})[scope];
     if(!litres||!cmp){$('calcResult').textContent='Renseignez directement un volume en litres, ou un kilométrage et une consommation.';return;}
     const ttc=litres*Number(cmp.gap_ttc_cpl)/100;
-    const ht=litres*Number(cmp.gap_ht_cpl)/100;
-    $('calcResult').textContent=`Volume estimé : ${litres.toLocaleString('fr-FR',{maximumFractionDigits:1})} L • écart moyen TTC : ${cpl(cmp.gap_ttc_cpl)}, soit ${ttc.toLocaleString('fr-FR',{style:'currency',currency:'EUR'})} • écart moyen HT : ${cpl(cmp.gap_ht_cpl)}, soit ${ht.toLocaleString('fr-FR',{style:'currency',currency:'EUR'})}.`;
+    const direction=ttc>0?'coût moyen supplémentaire en Corse':ttc<0?'coût moyen inférieur en Corse':'écart budgétaire nul';
+    $('calcResult').textContent=`Volume estimé : ${litres.toLocaleString('fr-FR',{maximumFractionDigits:1})} L • écart TTC : ${cpl(cmp.gap_ttc_cpl)}, soit ${Math.abs(ttc).toLocaleString('fr-FR',{style:'currency',currency:'EUR'})} de ${direction} sur ce volume • écart HT analytique : ${cpl(cmp.gap_ht_cpl)}.`;
   }
 
   fetch(dataUrl,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json();}).then(data=>{
     DATA=data;
-    $('period').textContent=`Bilan de ${monthLabel(data.meta.period_start)} — du ${new Date(data.meta.period_start+'T12:00:00').toLocaleDateString('fr-FR')} au ${new Date(data.meta.period_end+'T12:00:00').toLocaleDateString('fr-FR')}`;
+    $('period').textContent=`Bilan de ${monthLabel(data.meta.period_start)} — données du ${new Date(data.meta.period_start+'T12:00:00').toLocaleDateString('fr-FR')} au ${new Date(data.meta.period_end+'T12:00:00').toLocaleDateString('fr-FR')}`;
     $('app').hidden=false;
     document.querySelectorAll('[data-fuel]').forEach(btn=>btn.addEventListener('click',()=>{
-      fuel=btn.dataset.fuel;document.querySelectorAll('[data-fuel]').forEach(b=>b.classList.toggle('active',b===btn));renderMain();
+      fuel=btn.dataset.fuel;
+      document.querySelectorAll('[data-fuel]').forEach(b=>{const active=b===btn;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
+      renderMain();
     }));
     $('epci').addEventListener('change',renderMain);
     $('compareA').addEventListener('change',renderCompare);$('compareB').addEventListener('change',renderCompare);
+    $('bdrScope').addEventListener('change',renderCalc);
     ['litres','km','consumption'].forEach(id=>$(id).addEventListener('input',renderCalc));
     renderMain();
   }).catch(err=>{
