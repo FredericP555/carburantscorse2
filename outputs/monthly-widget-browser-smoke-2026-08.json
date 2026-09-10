@@ -1,5 +1,5 @@
 {
-  "schema": "a4c-monthly-widget-browser-smoke-v1",
+  "schema": "a4c-monthly-widget-browser-smoke-v2",
   "url": "http://127.0.0.1:8765/widgets/bilan-territorial/index.html?data=/outputs/monthly-territories-2026-08.json",
   "browser": "152.0.7977.82",
   "executablePath": "/usr/bin/google-chrome",
@@ -15,6 +15,16 @@
         "controls": 2,
         "cardWidth": 244.5,
         "wrapWidth": 1050
+      },
+      "exhaustive": {
+        "Gazole": {
+          "epciTested": 19,
+          "horsClassement": 2
+        },
+        "SP95": {
+          "epciTested": 19,
+          "horsClassement": 3
+        }
       },
       "calviSample": "2 stations contributrices • 2 communes • 39 station-jours • couverture temporelle de l’échantillon : 62,9 %",
       "calviRange": "1,999 → 1,999 €/L",
@@ -41,6 +51,8 @@
         "tableScrollWidth": 514
       },
       "mobileSample": "2 stations contributrices • 2 communes • 39 station-jours • couverture temporelle de l’échantillon : 62,9 %",
+      "longCompare": "CC de la Pieve de l'Ornano et du Taravo : 2,033 €/L • CC de l'Ile-Rousse - Balagne : 2,002 €/L • écart A − B : +3,14 c/L",
+      "mobileCalc": "Volume estimé : 70 L • écart TTC : -7,04 c/L, soit 4,93 € de coût moyen inférieur en Corse sur ce volume • écart HT analytique : +4,55 c/L.",
       "after": {
         "scrollWidth": 390,
         "innerWidth": 390
