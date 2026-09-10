@@ -1,0 +1,1205 @@
+{
+  "meta": {
+    "schema": "a4c-monthly-territorial-coverage-audit-v1",
+    "month": "2026-08",
+    "period_start": "2026-08-01",
+    "period_end": "2026-08-31",
+    "c1_release_tag": "a4c-v2-shared-20260908T011056Z-34175476841",
+    "c2_reference_daily_target_end": "2026-09-07",
+    "c2_engine": "A4C-V2-2026-07-23",
+    "source_max_date": "2026-09-07",
+    "definition": "known_fuel_stations = geography-registry stations with at least one declaration of that fuel on or before month end; effective coverage = retained C2 V2 station-days / (known fuel stations × calendar days)",
+    "warning": "Diagnostic only. These wider-coverage metrics do not yet change rankability thresholds.",
+    "engine_r2_unavailable": 0,
+    "missing_geography": [
+      {
+        "station_id": "20110005",
+        "cp": "20110",
+        "city": "Propriano",
+        "address": "4 QUARTIER ST JOSEPH",
+        "latitude": 4167200.0,
+        "longitude": 890900.0,
+        "fuels_in_month_state": [
+          "Gazole",
+          "SP95"
+        ],
+        "eligible_fuels_in_month": []
+      },
+      {
+        "station_id": "20213003",
+        "cp": "20213",
+        "city": "Penta-di-Casinca",
+        "address": "Station TOTAL - RN 198 - FOLELLI",
+        "latitude": 4244600.0,
+        "longitude": 950800.0,
+        "fuels_in_month_state": [
+          "Gazole",
+          "SP95"
+        ],
+        "eligible_fuels_in_month": []
+      }
+    ]
+  },
+  "epci": [
+    {
+      "epci_siren": "200015162",
+      "epci_nom": "CC de l'Oriente",
+      "fuel": "Gazole",
+      "registry_stations": 2,
+      "known_fuel_stations": 2,
+      "known_fuel_station_ids": [
+        "20270001",
+        "20270003"
+      ],
+      "contributing_stations": 1,
+      "contributing_station_ids": [
+        "20270001"
+      ],
+      "station_coverage_ratio": 0.5,
+      "retained_station_days": 31,
+      "possible_station_days_known_fuel": 62,
+      "effective_coverage_ratio": 0.5,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200015162",
+      "epci_nom": "CC de l'Oriente",
+      "fuel": "SP95",
+      "registry_stations": 2,
+      "known_fuel_stations": 2,
+      "known_fuel_station_ids": [
+        "20270001",
+        "20270003"
+      ],
+      "contributing_stations": 1,
+      "contributing_station_ids": [
+        "20270001"
+      ],
+      "station_coverage_ratio": 0.5,
+      "retained_station_days": 31,
+      "possible_station_days_known_fuel": 62,
+      "effective_coverage_ratio": 0.5,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200033827",
+      "epci_nom": "CC de Fium'Orbu Castellu",
+      "fuel": "Gazole",
+      "registry_stations": 6,
+      "known_fuel_stations": 6,
+      "known_fuel_station_ids": [
+        "20240001",
+        "20240002",
+        "20240003",
+        "20240004",
+        "20240005",
+        "20243001"
+      ],
+      "contributing_stations": 6,
+      "contributing_station_ids": [
+        "20240001",
+        "20240002",
+        "20240003",
+        "20240004",
+        "20240005",
+        "20243001"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 186,
+      "possible_station_days_known_fuel": 186,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200033827",
+      "epci_nom": "CC de Fium'Orbu Castellu",
+      "fuel": "SP95",
+      "registry_stations": 6,
+      "known_fuel_stations": 6,
+      "known_fuel_station_ids": [
+        "20240001",
+        "20240002",
+        "20240003",
+        "20240004",
+        "20240005",
+        "20243001"
+      ],
+      "contributing_stations": 6,
+      "contributing_station_ids": [
+        "20240001",
+        "20240002",
+        "20240003",
+        "20240004",
+        "20240005",
+        "20243001"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 178,
+      "possible_station_days_known_fuel": 186,
+      "effective_coverage_ratio": 0.957,
+      "contributor_temporal_coverage_ratio": 0.957,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200034205",
+      "epci_nom": "CC de la Costa Verde",
+      "fuel": "Gazole",
+      "registry_stations": 5,
+      "known_fuel_stations": 5,
+      "known_fuel_station_ids": [
+        "20221001",
+        "20230003",
+        "20230006",
+        "20230008",
+        "20230011"
+      ],
+      "contributing_stations": 5,
+      "contributing_station_ids": [
+        "20221001",
+        "20230003",
+        "20230006",
+        "20230008",
+        "20230011"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 147,
+      "possible_station_days_known_fuel": 155,
+      "effective_coverage_ratio": 0.9484,
+      "contributor_temporal_coverage_ratio": 0.9484,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200034205",
+      "epci_nom": "CC de la Costa Verde",
+      "fuel": "SP95",
+      "registry_stations": 5,
+      "known_fuel_stations": 5,
+      "known_fuel_station_ids": [
+        "20221001",
+        "20230003",
+        "20230006",
+        "20230008",
+        "20230011"
+      ],
+      "contributing_stations": 5,
+      "contributing_station_ids": [
+        "20221001",
+        "20230003",
+        "20230006",
+        "20230008",
+        "20230011"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 133,
+      "possible_station_days_known_fuel": 155,
+      "effective_coverage_ratio": 0.8581,
+      "contributor_temporal_coverage_ratio": 0.8581,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200036499",
+      "epci_nom": "CC de Marana-Golo",
+      "fuel": "Gazole",
+      "registry_stations": 8,
+      "known_fuel_stations": 8,
+      "known_fuel_station_ids": [
+        "20290002",
+        "20290003",
+        "20290008",
+        "20290009",
+        "20290010",
+        "20620002",
+        "20620004",
+        "20620005"
+      ],
+      "contributing_stations": 8,
+      "contributing_station_ids": [
+        "20290002",
+        "20290003",
+        "20290008",
+        "20290009",
+        "20290010",
+        "20620002",
+        "20620004",
+        "20620005"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 248,
+      "possible_station_days_known_fuel": 248,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200036499",
+      "epci_nom": "CC de Marana-Golo",
+      "fuel": "SP95",
+      "registry_stations": 8,
+      "known_fuel_stations": 8,
+      "known_fuel_station_ids": [
+        "20290002",
+        "20290003",
+        "20290008",
+        "20290009",
+        "20290010",
+        "20620002",
+        "20620004",
+        "20620005"
+      ],
+      "contributing_stations": 8,
+      "contributing_station_ids": [
+        "20290002",
+        "20290003",
+        "20290008",
+        "20290009",
+        "20290010",
+        "20620002",
+        "20620004",
+        "20620005"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 248,
+      "possible_station_days_known_fuel": 248,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200038958",
+      "epci_nom": "CC de la Pieve de l'Ornano et du Taravo",
+      "fuel": "Gazole",
+      "registry_stations": 8,
+      "known_fuel_stations": 8,
+      "known_fuel_station_ids": [
+        "20148001",
+        "20153003",
+        "20156001",
+        "20166002",
+        "20166004",
+        "20166005",
+        "20166006",
+        "20190002"
+      ],
+      "contributing_stations": 8,
+      "contributing_station_ids": [
+        "20148001",
+        "20153003",
+        "20156001",
+        "20166002",
+        "20166004",
+        "20166005",
+        "20166006",
+        "20190002"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 248,
+      "possible_station_days_known_fuel": 248,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200038958",
+      "epci_nom": "CC de la Pieve de l'Ornano et du Taravo",
+      "fuel": "SP95",
+      "registry_stations": 8,
+      "known_fuel_stations": 8,
+      "known_fuel_station_ids": [
+        "20148001",
+        "20153003",
+        "20156001",
+        "20166002",
+        "20166004",
+        "20166005",
+        "20166006",
+        "20190002"
+      ],
+      "contributing_stations": 8,
+      "contributing_station_ids": [
+        "20148001",
+        "20153003",
+        "20156001",
+        "20166002",
+        "20166004",
+        "20166005",
+        "20166006",
+        "20190002"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 239,
+      "possible_station_days_known_fuel": 248,
+      "effective_coverage_ratio": 0.9637,
+      "contributor_temporal_coverage_ratio": 0.9637,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200040764",
+      "epci_nom": "CC du Sud Corse",
+      "fuel": "Gazole",
+      "registry_stations": 12,
+      "known_fuel_stations": 12,
+      "known_fuel_station_ids": [
+        "20131001",
+        "20131002",
+        "20137004",
+        "20137005",
+        "20137006",
+        "20137007",
+        "20137008",
+        "20137009",
+        "20137010",
+        "20169002",
+        "20169003",
+        "20538001"
+      ],
+      "contributing_stations": 12,
+      "contributing_station_ids": [
+        "20131001",
+        "20131002",
+        "20137004",
+        "20137005",
+        "20137006",
+        "20137007",
+        "20137008",
+        "20137009",
+        "20137010",
+        "20169002",
+        "20169003",
+        "20538001"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 372,
+      "possible_station_days_known_fuel": 372,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200040764",
+      "epci_nom": "CC du Sud Corse",
+      "fuel": "SP95",
+      "registry_stations": 12,
+      "known_fuel_stations": 12,
+      "known_fuel_station_ids": [
+        "20131001",
+        "20131002",
+        "20137004",
+        "20137005",
+        "20137006",
+        "20137007",
+        "20137008",
+        "20137009",
+        "20137010",
+        "20169002",
+        "20169003",
+        "20538001"
+      ],
+      "contributing_stations": 10,
+      "contributing_station_ids": [
+        "20131001",
+        "20137004",
+        "20137006",
+        "20137007",
+        "20137008",
+        "20137009",
+        "20137010",
+        "20169002",
+        "20169003",
+        "20538001"
+      ],
+      "station_coverage_ratio": 0.8333,
+      "retained_station_days": 310,
+      "possible_station_days_known_fuel": 372,
+      "effective_coverage_ratio": 0.8333,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200042943",
+      "epci_nom": "CC du Cap Corse",
+      "fuel": "Gazole",
+      "registry_stations": 3,
+      "known_fuel_stations": 3,
+      "known_fuel_station_ids": [
+        "20222001",
+        "20228005",
+        "20248001"
+      ],
+      "contributing_stations": 3,
+      "contributing_station_ids": [
+        "20222001",
+        "20228005",
+        "20248001"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 93,
+      "possible_station_days_known_fuel": 93,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200042943",
+      "epci_nom": "CC du Cap Corse",
+      "fuel": "SP95",
+      "registry_stations": 3,
+      "known_fuel_stations": 3,
+      "known_fuel_station_ids": [
+        "20222001",
+        "20228005",
+        "20248001"
+      ],
+      "contributing_stations": 3,
+      "contributing_station_ids": [
+        "20222001",
+        "20228005",
+        "20248001"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 93,
+      "possible_station_days_known_fuel": 93,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200067049",
+      "epci_nom": "CC Spelunca-Liamone",
+      "fuel": "Gazole",
+      "registry_stations": 6,
+      "known_fuel_stations": 6,
+      "known_fuel_station_ids": [
+        "20111001",
+        "20115001",
+        "20118001",
+        "20130002",
+        "20147001",
+        "20160001"
+      ],
+      "contributing_stations": 6,
+      "contributing_station_ids": [
+        "20111001",
+        "20115001",
+        "20118001",
+        "20130002",
+        "20147001",
+        "20160001"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 186,
+      "possible_station_days_known_fuel": 186,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200067049",
+      "epci_nom": "CC Spelunca-Liamone",
+      "fuel": "SP95",
+      "registry_stations": 6,
+      "known_fuel_stations": 6,
+      "known_fuel_station_ids": [
+        "20111001",
+        "20115001",
+        "20118001",
+        "20130002",
+        "20147001",
+        "20160001"
+      ],
+      "contributing_stations": 6,
+      "contributing_station_ids": [
+        "20111001",
+        "20115001",
+        "20118001",
+        "20130002",
+        "20147001",
+        "20160001"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 186,
+      "possible_station_days_known_fuel": 186,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200073104",
+      "epci_nom": "CC de l'Ile-Rousse - Balagne",
+      "fuel": "Gazole",
+      "registry_stations": 3,
+      "known_fuel_stations": 3,
+      "known_fuel_station_ids": [
+        "20220001",
+        "20220002",
+        "20220003"
+      ],
+      "contributing_stations": 3,
+      "contributing_station_ids": [
+        "20220001",
+        "20220002",
+        "20220003"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 93,
+      "possible_station_days_known_fuel": 93,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200073104",
+      "epci_nom": "CC de l'Ile-Rousse - Balagne",
+      "fuel": "SP95",
+      "registry_stations": 3,
+      "known_fuel_stations": 3,
+      "known_fuel_station_ids": [
+        "20220001",
+        "20220002",
+        "20220003"
+      ],
+      "contributing_stations": 3,
+      "contributing_station_ids": [
+        "20220001",
+        "20220002",
+        "20220003"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 93,
+      "possible_station_days_known_fuel": 93,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200073120",
+      "epci_nom": "CC Nebbiu - Conca d'Oro",
+      "fuel": "Gazole",
+      "registry_stations": 3,
+      "known_fuel_stations": 3,
+      "known_fuel_station_ids": [
+        "20217001",
+        "20217004",
+        "20217005"
+      ],
+      "contributing_stations": 3,
+      "contributing_station_ids": [
+        "20217001",
+        "20217004",
+        "20217005"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 93,
+      "possible_station_days_known_fuel": 93,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200073120",
+      "epci_nom": "CC Nebbiu - Conca d'Oro",
+      "fuel": "SP95",
+      "registry_stations": 3,
+      "known_fuel_stations": 3,
+      "known_fuel_station_ids": [
+        "20217001",
+        "20217004",
+        "20217005"
+      ],
+      "contributing_stations": 3,
+      "contributing_station_ids": [
+        "20217001",
+        "20217004",
+        "20217005"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 93,
+      "possible_station_days_known_fuel": 93,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200073138",
+      "epci_nom": "CC Pasquale Paoli",
+      "fuel": "Gazole",
+      "registry_stations": 7,
+      "known_fuel_stations": 7,
+      "known_fuel_station_ids": [
+        "20218001",
+        "20218004",
+        "20218007",
+        "20218008",
+        "20218009",
+        "20224001",
+        "20235001"
+      ],
+      "contributing_stations": 7,
+      "contributing_station_ids": [
+        "20218001",
+        "20218004",
+        "20218007",
+        "20218008",
+        "20218009",
+        "20224001",
+        "20235001"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 217,
+      "possible_station_days_known_fuel": 217,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200073138",
+      "epci_nom": "CC Pasquale Paoli",
+      "fuel": "SP95",
+      "registry_stations": 7,
+      "known_fuel_stations": 7,
+      "known_fuel_station_ids": [
+        "20218001",
+        "20218004",
+        "20218007",
+        "20218008",
+        "20218009",
+        "20224001",
+        "20235001"
+      ],
+      "contributing_stations": 7,
+      "contributing_station_ids": [
+        "20218001",
+        "20218004",
+        "20218007",
+        "20218008",
+        "20218009",
+        "20224001",
+        "20235001"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 188,
+      "possible_station_days_known_fuel": 217,
+      "effective_coverage_ratio": 0.8664,
+      "contributor_temporal_coverage_ratio": 0.8664,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200073252",
+      "epci_nom": "CC de la Castagniccia-Casinca",
+      "fuel": "Gazole",
+      "registry_stations": 4,
+      "known_fuel_stations": 3,
+      "known_fuel_station_ids": [
+        "20213004",
+        "20213005",
+        "20215001"
+      ],
+      "contributing_stations": 3,
+      "contributing_station_ids": [
+        "20213004",
+        "20213005",
+        "20215001"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 93,
+      "possible_station_days_known_fuel": 93,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "200073252",
+      "epci_nom": "CC de la Castagniccia-Casinca",
+      "fuel": "SP95",
+      "registry_stations": 4,
+      "known_fuel_stations": 3,
+      "known_fuel_station_ids": [
+        "20213004",
+        "20213005",
+        "20215001"
+      ],
+      "contributing_stations": 3,
+      "contributing_station_ids": [
+        "20213004",
+        "20213005",
+        "20215001"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 93,
+      "possible_station_days_known_fuel": 93,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "242000354",
+      "epci_nom": "CA de Bastia",
+      "fuel": "Gazole",
+      "registry_stations": 14,
+      "known_fuel_stations": 14,
+      "known_fuel_station_ids": [
+        "20200006",
+        "20200008",
+        "20200014",
+        "20200016",
+        "20600002",
+        "20600003",
+        "20600004",
+        "20600006",
+        "20600007",
+        "20600009",
+        "20600010",
+        "20600011",
+        "20600014",
+        "20600015"
+      ],
+      "contributing_stations": 14,
+      "contributing_station_ids": [
+        "20200006",
+        "20200008",
+        "20200014",
+        "20200016",
+        "20600002",
+        "20600003",
+        "20600004",
+        "20600006",
+        "20600007",
+        "20600009",
+        "20600010",
+        "20600011",
+        "20600014",
+        "20600015"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 434,
+      "possible_station_days_known_fuel": 434,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "242000354",
+      "epci_nom": "CA de Bastia",
+      "fuel": "SP95",
+      "registry_stations": 14,
+      "known_fuel_stations": 14,
+      "known_fuel_station_ids": [
+        "20200006",
+        "20200008",
+        "20200014",
+        "20200016",
+        "20600002",
+        "20600003",
+        "20600004",
+        "20600006",
+        "20600007",
+        "20600009",
+        "20600010",
+        "20600011",
+        "20600014",
+        "20600015"
+      ],
+      "contributing_stations": 11,
+      "contributing_station_ids": [
+        "20200006",
+        "20200008",
+        "20200014",
+        "20200016",
+        "20600002",
+        "20600007",
+        "20600009",
+        "20600010",
+        "20600011",
+        "20600014",
+        "20600015"
+      ],
+      "station_coverage_ratio": 0.7857,
+      "retained_station_days": 314,
+      "possible_station_days_known_fuel": 434,
+      "effective_coverage_ratio": 0.7235,
+      "contributor_temporal_coverage_ratio": 0.9208,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "242000495",
+      "epci_nom": "CC de l'Alta Rocca",
+      "fuel": "Gazole",
+      "registry_stations": 5,
+      "known_fuel_stations": 5,
+      "known_fuel_station_ids": [
+        "20144002",
+        "20144003",
+        "20145001",
+        "20145004",
+        "20170002"
+      ],
+      "contributing_stations": 5,
+      "contributing_station_ids": [
+        "20144002",
+        "20144003",
+        "20145001",
+        "20145004",
+        "20170002"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 155,
+      "possible_station_days_known_fuel": 155,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "242000495",
+      "epci_nom": "CC de l'Alta Rocca",
+      "fuel": "SP95",
+      "registry_stations": 5,
+      "known_fuel_stations": 5,
+      "known_fuel_station_ids": [
+        "20144002",
+        "20144003",
+        "20145001",
+        "20145004",
+        "20170002"
+      ],
+      "contributing_stations": 5,
+      "contributing_station_ids": [
+        "20144002",
+        "20144003",
+        "20145001",
+        "20145004",
+        "20170002"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 155,
+      "possible_station_days_known_fuel": 155,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "242000503",
+      "epci_nom": "CC Celavu-Prunelli",
+      "fuel": "Gazole",
+      "registry_stations": 1,
+      "known_fuel_stations": 1,
+      "known_fuel_station_ids": [
+        "20129001"
+      ],
+      "contributing_stations": 1,
+      "contributing_station_ids": [
+        "20129001"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 31,
+      "possible_station_days_known_fuel": 31,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "242000503",
+      "epci_nom": "CC Celavu-Prunelli",
+      "fuel": "SP95",
+      "registry_stations": 1,
+      "known_fuel_stations": 1,
+      "known_fuel_station_ids": [
+        "20129001"
+      ],
+      "contributing_stations": 1,
+      "contributing_station_ids": [
+        "20129001"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 31,
+      "possible_station_days_known_fuel": 31,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "242010056",
+      "epci_nom": "CA du Pays Ajaccien",
+      "fuel": "Gazole",
+      "registry_stations": 19,
+      "known_fuel_stations": 19,
+      "known_fuel_station_ids": [
+        "20000002",
+        "20000006",
+        "20000007",
+        "20090001",
+        "20090002",
+        "20090004",
+        "20090007",
+        "20090011",
+        "20090014",
+        "20090015",
+        "20167003",
+        "20167004",
+        "20167005",
+        "20167008",
+        "20167010",
+        "20167012",
+        "20167013",
+        "20189001",
+        "20189002"
+      ],
+      "contributing_stations": 19,
+      "contributing_station_ids": [
+        "20000002",
+        "20000006",
+        "20000007",
+        "20090001",
+        "20090002",
+        "20090004",
+        "20090007",
+        "20090011",
+        "20090014",
+        "20090015",
+        "20167003",
+        "20167004",
+        "20167005",
+        "20167008",
+        "20167010",
+        "20167012",
+        "20167013",
+        "20189001",
+        "20189002"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 589,
+      "possible_station_days_known_fuel": 589,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "242010056",
+      "epci_nom": "CA du Pays Ajaccien",
+      "fuel": "SP95",
+      "registry_stations": 19,
+      "known_fuel_stations": 19,
+      "known_fuel_station_ids": [
+        "20000002",
+        "20000006",
+        "20000007",
+        "20090001",
+        "20090002",
+        "20090004",
+        "20090007",
+        "20090011",
+        "20090014",
+        "20090015",
+        "20167003",
+        "20167004",
+        "20167005",
+        "20167008",
+        "20167010",
+        "20167012",
+        "20167013",
+        "20189001",
+        "20189002"
+      ],
+      "contributing_stations": 19,
+      "contributing_station_ids": [
+        "20000002",
+        "20000006",
+        "20000007",
+        "20090001",
+        "20090002",
+        "20090004",
+        "20090007",
+        "20090011",
+        "20090014",
+        "20090015",
+        "20167003",
+        "20167004",
+        "20167005",
+        "20167008",
+        "20167010",
+        "20167012",
+        "20167013",
+        "20189001",
+        "20189002"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 560,
+      "possible_station_days_known_fuel": 589,
+      "effective_coverage_ratio": 0.9508,
+      "contributor_temporal_coverage_ratio": 0.9508,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "242010130",
+      "epci_nom": "CC du Sartenais Valinco Taravo",
+      "fuel": "Gazole",
+      "registry_stations": 8,
+      "known_fuel_stations": 8,
+      "known_fuel_station_ids": [
+        "20100001",
+        "20100003",
+        "20100005",
+        "20110003",
+        "20110006",
+        "20113001",
+        "20113002",
+        "20140001"
+      ],
+      "contributing_stations": 8,
+      "contributing_station_ids": [
+        "20100001",
+        "20100003",
+        "20100005",
+        "20110003",
+        "20110006",
+        "20113001",
+        "20113002",
+        "20140001"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 248,
+      "possible_station_days_known_fuel": 248,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "242010130",
+      "epci_nom": "CC du Sartenais Valinco Taravo",
+      "fuel": "SP95",
+      "registry_stations": 8,
+      "known_fuel_stations": 8,
+      "known_fuel_station_ids": [
+        "20100001",
+        "20100003",
+        "20100005",
+        "20110003",
+        "20110006",
+        "20113001",
+        "20113002",
+        "20140001"
+      ],
+      "contributing_stations": 8,
+      "contributing_station_ids": [
+        "20100001",
+        "20100003",
+        "20100005",
+        "20110003",
+        "20110006",
+        "20113001",
+        "20113002",
+        "20140001"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 213,
+      "possible_station_days_known_fuel": 248,
+      "effective_coverage_ratio": 0.8589,
+      "contributor_temporal_coverage_ratio": 0.8589,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "242020071",
+      "epci_nom": "CC du Centre Corse",
+      "fuel": "Gazole",
+      "registry_stations": 5,
+      "known_fuel_stations": 4,
+      "known_fuel_station_ids": [
+        "20219003",
+        "20250001",
+        "20250002",
+        "20250003"
+      ],
+      "contributing_stations": 4,
+      "contributing_station_ids": [
+        "20219003",
+        "20250001",
+        "20250002",
+        "20250003"
+      ],
+      "station_coverage_ratio": 1.0,
+      "retained_station_days": 124,
+      "possible_station_days_known_fuel": 124,
+      "effective_coverage_ratio": 1.0,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "242020071",
+      "epci_nom": "CC du Centre Corse",
+      "fuel": "SP95",
+      "registry_stations": 5,
+      "known_fuel_stations": 4,
+      "known_fuel_station_ids": [
+        "20219003",
+        "20250001",
+        "20250002",
+        "20250003"
+      ],
+      "contributing_stations": 3,
+      "contributing_station_ids": [
+        "20219003",
+        "20250001",
+        "20250003"
+      ],
+      "station_coverage_ratio": 0.75,
+      "retained_station_days": 78,
+      "possible_station_days_known_fuel": 124,
+      "effective_coverage_ratio": 0.629,
+      "contributor_temporal_coverage_ratio": 0.8387,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "242020105",
+      "epci_nom": "CC de Calvi Balagne",
+      "fuel": "Gazole",
+      "registry_stations": 5,
+      "known_fuel_stations": 5,
+      "known_fuel_station_ids": [
+        "20220006",
+        "20245002",
+        "20260001",
+        "20260002",
+        "20260003"
+      ],
+      "contributing_stations": 4,
+      "contributing_station_ids": [
+        "20220006",
+        "20245002",
+        "20260002",
+        "20260003"
+      ],
+      "station_coverage_ratio": 0.8,
+      "retained_station_days": 124,
+      "possible_station_days_known_fuel": 155,
+      "effective_coverage_ratio": 0.8,
+      "contributor_temporal_coverage_ratio": 1.0,
+      "days_with_any_price": 31
+    },
+    {
+      "epci_siren": "242020105",
+      "epci_nom": "CC de Calvi Balagne",
+      "fuel": "SP95",
+      "registry_stations": 5,
+      "known_fuel_stations": 5,
+      "known_fuel_station_ids": [
+        "20220006",
+        "20245002",
+        "20260001",
+        "20260002",
+        "20260003"
+      ],
+      "contributing_stations": 2,
+      "contributing_station_ids": [
+        "20245002",
+        "20260003"
+      ],
+      "station_coverage_ratio": 0.4,
+      "retained_station_days": 39,
+      "possible_station_days_known_fuel": 155,
+      "effective_coverage_ratio": 0.2516,
+      "contributor_temporal_coverage_ratio": 0.629,
+      "days_with_any_price": 31
+    }
+  ]
+}
