@@ -7,6 +7,7 @@ on:
     paths:
       - .github/workflows/monthly-territorial-test.yml
       - scripts/build_monthly_territorial.py
+      - scripts/audit_epci_monthly.py
       - config/corse_station_geography_2026.csv
 
 permissions:
@@ -72,6 +73,18 @@ jobs:
           --c2-data /tmp/c2-main-data.json
           --output outputs/monthly-territories-2026-08.json
 
+      - name: Audit Calvi Balagne SP95 station by station
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          PYTHONPATH=. python scripts/audit_epci_monthly.py
+          --month 2026-08
+          --epci-siren 242020105
+          --fuel SP95
+          --c2-data /tmp/c2-main-data.json
+          --output outputs/calvi-balagne-sp95-2026-08-audit.json
+          --markdown outputs/calvi-balagne-sp95-2026-08-audit.md
+
       - name: Build August conformance summary
         run: |
           python - <<'PY'
@@ -118,7 +131,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm -f outputs/monthly-territories-2026-08-audit.json outputs/monthly-territories-2026-08-audit.md 2>/dev/null || true
-          git add -f outputs/monthly-territories-2026-08.json outputs/monthly-territories-2026-08-summary.md
+          git add -f \
+            outputs/monthly-territories-2026-08.json \
+            outputs/monthly-territories-2026-08-summary.md \
+            outputs/calvi-balagne-sp95-2026-08-audit.json \
+            outputs/calvi-balagne-sp95-2026-08-audit.md
           git diff --cached --quiet && exit 0
-          git commit -m "Regenerate August territorial test with C2 V2 engine"
+          git commit -m "Audit Calvi Balagne SP95 for August 2026"
           git push origin HEAD:add-corse-station-geography-2026
