@@ -11,34 +11,7 @@
     "definition": "known_fuel_stations = geography-registry stations with at least one declaration of that fuel on or before month end; effective coverage = retained C2 V2 station-days / (known fuel stations × calendar days)",
     "warning": "Diagnostic only. These wider-coverage metrics do not yet change rankability thresholds.",
     "engine_r2_unavailable": 0,
-    "missing_geography": [
-      {
-        "station_id": "20110005",
-        "cp": "20110",
-        "city": "Propriano",
-        "address": "4 QUARTIER ST JOSEPH",
-        "latitude": 4167200.0,
-        "longitude": 890900.0,
-        "fuels_in_month_state": [
-          "Gazole",
-          "SP95"
-        ],
-        "eligible_fuels_in_month": []
-      },
-      {
-        "station_id": "20213003",
-        "cp": "20213",
-        "city": "Penta-di-Casinca",
-        "address": "Station TOTAL - RN 198 - FOLELLI",
-        "latitude": 4244600.0,
-        "longitude": 950800.0,
-        "fuels_in_month_state": [
-          "Gazole",
-          "SP95"
-        ],
-        "eligible_fuels_in_month": []
-      }
-    ]
+    "missing_geography": []
   },
   "epci": [
     {
@@ -689,9 +662,10 @@
       "epci_siren": "200073252",
       "epci_nom": "CC de la Castagniccia-Casinca",
       "fuel": "Gazole",
-      "registry_stations": 4,
-      "known_fuel_stations": 3,
+      "registry_stations": 5,
+      "known_fuel_stations": 4,
       "known_fuel_station_ids": [
+        "20213003",
         "20213004",
         "20213005",
         "20215001"
@@ -702,10 +676,10 @@
         "20213005",
         "20215001"
       ],
-      "station_coverage_ratio": 1.0,
+      "station_coverage_ratio": 0.75,
       "retained_station_days": 93,
-      "possible_station_days_known_fuel": 93,
-      "effective_coverage_ratio": 1.0,
+      "possible_station_days_known_fuel": 124,
+      "effective_coverage_ratio": 0.75,
       "contributor_temporal_coverage_ratio": 1.0,
       "days_with_any_price": 31
     },
@@ -713,9 +687,10 @@
       "epci_siren": "200073252",
       "epci_nom": "CC de la Castagniccia-Casinca",
       "fuel": "SP95",
-      "registry_stations": 4,
-      "known_fuel_stations": 3,
+      "registry_stations": 5,
+      "known_fuel_stations": 4,
       "known_fuel_station_ids": [
+        "20213003",
         "20213004",
         "20213005",
         "20215001"
@@ -726,10 +701,10 @@
         "20213005",
         "20215001"
       ],
-      "station_coverage_ratio": 1.0,
+      "station_coverage_ratio": 0.75,
       "retained_station_days": 93,
-      "possible_station_days_known_fuel": 93,
-      "effective_coverage_ratio": 1.0,
+      "possible_station_days_known_fuel": 124,
+      "effective_coverage_ratio": 0.75,
       "contributor_temporal_coverage_ratio": 1.0,
       "days_with_any_price": 31
     },
@@ -1034,13 +1009,14 @@
       "epci_siren": "242010130",
       "epci_nom": "CC du Sartenais Valinco Taravo",
       "fuel": "Gazole",
-      "registry_stations": 8,
-      "known_fuel_stations": 8,
+      "registry_stations": 9,
+      "known_fuel_stations": 9,
       "known_fuel_station_ids": [
         "20100001",
         "20100003",
         "20100005",
         "20110003",
+        "20110005",
         "20110006",
         "20113001",
         "20113002",
@@ -1057,10 +1033,10 @@
         "20113002",
         "20140001"
       ],
-      "station_coverage_ratio": 1.0,
+      "station_coverage_ratio": 0.8889,
       "retained_station_days": 248,
-      "possible_station_days_known_fuel": 248,
-      "effective_coverage_ratio": 1.0,
+      "possible_station_days_known_fuel": 279,
+      "effective_coverage_ratio": 0.8889,
       "contributor_temporal_coverage_ratio": 1.0,
       "days_with_any_price": 31
     },
@@ -1068,13 +1044,14 @@
       "epci_siren": "242010130",
       "epci_nom": "CC du Sartenais Valinco Taravo",
       "fuel": "SP95",
-      "registry_stations": 8,
-      "known_fuel_stations": 8,
+      "registry_stations": 9,
+      "known_fuel_stations": 9,
       "known_fuel_station_ids": [
         "20100001",
         "20100003",
         "20100005",
         "20110003",
+        "20110005",
         "20110006",
         "20113001",
         "20113002",
@@ -1091,10 +1068,10 @@
         "20113002",
         "20140001"
       ],
-      "station_coverage_ratio": 1.0,
+      "station_coverage_ratio": 0.8889,
       "retained_station_days": 213,
-      "possible_station_days_known_fuel": 248,
-      "effective_coverage_ratio": 0.8589,
+      "possible_station_days_known_fuel": 279,
+      "effective_coverage_ratio": 0.7634,
       "contributor_temporal_coverage_ratio": 0.8589,
       "days_with_any_price": 31
     },

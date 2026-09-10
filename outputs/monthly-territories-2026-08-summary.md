@@ -3,7 +3,7 @@
 Moteur : A4C-V2-2026-07-23 ; C2 main : 756a837fd2cd0d9f9336d702fe845d05c9f6dc94.
 Release C1 épinglée par C2 : a4c-v2-shared-20260908T011056Z-34175476841.
 Source officielle disponible jusqu'au : 2026-09-07.
-Registre géographique : 124 stations ; 19 EPCI.
+Registre géographique : 126 stations ; 19 EPCI.
 
 ## Gazole
 EPCI présents : 19 ; classables : 17 ; hors classement : 2.

@@ -17,7 +17,7 @@
       "network"
     ],
     "geography_file": "config/corse_station_geography_2026.csv",
-    "geography_rows": 124,
+    "geography_rows": 126,
     "epci_count_registry": 19,
     "thresholds": {
       "ranking_min_stations": 3,
