@@ -10,6 +10,7 @@ on:
       - scripts/audit_epci_monthly.py
       - scripts/audit_monthly_territorial_coverage.py
       - scripts/validate_monthly_widget_contract.py
+      - scripts/browser_smoke_monthly_widget.mjs
       - widgets/bilan-territorial/index.html
       - config/corse_station_geography_2026.csv
       - config/corse_station_geography_2026_additions.csv
@@ -102,6 +103,26 @@ jobs:
           --data outputs/monthly-territories-2026-08.json
           --widget widgets/bilan-territorial/index.html
 
+      - name: Install real-browser smoke-test dependency
+        run: npm install --no-save --no-package-lock playwright-core@1.55.0
+
+      - name: Render and exercise widget in desktop and mobile Chrome
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/a4c-monthly-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:8765/widgets/bilan-territorial/index.html >/dev/null; then
+              break
+            fi
+            sleep 0.5
+          done
+          node scripts/browser_smoke_monthly_widget.mjs \
+            --url 'http://127.0.0.1:8765/widgets/bilan-territorial/index.html?data=/outputs/monthly-territories-2026-08.json' \
+            --output outputs/monthly-widget-browser-smoke-2026-08.json
+
       - name: Audit Calvi Balagne SP95 station by station
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -173,10 +194,11 @@ jobs:
           git add -f \
             outputs/monthly-territories-2026-08.json \
             outputs/monthly-territories-2026-08-summary.md \
+            outputs/monthly-widget-browser-smoke-2026-08.json \
             outputs/calvi-balagne-sp95-2026-08-audit.json \
             outputs/calvi-balagne-sp95-2026-08-audit.md \
             outputs/monthly-territorial-coverage-2026-08-audit.json \
             outputs/monthly-territorial-coverage-2026-08-audit.md
           git diff --cached --quiet && exit 0
-          git commit -m "Validate August monthly widget against C2 V2 data"
+          git commit -m "Browser-test August monthly widget on desktop and mobile"
           git push origin HEAD:add-corse-station-geography-2026
