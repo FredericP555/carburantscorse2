@@ -33,10 +33,6 @@ cd "$INTEGRATED"
 python -m pip install --disable-pip-version-check -r requirements.lock.txt
 python -m unittest tests.test_ci_supply_chain_contracts -v
 
-# Consume a real successful C2 publication receipt and prove that it still matches current
-# repository data + current public Pages. We intentionally do not require receipt.commit == HEAD:
-# the existing verifier proves content by SHA-256 and Pages identity, which is stronger when main
-# has advanced without changing data.json/homepage-summary.json.
 run_id=$(gh run list \
   --repo FredericP555/carburantscorse2 \
   --workflow verify-c2-publication.yml \
@@ -73,8 +69,6 @@ python scripts/check_monthly_readiness.py \
   --output outputs/monthly-readiness-2026-08.json \
   --fail-if-not-ready
 
-# Negative readiness cases: incomplete calendar month, stale/tampered C2 state, valid final receipt,
-# and corrupt final receipt must all block generation.
 rm -rf /tmp/readiness && mkdir -p /tmp/readiness
 common=(--month "$MONTH" --c2-summary homepage-summary.json --c2-business-receipt "$BUSINESS_RECEIPT")
 python scripts/check_monthly_readiness.py "${common[@]}" --as-of 2026-08-31 --c2-data data.json --output /tmp/readiness/incomplete.json
@@ -102,15 +96,36 @@ for name in ('incomplete','stale','finalized','corrupt'):
     print(name, 'blocked by', [c['key'] for c in d['checks'] if not c['ok']])
 PY
 
-# All scripts below run in this disposable main-based worktree. Production helper files may mutate
-# here, but only explicitly approved monthly outputs are copied back to the feature branch.
 cp config/bdr_station_brands.json /tmp/monthly-bdr-registry.json
+set +e
 PYTHONPATH=. python scripts/validate_monthly_source_guards.py \
   --month "$MONTH" --c2-data data.json \
   --output outputs/monthly-source-guards-2026-08.json
+source_guard_rc=$?
+set -e
+if [ "$source_guard_rc" -ne 2 ]; then
+  echo "Expected August source guard to block with exit 2, got $source_guard_rc" >&2
+  exit 1
+fi
+python - <<'PY'
+import json
+from pathlib import Path
+d=json.loads(Path('outputs/monthly-source-guards-2026-08.json').read_text())
+assert d['status']=='fail', d
+assert d['failure_kind']=='bdr_perimeter_incomplete', d
+assert d['missing_geography']==[], d
+assert d['unknown_recent_bdr_stations']==['13120012'], d
+x=d['unknown_bdr_details'][0]
+assert x['first_eligible_unknown_day']=='2026-08-25', x
+assert x['last_eligible_unknown_day']=='2026-08-30', x
+assert x['eligible_unknown_station_days']==6, x
+print('Expected historical BDR boundary preserved:', x)
+PY
 cp /tmp/monthly-bdr-registry.json config/bdr_station_brands.json
 rm -rf outputs/ufip outputs/c1
 
+# Continue non-promotional validation. Because the strict guard failed above, August cannot receive
+# a real final monthly receipt even if the UI/prototype tests below pass.
 PYTHONPATH=. python scripts/build_monthly_territorial.py \
   --month "$MONTH" --c2-data data.json \
   --output outputs/monthly-territories-2026-08.json
@@ -152,6 +167,7 @@ from pathlib import Path
 d=json.loads(Path('outputs/monthly-territories-2026-08.json').read_text())
 m=d['meta']
 lines=['# Contrôle territorial C2 V2 — août 2026','',
+       '**Statut de promotion : BLOQUÉ par le garde de périmètre BdR (station 13120012, 25-30 août).**','',
        f"Moteur : {m['c2_engine']} ; C2 main : {m['c2_main_sha_runtime']}.",
        f"Release C1 : {m['c1_release_tag']}.",
        f"Registre géographique : {m['geography_rows']} stations ; {m['epci_count_registry']} EPCI.",'']
@@ -162,18 +178,7 @@ for fuel in ('Gazole','SP95'):
 Path('outputs/monthly-territories-2026-08-summary.md').write_text('\n'.join(lines)+'\n', encoding='utf-8')
 PY
 
-mkdir -p /tmp/monthly-final-receipts
-FINAL_RECEIPT=/tmp/monthly-final-receipts/2026-08.json
-python scripts/write_monthly_receipt.py \
-  --month "$MONTH" \
-  --dataset outputs/monthly-territories-2026-08.json \
-  --readiness outputs/monthly-readiness-2026-08.json \
-  --source-guards outputs/monthly-source-guards-2026-08.json \
-  --browser-smoke outputs/monthly-widget-browser-smoke-2026-08.json \
-  --widget widgets/bilan-territorial/index.html \
-  --geography config/corse_station_geography_2026.csv \
-  --c2-business-receipt "$BUSINESS_RECEIPT" \
-  --output "$FINAL_RECEIPT"
+rm -rf /tmp/monthly-final-receipts && mkdir -p /tmp/monthly-final-receipts
 if python scripts/write_monthly_receipt.py \
   --month "$MONTH" \
   --dataset outputs/monthly-territories-2026-08.json \
@@ -183,13 +188,42 @@ if python scripts/write_monthly_receipt.py \
   --widget widgets/bilan-territorial/index.html \
   --geography config/corse_station_geography_2026.csv \
   --c2-business-receipt "$BUSINESS_RECEIPT" \
-  --output "$FINAL_RECEIPT"; then
+  --output /tmp/monthly-final-receipts/2026-08.json; then
+  echo 'Receipt writer accepted a failed source guard' >&2
+  exit 1
+fi
+
+python - <<'PY'
+import json
+from pathlib import Path
+p=Path('outputs/monthly-source-guards-2026-08.json')
+d=json.loads(p.read_text())
+d['status']='pass'; d['failure_kind']=None; d['failure_message']=None
+d['unknown_recent_bdr_stations']=[]; d['unknown_bdr_details']=[]
+Path('/tmp/source-guards-pass-mechanics.json').write_text(json.dumps(d), encoding='utf-8')
+PY
+MECH=/tmp/monthly-receipt-mechanics.json
+rm -f "$MECH"
+python scripts/write_monthly_receipt.py \
+  --month "$MONTH" --dataset outputs/monthly-territories-2026-08.json \
+  --readiness outputs/monthly-readiness-2026-08.json \
+  --source-guards /tmp/source-guards-pass-mechanics.json \
+  --browser-smoke outputs/monthly-widget-browser-smoke-2026-08.json \
+  --widget widgets/bilan-territorial/index.html \
+  --geography config/corse_station_geography_2026.csv \
+  --c2-business-receipt "$BUSINESS_RECEIPT" --output "$MECH"
+if python scripts/write_monthly_receipt.py \
+  --month "$MONTH" --dataset outputs/monthly-territories-2026-08.json \
+  --readiness outputs/monthly-readiness-2026-08.json \
+  --source-guards /tmp/source-guards-pass-mechanics.json \
+  --browser-smoke outputs/monthly-widget-browser-smoke-2026-08.json \
+  --widget widgets/bilan-territorial/index.html \
+  --geography config/corse_station_geography_2026.csv \
+  --c2-business-receipt "$BUSINESS_RECEIPT" --output "$MECH"; then
   echo 'Second receipt write unexpectedly succeeded' >&2
   exit 1
 fi
-cp "$FINAL_RECEIPT" outputs/monthly-final-receipt-test-2026-08.json
 
-# Copy only controlled test evidence back. Mutable C2 helper inputs and node_modules stay disposable.
 mkdir -p "$FEATURE_ROOT/outputs"
 approved=(
   monthly-readiness-2026-08.json
@@ -197,7 +231,6 @@ approved=(
   monthly-territories-2026-08.json
   monthly-territories-2026-08-summary.md
   monthly-widget-browser-smoke-2026-08.json
-  monthly-final-receipt-test-2026-08.json
   calvi-balagne-sp95-2026-08-audit.json
   calvi-balagne-sp95-2026-08-audit.md
   monthly-territorial-coverage-2026-08-audit.json
@@ -210,6 +243,6 @@ git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 for f in "${approved[@]}"; do git add -f "outputs/$f"; done
 if ! git diff --cached --quiet; then
-  git commit -m "Revalidate hardened August monthly prototype"
+  git commit -m "Revalidate hardened August monthly prototype without promoting blocked output"
   git push origin HEAD:add-corse-station-geography-2026
 fi
