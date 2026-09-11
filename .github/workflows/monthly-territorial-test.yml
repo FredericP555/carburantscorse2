@@ -7,6 +7,8 @@ on:
     paths:
       - .github/workflows/monthly-territorial-test.yml
       - scripts/run_monthly_hardening_test.sh
+      - scripts/check_monthly_c2_contract_isolated.sh
+      - scripts/validate_monthly_c2_contract.py
       - scripts/check_monthly_readiness.py
       - scripts/build_monthly_territorial.py
       - scripts/validate_monthly_source_guards.py
@@ -48,3 +50,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GITHUB_TOKEN: ${{ github.token }}
         run: bash scripts/run_monthly_hardening_test.sh
+
+      - name: Verify monthly C2 constants still match current production defaults
+        run: bash scripts/check_monthly_c2_contract_isolated.sh
