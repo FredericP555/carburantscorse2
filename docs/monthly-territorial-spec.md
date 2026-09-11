@@ -1,6 +1,6 @@
 # Bilan mensuel territorial A4C — spécification de prototype
 
-Ce document décrit une chaîne **indépendante** du workflow hebdomadaire C2. Elle ne modifie ni `data.json`, ni le site public, ni WordPress, ni les règles de publication existantes.
+Ce document décrit une chaîne **indépendante** du workflow hebdomadaire C2. Tant qu'elle reste sur la branche de travail, elle ne modifie ni `data.json`, ni le site public, ni WordPress, ni les règles de publication existantes.
 
 ## 1. Périmètre
 
@@ -12,7 +12,7 @@ Ce document décrit une chaîne **indépendante** du workflow hebdomadaire C2. E
 
 ## 2. Population statistique et moteur de fiabilité
 
-La géographie territoriale est nouvelle, mais **la décision de fiabilité d'un station-jour n'est pas réimplémentée dans le générateur mensuel**.
+La géographie territoriale est nouvelle, mais **la décision de fiabilité d'un station-jour n'est pas réimplémentée comme une politique concurrente de C2**.
 
 `build_monthly_territorial.py` reprend la même release C1 V2 que celle déjà consommée par C2 et réutilise la chaîne du moteur de production C2 : état de publication, résolution du périmètre Bouches-du-Rhône, métadonnées de bouclier, marques corses, gardes événementiels et évaluation V2 via `scripts.build_v2_production_candidate._evaluate_v2`.
 
@@ -20,11 +20,13 @@ La transition V2 conserve les mêmes sémantiques que C2 : V2 remplace l'éligib
 
 Les agrégats mensuels ne sont calculés que sur les station-jours marqués `eligible_publication` par cette chaîne. Une donnée retenue par le moteur est utilisée normalement ; une donnée rejetée n'entre pas dans les calculs.
 
-## 3. Registre géographique et garde-fou sur les nouveaux identifiants
+## 3. Registre géographique et périmètre Bouches-du-Rhône
 
-Chaque identifiant de station corse éligible doit disposer d'un rattachement territorial explicite. Le rattachement EPCI se fait par la **commune**, jamais par la seule localité commerciale ou postale.
+Le rattachement EPCI se fait par la **commune**, jamais par la seule localité commerciale ou postale. La chaîne de production mensuelle doit vérifier les identifiants de stations corses présents dans le mois **avant le filtrage d'éligibilité**. Ainsi, un nouvel identifiant entièrement rejeté par la politique de fiabilité ne peut pas échapper au contrôle géographique.
 
-Le générateur ne doit ni inventer un EPCI, ni fusionner automatiquement deux identifiants de station. Si une station corse éligible apparaît dans C2 sans rattachement dans le registre géographique, la génération mensuelle doit échouer explicitement afin que l'identifiant soit vérifié et rattaché avant production du bilan.
+Aucun EPCI n'est inventé et aucun historique n'est transféré entre deux `station_id`. Tout identifiant corse présent dans le mois mais absent du registre provoque un échec explicite.
+
+La chaîne réutilise également le garde-fou C2 `validate_recent_bdr_perimeter`. Une station BdR éligible restant classée `unknown` sur le mois est un arrêt bloquant avant promotion d'un résultat mensuel.
 
 ## 4. Indicateurs par EPCI et par carburant
 
@@ -46,7 +48,7 @@ Le module n'utilise pas le minimum ou le maximum ponctuel observé pendant le mo
 
 ## 5. Affichage, comparaison et classement
 
-Les **19 EPCI restent accessibles** dans le module dès lors qu'une donnée mensuelle peut être calculée. Un territoire n'est exclu de l'interface simplement parce qu'il ne franchit pas un seuil de classement.
+Les **19 EPCI restent accessibles** dans le module dès lors qu'une donnée mensuelle peut être calculée. Un territoire n'est pas retiré de l'interface simplement parce qu'il ne franchit pas un seuil de classement.
 
 Un EPCI est classable entre territoires si :
 
@@ -56,46 +58,61 @@ Un EPCI est classable entre territoires si :
 
 Sous ces seuils, ses valeurs restent affichées, avec une mention explicite indiquant qu'il est hors classement inter-EPCI pour ce carburant et ce mois. Une comparaison directe avec un autre territoire reste possible mais est présentée comme descriptive.
 
-Le diagnostic interne peut calculer un indicateur plus sévère de représentativité rapportant les station-jours retenus à toutes les stations du registre historiquement connues pour vendre le carburant. Cet indicateur **ne remplace pas** la couverture temporelle de l'échantillon et ne modifie pas automatiquement les seuils de classement : il sert au contrôle interne.
+Le diagnostic interne peut calculer un indicateur plus sévère de représentativité rapportant les station-jours retenus à toutes les stations du registre historiquement connues pour vendre le carburant. Cet indicateur **ne remplace pas** la couverture temporelle de l'échantillon et ne modifie pas automatiquement les seuils de classement.
 
 ## 6. Comparaison Corse / Bouches-du-Rhône
 
-Pour chaque carburant et pour chacun des périmètres `network` et `all`, le fichier mensuel contient :
-
-- moyenne TTC Corse et Bouches-du-Rhône ;
-- écart TTC en centimes/litre ;
-- moyenne HT Corse et Bouches-du-Rhône suivant la convention C2 ;
-- écart HT en centimes/litre ;
-- évolution mensuelle des écarts TTC et HT ;
-- nombre de jours ayant franchi les gardes d'effectif C2 ;
-- effectifs de stations et de station-jours utilisés.
+Pour chaque carburant et pour chacun des périmètres `network` et `all`, le fichier mensuel contient les moyennes TTC et HT, les écarts en centimes/litre, leur évolution mensuelle, les jours franchissant les gardes d'effectif C2 et les effectifs utilisés.
 
 Les libellés distinguent explicitement TTC et HT. L'écart TTC est celui utilisé pour l'estimation budgétaire destinée à l'automobiliste ; l'écart HT reste analytique.
 
-## 7. Séparation « aujourd'hui » / « bilan du mois »
+## 7. Preuve de succès C2 avant génération
 
-Le bilan mensuel porte exclusivement sur le mois complet sélectionné. Si une donnée courante est ajoutée ultérieurement dans un article, elle doit être visuellement séparée et datée (« dernière donnée disponible au ... »). Un bilan figé ne doit pas être silencieusement réécrit par une donnée plus récente.
+Le simple passage au mois suivant n'autorise pas une génération. `check_monthly_readiness.py` exige un **reçu `business-success` réel de C2**, issu de la vérification de publication bout-en-bout, et vérifie notamment :
 
-## 8. Calculateur personnel
+- que le mois demandé est terminé ;
+- que `data.json` couvre un jour postérieur à la fin du mois ;
+- que `data.json` et `homepage-summary.json` portent la même provenance C1 ;
+- que les SHA-256 du dépôt correspondent à ceux certifiés par le reçu C2 et aux contenus observés sur Pages ;
+- que le tag et l'empreinte de la release C1 correspondent ;
+- que le registre géographique est complet et unique ;
+- qu'aucun reçu mensuel final valide n'existe déjà.
 
-Le module permet :
+Le champ `commit` du reçu C2 est conservé comme provenance du vérificateur, mais l'identité du contenu repose sur les empreintes SHA-256 certifiées. Le SHA de `main` utilisé au moment du calcul mensuel est enregistré séparément.
 
-- soit de saisir directement un volume de carburant en litres ;
-- soit de saisir `kilomètres + consommation L/100 km` pour obtenir un volume estimé ;
-- de choisir la référence Bouches-du-Rhône (`network` ou `all`) ;
-- d'afficher l'effet budgétaire à partir de l'écart TTC, avec l'écart HT présenté séparément comme indicateur analytique.
+## 8. Isolation d'exécution et idempotence
 
-Aucune hypothèse fixe de réservoir de 50 L n'est imposée.
+Les tests d'intégration sont exécutés dans un **worktree jetable construit à partir du `main` courant**, auquel seuls les fichiers mensuels sont superposés. Cela évite de tester contre l'ancien arbre de la branche et empêche les écritures auxiliaires du résolveur BdR ou des téléchargements C1 de contaminer le checkout de production.
 
-## 9. Contrôles avant toute intégration
+Avant chaque reconstruction sensible, le registre BdR de départ est restauré. Seules les sorties mensuelles explicitement autorisées sont recopiées vers la branche de travail.
 
-Le prototype possède deux niveaux de contrôle indépendants :
+La future automatisation doit être sérialisée par une `concurrency` GitHub Actions et écrire, après réussite complète, un reçu mensuel structuré. `write_monthly_receipt.py` utilise une création exclusive (`O_EXCL`) et refuse tout écrasement. Le reçu contient les empreintes du jeu mensuel, du registre géographique, du widget, des contrôles navigateur, des gardes source et la provenance C1/C2.
 
-- un contrôle de contrat JSON/HTML vérifiant le schéma, les 19 EPCI, les champs consommés, les deux périmètres Bouches-du-Rhône et la syntaxe JavaScript ;
-- un test dans un vrai navigateur Chrome, en vue ordinateur et mobile, qui exerce les deux carburants, les 38 couples EPCI/carburant, les cas hors classement, la comparaison entre territoires, le calculateur et l'absence de débordement horizontal de page.
+## 9. Calculateur personnel
 
-Les tableaux peuvent défiler horizontalement dans leur propre conteneur sur mobile ; la page elle-même ne doit pas déborder. Les contrôles tactiles principaux visent au moins 44 px de hauteur.
+Le module permet soit de saisir directement un volume de carburant, soit de saisir `kilomètres + consommation L/100 km`, puis de choisir `network` ou `all`. L'effet budgétaire est calculé à partir de l'écart TTC, avec l'écart HT présenté séparément comme indicateur analytique. Aucune hypothèse fixe de réservoir de 50 L n'est imposée.
 
-## 10. Sécurité de publication
+## 10. Tests avant intégration
 
-Le prototype est développé uniquement sur `add-corse-station-geography-2026`. Aucun workflow hebdomadaire de production n'est modifié. Aucun fichier produit par ce prototype n'est consommé par le site C2 public ni par WordPress tant qu'une validation séparée et explicite n'a pas été décidée.
+La chaîne de test vérifie :
+
+- le contrat global de sécurité CI de `main`, notamment l'épinglage complet des actions GitHub ;
+- la readiness à partir d'un reçu C2 réellement validé ;
+- des scénarios négatifs : mois incomplet, état C2 altéré ou ancien, reçu mensuel existant et reçu corrompu ;
+- les identifiants corses avant éligibilité et le garde-fou BdR de production ;
+- l'unicité des 38 lignes EPCI/carburant, les types et cohérences numériques ;
+- les **19 EPCI × 2 carburants sur desktop et mobile** dans un vrai Chrome ;
+- les cas hors classement, la comparaison entre territoires, le calculateur, les cibles tactiles et l'absence de débordement horizontal de page ;
+- l'écriture unique du reçu final et le refus d'un second écrasement.
+
+## 11. GitHub Pages et WordPress
+
+Le dépôt C2 est servi par GitHub Pages. En conséquence, **le widget et les fichiers `outputs/monthly-*` ne doivent pas être fusionnés dans `main` tant que leur exposition publique n'a pas été décidée explicitement**. Le fait qu'une page ne soit pas liée depuis `index.html` ne suffit pas à la rendre privée.
+
+Aucun code de création, modification ou publication WordPress ne fait partie de cette chaîne. L'intégration WordPress reste une étape distincte, soumise à autorisation explicite.
+
+## 12. Sécurité de fusion
+
+Le développement reste sur `add-corse-station-geography-2026`. Une éventuelle intégration future doit partir du **`main` courant** et ajouter les fichiers retenus ; elle ne doit jamais remplacer l'arbre de `main` par celui de cette branche historiquement en retard.
+
+Avant toute fusion, un nouvel audit doit contrôler le diff réellement destiné à `main`, l'effet Pages, les workflows déclenchables et l'absence de writer C2 actif au moment de l'opération.
