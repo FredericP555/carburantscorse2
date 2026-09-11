@@ -105,7 +105,7 @@ PY
 # All scripts below run in this disposable main-based worktree. Production helper files may mutate
 # here, but only explicitly approved monthly outputs are copied back to the feature branch.
 cp config/bdr_station_brands.json /tmp/monthly-bdr-registry.json
-python scripts/validate_monthly_source_guards.py \
+PYTHONPATH=. python scripts/validate_monthly_source_guards.py \
   --month "$MONTH" --c2-data data.json \
   --output outputs/monthly-source-guards-2026-08.json
 cp /tmp/monthly-bdr-registry.json config/bdr_station_brands.json
