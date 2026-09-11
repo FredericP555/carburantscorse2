@@ -90,6 +90,8 @@ def main() -> None:
         raise RuntimeError("dataset and C2 receipt use different C1 releases")
     if readiness.get("c2_business_success_commit") != business.get("commit"):
         raise RuntimeError("readiness and C2 receipt commit differ")
+    if readiness.get("c2_business_success_data_sha256") != business.get("expected_data_sha256"):
+        raise RuntimeError("readiness and C2 receipt data hash differ")
 
     receipt = {
         "schema": SCHEMA,
@@ -99,7 +101,8 @@ def main() -> None:
         "period_end": meta.get("period_end"),
         "created_at": datetime.now(timezone.utc).isoformat(),
         "c1_release_tag": meta.get("c1_release_tag"),
-        "c2_main_commit": business.get("commit"),
+        "c2_main_commit_at_monthly_run": meta.get("c2_main_sha_runtime"),
+        "c2_business_receipt_commit": business.get("commit"),
         "c2_data_through": business.get("data_through"),
         "c2_expected_data_sha256": business.get("expected_data_sha256"),
         "c2_pages_data_sha256": business.get("pages_data_sha256"),
@@ -112,7 +115,6 @@ def main() -> None:
         "provenance": {
             "dataset_schema": meta.get("schema"),
             "c2_engine": meta.get("c2_engine"),
-            "c2_runtime_sha": meta.get("c2_main_sha_runtime"),
             "geography_rows": meta.get("geography_rows"),
             "epci_count": meta.get("epci_count_registry"),
         },
