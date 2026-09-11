@@ -1,5 +1,5 @@
 {
-  "schema": "a4c-monthly-widget-browser-smoke-v2",
+  "schema": "a4c-monthly-widget-browser-smoke-v3",
   "url": "http://127.0.0.1:8765/widgets/bilan-territorial/index.html?data=/outputs/monthly-territories-2026-08.json",
   "browser": "152.0.7977.82",
   "executablePath": "/usr/bin/google-chrome",
@@ -49,6 +49,16 @@
         ],
         "tableViewportWidth": 344,
         "tableScrollWidth": 514
+      },
+      "exhaustive": {
+        "Gazole": {
+          "epciTested": 19,
+          "horsClassement": 2
+        },
+        "SP95": {
+          "epciTested": 19,
+          "horsClassement": 3
+        }
       },
       "mobileSample": "2 stations contributrices • 2 communes • 39 station-jours • couverture temporelle de l’échantillon : 62,9 %",
       "longCompare": "CC de la Pieve de l'Ornano et du Taravo : 2,033 €/L • CC de l'Ile-Rousse - Balagne : 2,002 €/L • écart A − B : +3,14 c/L",

@@ -1,15 +1,19 @@
 {
-  "schema": "a4c-monthly-readiness-v1",
+  "schema": "a4c-monthly-readiness-v2",
   "ready": true,
   "month": "2026-08",
   "period_start": "2026-08-01",
   "period_end": "2026-08-31",
   "as_of": "2026-09-11",
   "c2_daily_target_end": "2026-09-07",
+  "c2_business_success_commit": "b193a0d4a50bac6ba4c14e8e260a9e86ef2705b3",
+  "c2_business_success_data_sha256": "a5593db87808a9d6426b3869baed90dbab99795cc321ee2e8738e8c63927d76c",
+  "c2_business_success_summary_sha256": "96c39173392dd0cc5009abc681b4779d7b765c943358b625f6d7f34b0345ac8a",
   "c1_release_tag": "a4c-v2-shared-20260908T011056Z-34175476841",
+  "c1_snapshot_sha256": "3876d7508069a492f47e1735e15ccf0263488410c0c980db59e79fb09f95ef36",
   "geography_rows": 126,
   "epci_count": 19,
-  "receipt_path": "/home/runner/work/carburantscorse2/carburantscorse2/outputs/monthly-receipts/2026-08.json",
+  "receipt_path": "/tmp/monthly-final-receipts/2026-08.json",
   "checks": [
     {
       "key": "month_complete",
@@ -27,14 +31,64 @@
       "detail": "c1_release_tag=a4c-v2-shared-20260908T011056Z-34175476841"
     },
     {
+      "key": "c2_summary_release_matches",
+      "ok": true,
+      "detail": "summary=a4c-v2-shared-20260908T011056Z-34175476841, data=a4c-v2-shared-20260908T011056Z-34175476841"
+    },
+    {
+      "key": "c2_summary_daily_matches",
+      "ok": true,
+      "detail": "summary=2026-09-07, data=2026-09-07"
+    },
+    {
+      "key": "c2_summary_snapshot_matches",
+      "ok": true,
+      "detail": "summary=3876d7508069a492f47e1735e15ccf0263488410c0c980db59e79fb09f95ef36, data=3876d7508069a492f47e1735e15ccf0263488410c0c980db59e79fb09f95ef36"
+    },
+    {
       "key": "c2_complete_through_month_end",
       "ok": true,
-      "detail": "c2_daily_target_end=2026-09-07, month_end=2026-08-31"
+      "detail": "daily_target=2026-09-07, month_end=2026-08-31"
     },
     {
       "key": "c2_success_state_is_post_month_end",
       "ok": true,
-      "detail": "c2_daily_target_end=2026-09-07, required_after=2026-08-31"
+      "detail": "daily_target=2026-09-07, required_after=2026-08-31"
+    },
+    {
+      "key": "c2_business_success_status",
+      "ok": true,
+      "detail": "status=business-success"
+    },
+    {
+      "key": "c2_business_release_matches",
+      "ok": true,
+      "detail": "receipt=a4c-v2-shared-20260908T011056Z-34175476841, data=a4c-v2-shared-20260908T011056Z-34175476841"
+    },
+    {
+      "key": "c2_business_data_through_matches",
+      "ok": true,
+      "detail": "receipt=2026-09-07, data=2026-09-07"
+    },
+    {
+      "key": "c2_business_snapshot_matches",
+      "ok": true,
+      "detail": "receipt_snapshot=3876d7508069a492f47e1735e15ccf0263488410c0c980db59e79fb09f95ef36, bundle=3876d7508069a492f47e1735e15ccf0263488410c0c980db59e79fb09f95ef36, data=3876d7508069a492f47e1735e15ccf0263488410c0c980db59e79fb09f95ef36"
+    },
+    {
+      "key": "c2_business_data_hash_matches",
+      "ok": true,
+      "detail": "receipt_expected=a5593db87808a9d6426b3869baed90dbab99795cc321ee2e8738e8c63927d76c, receipt_pages=a5593db87808a9d6426b3869baed90dbab99795cc321ee2e8738e8c63927d76c, current=a5593db87808a9d6426b3869baed90dbab99795cc321ee2e8738e8c63927d76c"
+    },
+    {
+      "key": "c2_business_summary_hash_matches",
+      "ok": true,
+      "detail": "receipt_expected=96c39173392dd0cc5009abc681b4779d7b765c943358b625f6d7f34b0345ac8a, receipt_pages=96c39173392dd0cc5009abc681b4779d7b765c943358b625f6d7f34b0345ac8a, current=96c39173392dd0cc5009abc681b4779d7b765c943358b625f6d7f34b0345ac8a"
+    },
+    {
+      "key": "c2_business_commit_present",
+      "ok": true,
+      "detail": "receipt=b193a0d4a50bac6ba4c14e8e260a9e86ef2705b3"
     },
     {
       "key": "geography_columns",
@@ -59,7 +113,7 @@
     {
       "key": "month_not_already_finalized",
       "ok": true,
-      "detail": "receipt=/home/runner/work/carburantscorse2/carburantscorse2/outputs/monthly-receipts/2026-08.json, exists=False"
+      "detail": "receipt=/tmp/monthly-final-receipts/2026-08.json absent"
     }
   ],
   "next_action": "generate_monthly_dataset"
