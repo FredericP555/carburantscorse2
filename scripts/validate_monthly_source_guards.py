@@ -52,6 +52,33 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
+def unknown_bdr_details(month_state: pd.DataFrame) -> list[dict]:
+    unknown = month_state[
+        (month_state["territory"] == "Bouches-du-Rhone")
+        & month_state["eligible_publication"]
+        & month_state["category"].eq("unknown")
+    ].copy()
+    details: list[dict] = []
+    for sid, group in unknown.groupby("station_id", sort=True):
+        group = group.sort_values("date")
+        sample = group.iloc[-1]
+        dates = group["date"].dt.strftime("%Y-%m-%d")
+        source_ts = pd.to_datetime(group.get("source_timestamp"), errors="coerce")
+        details.append({
+            "station_id": str(sid),
+            "cp": str(sample.get("cp", "")),
+            "city": str(sample.get("city", "")),
+            "address": str(sample.get("address", "")),
+            "first_eligible_unknown_day": str(dates.min()),
+            "last_eligible_unknown_day": str(dates.max()),
+            "eligible_unknown_station_days": int(len(group)),
+            "fuels": sorted(group["fuel"].astype(str).unique().tolist()),
+            "source_timestamp_min": None if source_ts.isna().all() else source_ts.min().isoformat(),
+            "source_timestamp_max": None if source_ts.isna().all() else source_ts.max().isoformat(),
+        })
+    return details
+
+
 def main() -> None:
     args = parse_args()
     start, end = month_bounds(args.month)
@@ -139,8 +166,16 @@ def main() -> None:
             + json.dumps(details, ensure_ascii=False)
         )
 
-    # Exact production guard: any eligible BDR station still classified unknown is a hard stop.
-    unknown_bdr = validate_recent_bdr_perimeter(v2_state, since=start)
+    # Exact production guard, applied to the entire period being recalculated. Do not downgrade
+    # this to a warning: if it fails, a network-scope monthly comparison is not reproducible yet.
+    bdr_details = unknown_bdr_details(month_state)
+    try:
+        unknown_bdr = validate_recent_bdr_perimeter(v2_state, since=start)
+    except RuntimeError as exc:
+        raise RuntimeError(
+            f"{exc}; monthly_unknown_details="
+            + json.dumps(bdr_details, ensure_ascii=False)
+        ) from exc
 
     result = {
         "schema": "a4c-monthly-source-guards-v1",
@@ -155,6 +190,7 @@ def main() -> None:
         "corsica_station_ids_checked_before_eligibility": len(month_ids),
         "missing_geography": missing,
         "unknown_recent_bdr_stations": unknown_bdr,
+        "unknown_bdr_details": bdr_details,
         "r2_unavailable": engine.get("r2_unavailable"),
         "bdr_resolution": resolution,
     }
