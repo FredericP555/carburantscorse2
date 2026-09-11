@@ -23,7 +23,7 @@ check(url,'--url is required');
 
 const executablePath=browserPath();
 const browser=await chromium.launch({headless:true, executablePath, args:['--no-sandbox','--disable-dev-shm-usage']});
-const report={schema:'a4c-monthly-widget-browser-smoke-v2',url,browser:await browser.version(),executablePath,tests:{}};
+const report={schema:'a4c-monthly-widget-browser-smoke-v3',url,browser:await browser.version(),executablePath,tests:{}};
 
 async function noPageOverflow(page, label){
   const x=await page.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,innerWidth:window.innerWidth}));
@@ -76,7 +76,6 @@ async function exerciseAllEpci(page, mode){
   }));
   check(layout.cards===4,'desktop: cards are not in four columns');
   check(layout.controls===2,'desktop: controls are not in two columns');
-
   const exhaustive=await exerciseAllEpci(page,'desktop');
 
   await page.click('[data-fuel="SP95"]');
@@ -127,6 +126,8 @@ async function exerciseAllEpci(page, mode){
   check(layout.wrapWidth<=390,'mobile: wrapper exceeds viewport');
   check(layout.fuelButtonHeights.every(h=>h>=44),'mobile: fuel buttons are below 44px touch target');
 
+  const exhaustive=await exerciseAllEpci(page,'mobile');
+
   await page.click('[data-fuel="SP95"]');
   await page.selectOption('#epci','242020105');
   check(await page.locator('#limited').isVisible(),'mobile: Calvi Balagne SP95 limited notice is not visible');
@@ -140,9 +141,9 @@ async function exerciseAllEpci(page, mode){
   await page.fill('#litres','70');
   const mobileCalc=await page.locator('#calcResult').innerText();
   check(mobileCalc.includes('70 L') && !mobileCalc.includes('NaN'),'mobile: calculator did not render cleanly');
-  const after=await noPageOverflow(page,'mobile after long labels and calculator');
+  const after=await noPageOverflow(page,'mobile after exhaustive traversal, long labels and calculator');
 
-  report.tests.mobile={ok:true,overflow,layout,mobileSample,longCompare,mobileCalc,after};
+  report.tests.mobile={ok:true,overflow,layout,exhaustive,mobileSample,longCompare,mobileCalc,after};
   await context.close();
 }
 
