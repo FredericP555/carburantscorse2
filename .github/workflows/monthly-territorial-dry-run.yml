@@ -119,8 +119,6 @@ jobs:
                   and run.get('head_branch') == 'main'
                   and run.get('path') == monthly_path
               )
-          # Contract tests: failed artifact must not block; successful main artifact must block;
-          # successful non-main artifact must not block.
           fake=lambda rid: {
               1:{'status':'completed','conclusion':'failure','head_branch':'main','path':monthly_path},
               2:{'status':'completed','conclusion':'success','head_branch':'main','path':monthly_path},
@@ -338,14 +336,30 @@ jobs:
         run: |
           set -euo pipefail
           cd /tmp/monthly-run
-          cp config/bdr_station_brands.json /tmp/monthly-bdr-registry.json
-          python scripts/audit_monthly_territorial_coverage.py \
-            --month "$MONTH" \
-            --c2-data data.json \
-            --output "/tmp/monthly-artifact/monthly-territorial-coverage-$MONTH-audit.json" \
-            --markdown "/tmp/monthly-artifact/monthly-territorial-coverage-$MONTH-audit.md"
-          cp /tmp/monthly-bdr-registry.json config/bdr_station_brands.json
-          rm -rf outputs/ufip outputs/c1
+          if [[ "$MONTH" < '2026-08' ]]; then
+            python - <<'PY'
+          import json, os
+          from pathlib import Path
+          month=os.environ['MONTH']
+          out={
+              'schema':'a4c-monthly-territorial-coverage-not-applicable-v1',
+              'month':month,
+              'status':'not_applicable_pre_v2',
+              'note':'The detailed territorial coverage audit is defined only for C2 V2 months; the generic monthly build/browser/receipt proof continues.'
+          }
+          Path(f'/tmp/monthly-artifact/monthly-territorial-coverage-{month}-audit.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          Path(f'/tmp/monthly-artifact/monthly-territorial-coverage-{month}-audit.md').write_text(f'# Couverture territoriale {month}\n\nAudit détaillé non applicable avant le périmètre C2 V2.\n',encoding='utf-8')
+          PY
+          else
+            cp config/bdr_station_brands.json /tmp/monthly-bdr-registry.json
+            python scripts/audit_monthly_territorial_coverage.py \
+              --month "$MONTH" \
+              --c2-data data.json \
+              --output "/tmp/monthly-artifact/monthly-territorial-coverage-$MONTH-audit.json" \
+              --markdown "/tmp/monthly-artifact/monthly-territorial-coverage-$MONTH-audit.md"
+            cp /tmp/monthly-bdr-registry.json config/bdr_station_brands.json
+            rm -rf outputs/ufip outputs/c1
+          fi
           if [ "$MONTH" = '2026-08' ]; then
             cp config/bdr_station_brands.json /tmp/monthly-bdr-registry.json
             python scripts/audit_epci_monthly.py \
