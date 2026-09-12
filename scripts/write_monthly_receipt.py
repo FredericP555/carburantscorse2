@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import argparse
 import calendar
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 import hashlib
 import json
 import os
@@ -49,7 +49,7 @@ def month_period(month: str) -> tuple[str, str, str]:
     year, mon = int(match.group(1)), int(match.group(2))
     start = date(year, mon, 1)
     end = date(year, mon, calendar.monthrange(year, mon)[1])
-    previous_end = start.replace(day=1) - __import__("datetime").timedelta(days=1)
+    previous_end = start - timedelta(days=1)
     previous_start = previous_end.replace(day=1)
     return start.isoformat(), end.isoformat(), previous_start.isoformat()
 
@@ -215,6 +215,8 @@ def main() -> None:
         mode_result = require_object(tests.get(mode), f"browser smoke.tests.{mode}")
         if mode_result.get("ok") is not True:
             raise RuntimeError(f"browser smoke {mode} evidence is not successful")
+        require_equal(mode_result.get("datasetSha256"), dataset_sha, f"browser smoke {mode} dataset SHA-256")
+        require_equal(mode_result.get("datasetMonth"), args.month, f"browser smoke {mode} dataset month")
 
     if business.get("status") != "business-success":
         raise RuntimeError("C2 receipt is not business-success")
@@ -276,17 +278,10 @@ def main() -> None:
     temp = out.with_name(f".{out.name}.{os.getpid()}.tmp")
     try:
         fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
-        try:
-            with os.fdopen(fd, "wb") as fh:
-                fh.write(payload)
-                fh.flush()
-                os.fsync(fh.fileno())
-        except Exception:
-            try:
-                os.close(fd)
-            except OSError:
-                pass
-            raise
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(payload)
+            fh.flush()
+            os.fsync(fh.fileno())
         try:
             os.link(temp, out)
         except FileExistsError as exc:
