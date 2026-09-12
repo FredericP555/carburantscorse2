@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Fail-closed source guards for one monthly territorial reconstruction.
 
-The guard checks all Corsica station IDs in the target month before eligibility filtering and
-reuses C2's production BDR perimeter guard. A failure is written as structured JSON before the
-process exits non-zero so diagnostics can be retained without weakening the block.
+The guard checks all Corsica station IDs across the requested month *and the immediately
+preceding month used for month-over-month deltas* before eligibility filtering, and reuses C2's
+production BDR perimeter guard across that same reconstruction window. A failure is written as
+structured JSON before the process exits non-zero so diagnostics can be retained without weakening
+the block.
 """
 from __future__ import annotations
 
@@ -16,7 +18,12 @@ import pandas as pd
 
 from a4c_common.shared_release import download_shared_rotterdam_assets, load_shared_observations
 from carburantscorse2.publication import build_publication_state, load_bdr_categories, validate_recent_bdr_perimeter
-from scripts.build_monthly_territorial import load_c2_reference, load_geography, month_bounds
+from scripts.build_monthly_territorial import (
+    load_c2_reference,
+    load_geography,
+    month_bounds,
+    previous_month_bounds,
+)
 from scripts.build_v2_production_candidate import (
     BDR_REGISTRY, C1_META, C1_TAG, CORSE_REGISTRY, LEGACY_BDR, SWITCH_DAY,
     _bdr_category_resolver, _candidate_stale_bdr_ids, _evaluate_v2, _resolve_bdr,
@@ -46,11 +53,11 @@ def write_result(path: Path, result: dict) -> None:
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
-def unknown_bdr_details(month_state: pd.DataFrame) -> list[dict]:
-    unknown = month_state[
-        (month_state["territory"] == "Bouches-du-Rhone")
-        & month_state["eligible_publication"]
-        & month_state["category"].eq("unknown")
+def unknown_bdr_details(window_state: pd.DataFrame) -> list[dict]:
+    unknown = window_state[
+        (window_state["territory"] == "Bouches-du-Rhone")
+        & window_state["eligible_publication"]
+        & window_state["category"].eq("unknown")
     ].copy()
     details: list[dict] = []
     for sid, group in unknown.groupby("station_id", sort=True):
@@ -77,6 +84,8 @@ def main() -> None:
     args = parse_args()
     output = ROOT / args.output
     start, end = month_bounds(args.month)
+    prev_start, prev_end = previous_month_bounds(start)
+    guard_start = prev_start
     if end >= pd.Timestamp(date.today()):
         raise RuntimeError("Requested month is not complete")
 
@@ -122,24 +131,33 @@ def main() -> None:
         start=SWITCH_DAY, end=end.date(),
     )
 
-    month_state = v2_state[
-        (v2_state["date"] >= start) & (v2_state["date"] <= end) & v2_state["fuel"].isin(FUELS)
+    # The generator uses both months. Guard exactly that complete reconstruction window, not only
+    # the target month. This catches geography/perimeter problems that would otherwise affect the
+    # reported month-over-month deltas without being seen by the preflight guard.
+    window_state = v2_state[
+        (v2_state["date"] >= guard_start)
+        & (v2_state["date"] <= end)
+        & v2_state["fuel"].isin(FUELS)
     ].copy()
-    month_corse = month_state[month_state["territory"] == "Corse"]
-    month_ids = set(month_corse["station_id"].astype(str).unique())
+    window_corse = window_state[window_state["territory"] == "Corse"]
+    window_ids = set(window_corse["station_id"].astype(str).unique())
     geography_ids = set(geo["station_id"].astype(str).unique())
-    missing = sorted(month_ids - geography_ids)
+    missing = sorted(window_ids - geography_ids)
 
     base_result = {
         "schema": "a4c-monthly-source-guards-v2",
         "month": args.month,
         "period_start": start.strftime("%Y-%m-%d"),
         "period_end": end.strftime("%Y-%m-%d"),
+        "previous_period_start": prev_start.strftime("%Y-%m-%d"),
+        "previous_period_end": prev_end.strftime("%Y-%m-%d"),
+        "guard_period_start": guard_start.strftime("%Y-%m-%d"),
+        "guard_period_end": end.strftime("%Y-%m-%d"),
         "c1_release_tag": release_tag,
         "c2_reference_daily_target_end": c2_meta.get("daily_target_end"),
         "geography_rows": int(len(geo)),
         "epci_count": int(geo["epci_siren"].nunique()),
-        "corsica_station_ids_checked_before_eligibility": len(month_ids),
+        "corsica_station_ids_checked_before_eligibility": len(window_ids),
         "r2_unavailable": engine.get("r2_unavailable"),
         "bdr_resolution": resolution,
     }
@@ -147,23 +165,32 @@ def main() -> None:
     if missing:
         details = []
         for sid in missing:
-            g = month_corse[month_corse["station_id"].astype(str) == sid].sort_values("date")
+            g = window_corse[window_corse["station_id"].astype(str) == sid].sort_values("date")
             sample = g.iloc[-1]
             details.append({
                 "station_id": sid,
                 "cp": str(sample.get("cp", "")),
                 "city": str(sample.get("city", "")),
                 "address": str(sample.get("address", "")),
+                "first_seen_in_guard_window": g["date"].min().strftime("%Y-%m-%d"),
+                "last_seen_in_guard_window": g["date"].max().strftime("%Y-%m-%d"),
                 "fuels": sorted(g["fuel"].astype(str).unique().tolist()),
                 "eligible_fuels": sorted(g.loc[g["eligible_publication"], "fuel"].astype(str).unique().tolist()),
             })
-        result = {**base_result, "status": "fail", "failure_kind": "missing_corsica_geography", "missing_geography": details, "unknown_recent_bdr_stations": [], "unknown_bdr_details": []}
+        result = {
+            **base_result,
+            "status": "fail",
+            "failure_kind": "missing_corsica_geography",
+            "missing_geography": details,
+            "unknown_recent_bdr_stations": [],
+            "unknown_bdr_details": [],
+        }
         write_result(output, result)
         raise SystemExit(2)
 
-    bdr_details = unknown_bdr_details(month_state)
+    bdr_details = unknown_bdr_details(window_state)
     try:
-        unknown_bdr = validate_recent_bdr_perimeter(v2_state, since=start)
+        unknown_bdr = validate_recent_bdr_perimeter(v2_state, since=guard_start)
     except RuntimeError as exc:
         result = {
             **base_result,
