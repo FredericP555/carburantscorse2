@@ -293,4 +293,4 @@ jobs:
           name: monthly-territorial-dry-run-2026-08
           path: /tmp/monthly-artifact
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90
