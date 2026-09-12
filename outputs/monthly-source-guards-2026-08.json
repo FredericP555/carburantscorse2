@@ -1,5 +1,5 @@
 {
-  "schema": "a4c-monthly-source-guards-v2",
+  "schema": "a4c-monthly-source-guards-v3",
   "month": "2026-08",
   "period_start": "2026-08-01",
   "period_end": "2026-08-31",
@@ -27,27 +27,37 @@
       "unresolved_ids": []
     }
   },
-  "status": "fail",
-  "failure_kind": "bdr_perimeter_incomplete",
-  "failure_message": "C2 BDR perimeter incomplete: 1 recent eligible station(s) remain unclassified: 13120012",
+  "status": "pass",
+  "failure_kind": null,
   "missing_geography": [],
-  "unknown_recent_bdr_stations": [
-    "13120012"
-  ],
-  "unknown_bdr_details": [
-    {
-      "station_id": "13120012",
-      "cp": "13120",
-      "city": "Gardanne",
-      "address": "183 rue du petit chemin d'Aix",
-      "first_eligible_unknown_day": "2026-08-25",
-      "last_eligible_unknown_day": "2026-08-30",
-      "eligible_unknown_station_days": 6,
-      "fuels": [
-        "Gazole"
-      ],
-      "source_timestamp_min": "2026-08-25T12:30:32",
-      "source_timestamp_max": "2026-08-25T12:30:32"
-    }
-  ]
+  "unknown_recent_bdr_stations": [],
+  "unknown_bdr_details": [],
+  "bdr_category_backfill": {
+    "policy": {
+      "scope": "monthly_reconstruction_only",
+      "same_station_id_required": true,
+      "max_backfill_days": 7,
+      "verified_future_category_required": true,
+      "contradictory_brand_or_category_blocks": true,
+      "price_or_eligibility_modified": false,
+      "window_start": "2026-08-01",
+      "window_end": "2026-08-31"
+    },
+    "applied_station_days": 6,
+    "applied_network_station_days": 0,
+    "applied_gms_station_days": 6,
+    "applied_ranges": [
+      {
+        "station_id": "13120012",
+        "from": "2026-08-25",
+        "through": "2026-08-30",
+        "station_days": 6,
+        "category": "gms",
+        "enseigne": "Carrefour Market",
+        "classification_valid_from": "2026-08-31",
+        "verified_at": "2026-08-31T08:05:56.369558+00:00"
+      }
+    ],
+    "rejected_conflicts": []
+  }
 }

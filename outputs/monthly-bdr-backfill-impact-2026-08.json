@@ -1,0 +1,168 @@
+{
+  "schema": "a4c-monthly-bdr-backfill-impact-v1",
+  "month": "2026-08",
+  "station_id": "13120012",
+  "rule": {
+    "scope": "monthly_reconstruction_only",
+    "same_station_id_required": true,
+    "max_backfill_days": 7,
+    "verified_future_category_required": true,
+    "contradictory_brand_or_category_blocks": true,
+    "price_or_eligibility_modified": false,
+    "window_start": "2026-07-01",
+    "window_end": "2026-08-31"
+  },
+  "backfill": [
+    {
+      "station_id": "13120012",
+      "from": "2026-08-25",
+      "through": "2026-08-30",
+      "station_days": 6,
+      "category": "gms",
+      "enseigne": "Carrefour Market",
+      "classification_valid_from": "2026-08-31",
+      "verified_at": "2026-08-31T08:05:56.369558+00:00"
+    }
+  ],
+  "after": {
+    "Gazole": {
+      "all": {
+        "corse_ttc_eur_l": 2.239,
+        "bdr_ttc_eur_l": 2.2281,
+        "gap_ttc_cpl": 1.09,
+        "corse_ht_eur_l": 1.9814,
+        "bdr_ht_eur_l": 1.8567,
+        "gap_ht_cpl": 12.47,
+        "valid_days": 31,
+        "guard_failed_days": 0,
+        "n_corse_stations": 120,
+        "n_bdr_scope_stations": 255,
+        "n_corse_station_days": 3712,
+        "n_bdr_scope_station_days": 7765,
+        "gap_ttc_change_vs_previous_month_cpl": -4.53,
+        "gap_ht_change_vs_previous_month_cpl": -3.09
+      },
+      "network": {
+        "corse_ttc_eur_l": 2.239,
+        "bdr_ttc_eur_l": 2.253,
+        "gap_ttc_cpl": -1.4,
+        "corse_ht_eur_l": 1.9814,
+        "bdr_ht_eur_l": 1.8775,
+        "gap_ht_cpl": 10.39,
+        "valid_days": 31,
+        "guard_failed_days": 0,
+        "n_corse_stations": 120,
+        "n_bdr_scope_stations": 122,
+        "n_corse_station_days": 3712,
+        "n_bdr_scope_station_days": 3743,
+        "gap_ttc_change_vs_previous_month_cpl": -3.91,
+        "gap_ht_change_vs_previous_month_cpl": -2.57
+      }
+    },
+    "SP95": {
+      "all": {
+        "corse_ttc_eur_l": 2.018,
+        "bdr_ttc_eur_l": 2.0698,
+        "gap_ttc_cpl": -5.18,
+        "corse_ht_eur_l": 1.7859,
+        "bdr_ht_eur_l": 1.7249,
+        "gap_ht_cpl": 6.1,
+        "valid_days": 31,
+        "guard_failed_days": 0,
+        "n_corse_stations": 112,
+        "n_bdr_scope_stations": 54,
+        "n_corse_station_days": 3275,
+        "n_bdr_scope_station_days": 1590,
+        "gap_ttc_change_vs_previous_month_cpl": -5.26,
+        "gap_ht_change_vs_previous_month_cpl": -4.28
+      },
+      "network": {
+        "corse_ttc_eur_l": 2.018,
+        "bdr_ttc_eur_l": 2.0885,
+        "gap_ttc_cpl": -7.04,
+        "corse_ht_eur_l": 1.7859,
+        "bdr_ht_eur_l": 1.7404,
+        "gap_ht_cpl": 4.55,
+        "valid_days": 31,
+        "guard_failed_days": 0,
+        "n_corse_stations": 112,
+        "n_bdr_scope_stations": 29,
+        "n_corse_station_days": 3275,
+        "n_bdr_scope_station_days": 844,
+        "gap_ttc_change_vs_previous_month_cpl": -4.88,
+        "gap_ht_change_vs_previous_month_cpl": -3.96
+      }
+    }
+  },
+  "before": {
+    "Gazole": {
+      "all": {
+        "corse_ttc_eur_l": 2.239,
+        "bdr_ttc_eur_l": 2.2281,
+        "gap_ttc_cpl": 1.09,
+        "corse_ht_eur_l": 1.9814,
+        "bdr_ht_eur_l": 1.8567,
+        "gap_ht_cpl": 12.47,
+        "valid_days": 31,
+        "guard_failed_days": 0,
+        "n_corse_stations": 120,
+        "n_bdr_scope_stations": 255,
+        "n_corse_station_days": 3712,
+        "n_bdr_scope_station_days": 7765,
+        "gap_ttc_change_vs_previous_month_cpl": -4.53,
+        "gap_ht_change_vs_previous_month_cpl": -3.09
+      },
+      "network": {
+        "corse_ttc_eur_l": 2.239,
+        "bdr_ttc_eur_l": 2.253,
+        "gap_ttc_cpl": -1.4,
+        "corse_ht_eur_l": 1.9814,
+        "bdr_ht_eur_l": 1.8775,
+        "gap_ht_cpl": 10.39,
+        "valid_days": 31,
+        "guard_failed_days": 0,
+        "n_corse_stations": 120,
+        "n_bdr_scope_stations": 122,
+        "n_corse_station_days": 3712,
+        "n_bdr_scope_station_days": 3743,
+        "gap_ttc_change_vs_previous_month_cpl": -3.91,
+        "gap_ht_change_vs_previous_month_cpl": -2.57
+      }
+    },
+    "SP95": {
+      "all": {
+        "corse_ttc_eur_l": 2.018,
+        "bdr_ttc_eur_l": 2.0698,
+        "gap_ttc_cpl": -5.18,
+        "corse_ht_eur_l": 1.7859,
+        "bdr_ht_eur_l": 1.7249,
+        "gap_ht_cpl": 6.1,
+        "valid_days": 31,
+        "guard_failed_days": 0,
+        "n_corse_stations": 112,
+        "n_bdr_scope_stations": 54,
+        "n_corse_station_days": 3275,
+        "n_bdr_scope_station_days": 1590,
+        "gap_ttc_change_vs_previous_month_cpl": -5.26,
+        "gap_ht_change_vs_previous_month_cpl": -4.28
+      },
+      "network": {
+        "corse_ttc_eur_l": 2.018,
+        "bdr_ttc_eur_l": 2.0885,
+        "gap_ttc_cpl": -7.04,
+        "corse_ht_eur_l": 1.7859,
+        "bdr_ht_eur_l": 1.7404,
+        "gap_ht_cpl": 4.55,
+        "valid_days": 31,
+        "guard_failed_days": 0,
+        "n_corse_stations": 112,
+        "n_bdr_scope_stations": 29,
+        "n_corse_station_days": 3275,
+        "n_bdr_scope_station_days": 844,
+        "gap_ttc_change_vs_previous_month_cpl": -4.88,
+        "gap_ht_change_vs_previous_month_cpl": -3.96
+      }
+    }
+  },
+  "corse_vs_bdr_unchanged": true
+}

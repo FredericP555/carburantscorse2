@@ -26,7 +26,17 @@
       "c2_min_corse_stations_per_day": 5,
       "c2_min_bdr_stations_per_day": 10
     },
-    "note": "Prototype indépendant : aucune consommation par le dashboard C2 public ni par WordPress."
+    "note": "Prototype indépendant : aucune consommation par le dashboard C2 public ni par WordPress.",
+    "bdr_category_backfill": {
+      "scope": "monthly_reconstruction_only",
+      "same_station_id_required": true,
+      "max_backfill_days": 7,
+      "verified_future_category_required": true,
+      "contradictory_brand_or_category_blocks": true,
+      "price_or_eligibility_modified": false,
+      "window_start": "2026-07-01",
+      "window_end": "2026-08-31"
+    }
   },
   "corse": {
     "Gazole": {
@@ -3508,6 +3518,34 @@
         "unresolved_this_run": 0,
         "unresolved_ids": []
       }
+    },
+    "bdr_category_backfill": {
+      "policy": {
+        "scope": "monthly_reconstruction_only",
+        "same_station_id_required": true,
+        "max_backfill_days": 7,
+        "verified_future_category_required": true,
+        "contradictory_brand_or_category_blocks": true,
+        "price_or_eligibility_modified": false,
+        "window_start": "2026-07-01",
+        "window_end": "2026-08-31"
+      },
+      "applied_station_days": 6,
+      "applied_network_station_days": 0,
+      "applied_gms_station_days": 6,
+      "applied_ranges": [
+        {
+          "station_id": "13120012",
+          "from": "2026-08-25",
+          "through": "2026-08-30",
+          "station_days": 6,
+          "category": "gms",
+          "enseigne": "Carrefour Market",
+          "classification_valid_from": "2026-08-31",
+          "verified_at": "2026-08-31T08:05:56.369558+00:00"
+        }
+      ],
+      "rejected_conflicts": []
     }
   }
 }
