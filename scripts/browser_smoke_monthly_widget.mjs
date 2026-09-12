@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { chromium } from 'playwright-core';
 
 function arg(name, fallback=null){
@@ -16,14 +17,21 @@ function browserPath(){
   }
   throw new Error('No Chrome/Chromium executable found on runner');
 }
+function sha256(bytes){ return createHash('sha256').update(bytes).digest('hex'); }
 
 const url=arg('--url');
 const output=arg('--output','outputs/monthly-widget-browser-smoke.json');
 check(url,'--url is required');
+const widgetUrl=new URL(url);
+const dataParam=widgetUrl.searchParams.get('data');
+check(dataParam,'widget URL must contain a data query parameter');
+const datasetUrl=new URL(dataParam,widgetUrl).href;
 
 const executablePath=browserPath();
 const browser=await chromium.launch({headless:true, executablePath, args:['--no-sandbox','--disable-dev-shm-usage']});
-const report={schema:'a4c-monthly-widget-browser-smoke-v3',url,browser:await browser.version(),executablePath,tests:{}};
+const report={schema:'a4c-monthly-widget-browser-smoke-v3',url,dataset_url:datasetUrl,browser:await browser.version(),executablePath,tests:{}};
+let expectedDatasetSha=null;
+let expectedDatasetMonth=null;
 
 async function noPageOverflow(page, label){
   const x=await page.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,innerWidth:window.innerWidth}));
@@ -32,12 +40,26 @@ async function noPageOverflow(page, label){
 }
 
 async function baseChecks(page, mode){
+  const dataResponsePromise=page.waitForResponse(r=>r.url()===datasetUrl,{timeout:15000});
   await page.goto(url,{waitUntil:'networkidle'});
+  const dataResponse=await dataResponsePromise;
+  check(dataResponse.ok(),`${mode}: dataset HTTP ${dataResponse.status()}`);
+  const dataBytes=await dataResponse.body();
+  const datasetSha=sha256(dataBytes);
+  let dataset;
+  try { dataset=JSON.parse(dataBytes.toString('utf8')); }
+  catch { throw new Error(`${mode}: dataset response is not valid JSON`); }
+  const datasetMonth=dataset?.meta?.month;
+  check(typeof datasetMonth==='string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(datasetMonth),`${mode}: dataset month is missing or invalid`);
+  if(expectedDatasetSha===null){ expectedDatasetSha=datasetSha; expectedDatasetMonth=datasetMonth; }
+  check(datasetSha===expectedDatasetSha,`${mode}: dataset bytes changed between browser contexts`);
+  check(datasetMonth===expectedDatasetMonth,`${mode}: dataset month changed between browser contexts`);
+
   await page.waitForSelector('#app:not([hidden])',{timeout:15000});
   check((await page.locator('#error').innerText()).trim()==='',`${mode}: error panel is not empty`);
   check((await page.locator('#period').innerText()).toLowerCase().includes('août 2026'),`${mode}: period does not identify August 2026`);
   check(await page.locator('#epci option').count()===19,`${mode}: expected 19 EPCI for Gazole`);
-  return await noPageOverflow(page,mode);
+  return {overflow:await noPageOverflow(page,mode),datasetSha,datasetMonth};
 }
 
 async function exerciseAllEpci(page, mode){
@@ -67,7 +89,7 @@ async function exerciseAllEpci(page, mode){
 {
   const context=await browser.newContext({viewport:{width:1365,height:900},locale:'fr-FR'});
   const page=await context.newPage();
-  const overflow=await baseChecks(page,'desktop');
+  const base=await baseChecks(page,'desktop');
   const layout=await page.evaluate(()=>({
     cards:getComputedStyle(document.querySelector('.cards')).gridTemplateColumns.split(' ').filter(Boolean).length,
     controls:getComputedStyle(document.querySelector('.controls')).gridTemplateColumns.split(' ').filter(Boolean).length,
@@ -104,14 +126,14 @@ async function exerciseAllEpci(page, mode){
   const calcAll=await page.locator('#calcResult').innerText();
   check(calcAll!==calcNetwork,'desktop: BDR scope change did not change calculator result');
 
-  report.tests.desktop={ok:true,overflow,layout,exhaustive,calviSample,calviRange,compare,calcNetwork,calcAll};
+  report.tests.desktop={ok:true,overflow:base.overflow,datasetSha256:base.datasetSha,datasetMonth:base.datasetMonth,layout,exhaustive,calviSample,calviRange,compare,calcNetwork,calcAll};
   await context.close();
 }
 
 {
   const context=await browser.newContext({viewport:{width:390,height:844},locale:'fr-FR',isMobile:true});
   const page=await context.newPage();
-  const overflow=await baseChecks(page,'mobile');
+  const base=await baseChecks(page,'mobile');
   const layout=await page.evaluate(()=>({
     cards:getComputedStyle(document.querySelector('.cards')).gridTemplateColumns.split(' ').filter(Boolean).length,
     controls:getComputedStyle(document.querySelector('.controls')).gridTemplateColumns.split(' ').filter(Boolean).length,
@@ -143,11 +165,13 @@ async function exerciseAllEpci(page, mode){
   check(mobileCalc.includes('70 L') && !mobileCalc.includes('NaN'),'mobile: calculator did not render cleanly');
   const after=await noPageOverflow(page,'mobile after exhaustive traversal, long labels and calculator');
 
-  report.tests.mobile={ok:true,overflow,layout,exhaustive,mobileSample,longCompare,mobileCalc,after};
+  report.tests.mobile={ok:true,overflow:base.overflow,datasetSha256:base.datasetSha,datasetMonth:base.datasetMonth,layout,exhaustive,mobileSample,longCompare,mobileCalc,after};
   await context.close();
 }
 
 await browser.close();
+report.dataset_sha256=expectedDatasetSha;
+report.dataset_month=expectedDatasetMonth;
 report.ok=true;
 const parent=output.includes('/')?output.slice(0,output.lastIndexOf('/')):'.';
 fs.mkdirSync(parent,{recursive:true});
