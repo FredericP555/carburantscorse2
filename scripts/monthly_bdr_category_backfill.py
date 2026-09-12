@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Bounded, auditable BDR category backfill for monthly reconstruction only.
 
-C2 production remains strictly temporal and append-only.  The monthly reconstruction may need to
+C2 production remains strictly temporal and append-only. The monthly reconstruction may need to
 classify a station-day a few days before the first *verified* category attached to the same stable
-station_id.  This module only fills that category gap; it never changes price, source timestamp,
+station_id. This module only fills that category gap; it never changes price, source timestamp,
 or station-day eligibility.
 
 Policy:
@@ -15,7 +15,7 @@ Policy:
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 
 from scripts.resolve_new_bdr_station_brands import (
@@ -27,6 +27,10 @@ MAX_BACKFILL_DAYS = 7
 
 
 def _day(value: Any) -> date | None:
+    # pandas.Timestamp is datetime-like. Convert it to a plain datetime.date before passing it to
+    # the production temporal resolver, whose boundaries are datetime.date objects.
+    if isinstance(value, datetime):
+        return value.date()
     if isinstance(value, date):
         return value
     raw = str(value or "").strip()
