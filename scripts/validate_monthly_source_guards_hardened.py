@@ -16,7 +16,7 @@ def _amend(path: Path, resolvers) -> None:
     audit = resolvers[-1].audit() if resolvers else {
         "policy": {}, "applied_station_days": 0, "applied_ranges": [], "rejected_conflicts": []
     }
-    payload["schema"] = "a4c-monthly-source-guards-v4"
+    payload["schema"] = "a4c-monthly-source-guards-v3"
     payload["bdr_category_backfill"] = audit
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
