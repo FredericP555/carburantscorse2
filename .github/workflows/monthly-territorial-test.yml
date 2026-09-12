@@ -6,17 +6,21 @@ on:
       - add-corse-station-geography-2026
     paths:
       - .github/workflows/monthly-territorial-test.yml
-      - scripts/run_monthly_hardening_test.sh
+      - scripts/run_monthly_hardening_backfill_test.sh
       - scripts/check_monthly_c2_contract_isolated.sh
       - scripts/validate_monthly_c2_contract.py
       - scripts/check_monthly_readiness.py
       - scripts/build_monthly_territorial.py
+      - scripts/build_monthly_territorial_hardened.py
+      - scripts/monthly_bdr_category_backfill.py
       - scripts/validate_monthly_source_guards.py
+      - scripts/validate_monthly_source_guards_hardened.py
       - scripts/write_monthly_receipt.py
       - scripts/audit_epci_monthly.py
       - scripts/audit_monthly_territorial_coverage.py
       - scripts/validate_monthly_widget_contract.py
       - scripts/browser_smoke_monthly_widget.mjs
+      - tests/test_monthly_bdr_category_backfill.py
       - widgets/bilan-territorial/index.html
       - config/corse_station_geography_2026.csv
       - docs/monthly-territorial-spec.md
@@ -45,11 +49,11 @@ jobs:
         with:
           python-version: '3.12.14'
 
-      - name: Run hardened monthly integration test in disposable main-based worktree
+      - name: Run bounded-backfill monthly integration test in disposable main-based worktree
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_TOKEN: ${{ github.token }}
-        run: bash scripts/run_monthly_hardening_test.sh
+        run: bash scripts/run_monthly_hardening_backfill_test.sh
 
       - name: Verify monthly C2 constants still match current production defaults
         run: bash scripts/check_monthly_c2_contract_isolated.sh
