@@ -1,10 +1,6 @@
 name: Monthly territorial dry-run
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - '.github/workflows/monthly-territorial-dry-run.yml'
   workflow_dispatch:
     inputs:
       month:
@@ -40,17 +36,11 @@ jobs:
         id: target
         env:
           REQUESTED_MONTH: ${{ github.event.inputs.month || '' }}
-          EVENT_NAME: ${{ github.event_name }}
         shell: bash
         run: |
           set -euo pipefail
           as_of=$(TZ=Europe/Paris date +%F)
-          requested="$REQUESTED_MONTH"
-          # PR-only migration proof: exercise a completed month different from August.
-          if [ "$EVENT_NAME" = 'pull_request' ]; then
-            requested='2026-07'
-          fi
-          month=$(python - "$as_of" "$requested" <<'PY'
+          month=$(python - "$as_of" "$REQUESTED_MONTH" <<'PY'
           import re, sys
           from datetime import date, timedelta
           as_of=date.fromisoformat(sys.argv[1])
@@ -88,7 +78,7 @@ jobs:
           echo 'run_monthly=true' >> "$GITHUB_OUTPUT"
           echo 'business_run_id=' >> "$GITHUB_OUTPUT"
           if [ "$EVENT_NAME" != 'workflow_run' ]; then
-            echo 'Manual/PR dry-run: duplicate gate bypassed.'
+            echo 'Manual dry-run: duplicate gate intentionally bypassed.'
             exit 0
           fi
           test "$UPSTREAM_CONCLUSION" = 'success'
@@ -155,9 +145,10 @@ jobs:
       MONTH: ${{ needs.prepare.outputs.month }}
       TRIGGER_BUSINESS_RUN_ID: ${{ needs.prepare.outputs.business_run_id }}
     steps:
-      - name: Checkout exact candidate
+      - name: Checkout current production main
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: main
           fetch-depth: 0
 
       - name: Set up Python
@@ -178,7 +169,7 @@ jobs:
           git worktree add --detach /tmp/monthly-run HEAD
           mkdir -p /tmp/monthly-artifact /tmp/monthly-final-receipts
           echo "RUN_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-          echo "C2_MAIN_SHA=$(git rev-parse origin/main)" >> "$GITHUB_ENV"
+          echo "C2_MAIN_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
       - name: Resolve a still-current C2 business-success receipt
         env:
@@ -239,7 +230,7 @@ jobs:
           cd /tmp/monthly-run
           as_of=$(TZ=Europe/Paris date +%F)
           extra=()
-          if { [ "${{ github.event_name }}" = 'workflow_dispatch' ] && [ -n "${{ github.event.inputs.month || '' }}" ]; } || [ "${{ github.event_name }}" = 'pull_request' ]; then
+          if [ "${{ github.event_name }}" = 'workflow_dispatch' ] && [ -n "${{ github.event.inputs.month || '' }}" ]; then
             extra+=(--allow-backfill)
           fi
           python scripts/check_monthly_readiness.py \
