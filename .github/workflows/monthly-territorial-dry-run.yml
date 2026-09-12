@@ -6,24 +6,108 @@ on:
     paths:
       - '.github/workflows/monthly-territorial-dry-run.yml'
   workflow_dispatch:
+    inputs:
+      month:
+        description: 'Optional completed month YYYY-MM; blank means previous calendar month'
+        required: false
+        type: string
+  workflow_run:
+    workflows: ["Verify C2 publication end-to-end"]
+    types: [completed]
 
 permissions:
   contents: read
   actions: read
 
 concurrency:
-  group: monthly-territorial-dry-run-${{ github.ref }}
+  group: monthly-territorial-readonly
   cancel-in-progress: false
 
 env:
   PYTHONPATH: .
-  MONTH: '2026-08'
   PROTOTYPE_REF: 'c6d8ba376de8cf0e8795b8efa44038bf8c97a3d7'
 
 jobs:
-  august-2026:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      month: ${{ steps.target.outputs.month }}
+      run_monthly: ${{ steps.gate.outputs.run_monthly }}
+      business_run_id: ${{ steps.gate.outputs.business_run_id }}
+    steps:
+      - name: Resolve target month
+        id: target
+        env:
+          REQUESTED_MONTH: ${{ github.event.inputs.month || '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          as_of=$(TZ=Europe/Paris date +%F)
+          month=$(python - "$as_of" "$REQUESTED_MONTH" <<'PY'
+          import re, sys
+          from datetime import date, timedelta
+          as_of=date.fromisoformat(sys.argv[1])
+          requested=sys.argv[2].strip()
+          if requested:
+              if not re.fullmatch(r'\d{4}-\d{2}', requested):
+                  raise SystemExit('workflow_dispatch month must be YYYY-MM')
+              year, mon = map(int, requested.split('-'))
+              if not 1 <= mon <= 12:
+                  raise SystemExit('workflow_dispatch month must be YYYY-MM')
+              first=date(year, mon, 1)
+              if first >= as_of.replace(day=1):
+                  raise SystemExit('workflow_dispatch month must be complete')
+              print(requested)
+          else:
+              first=as_of.replace(day=1)
+              print((first-timedelta(days=1)).strftime('%Y-%m'))
+          PY
+          )
+          echo "month=$month" >> "$GITHUB_OUTPUT"
+          echo "Target month: $month"
+
+      - name: Gate automatic duplicate runs
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MONTH: ${{ steps.target.outputs.month }}
+          EVENT_NAME: ${{ github.event_name }}
+          UPSTREAM_CONCLUSION: ${{ github.event.workflow_run.conclusion || '' }}
+          UPSTREAM_BRANCH: ${{ github.event.workflow_run.head_branch || '' }}
+          UPSTREAM_RUN_ID: ${{ github.event.workflow_run.id || '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'run_monthly=true' >> "$GITHUB_OUTPUT"
+          echo 'business_run_id=' >> "$GITHUB_OUTPUT"
+          if [ "$EVENT_NAME" != 'workflow_run' ]; then
+            echo 'Manual/PR dry-run: duplicate gate bypassed.'
+            exit 0
+          fi
+          test "$UPSTREAM_CONCLUSION" = 'success'
+          test "$UPSTREAM_BRANCH" = 'main'
+          test -n "$UPSTREAM_RUN_ID"
+          echo "business_run_id=$UPSTREAM_RUN_ID" >> "$GITHUB_OUTPUT"
+          artifact_name="monthly-territorial-dry-run-$MONTH"
+          existing=$(gh api \
+            "repos/FredericP555/carburantscorse2/actions/artifacts?name=$artifact_name&per_page=100" \
+            --jq '[.artifacts[] | select((.expired == false) and (.workflow_run.head_branch == "main"))] | length')
+          if [ "$existing" -gt 0 ]; then
+            echo 'run_monthly=false' >> "$GITHUB_OUTPUT"
+            echo "Automatic dry-run for $MONTH already exists on main; no duplicate generated."
+          else
+            echo "First eligible automatic dry-run for $MONTH; continuing from business-success run $UPSTREAM_RUN_ID."
+          fi
+
+  monthly:
+    needs: prepare
+    if: needs.prepare.outputs.run_monthly == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
+    env:
+      MONTH: ${{ needs.prepare.outputs.month }}
+      TRIGGER_BUSINESS_RUN_ID: ${{ needs.prepare.outputs.business_run_id }}
     steps:
       - name: Checkout exact candidate
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -65,6 +149,18 @@ jobs:
           rm -rf /tmp/c2-business-candidates /tmp/c2-business
           mkdir -p /tmp/c2-business-candidates /tmp/c2-business
           found=''
+          if [ -n "$TRIGGER_BUSINESS_RUN_ID" ]; then
+            candidates="$TRIGGER_BUSINESS_RUN_ID"
+          else
+            candidates=$(gh run list \
+              --repo FredericP555/carburantscorse2 \
+              --workflow verify-c2-publication.yml \
+              --branch main \
+              --status success \
+              --limit 20 \
+              --json databaseId,createdAt \
+              --jq 'sort_by(.createdAt) | reverse | .[].databaseId')
+          fi
           while read -r run_id; do
             [ -z "$run_id" ] && continue
             dir="/tmp/c2-business-candidates/$run_id"
@@ -84,25 +180,22 @@ jobs:
                 break
               fi
             fi
-          done < <(gh run list \
-            --repo FredericP555/carburantscorse2 \
-            --workflow verify-c2-publication.yml \
-            --branch main \
-            --status success \
-            --limit 20 \
-            --json databaseId,createdAt \
-            --jq 'sort_by(.createdAt) | reverse | .[].databaseId')
+          done <<< "$candidates"
           test -n "$found"
           test -s /tmp/c2-business/c2-business-success.json
           echo "BUSINESS_RUN_ID=$found" >> "$GITHUB_ENV"
           echo "Using C2 business-success run $found"
 
-      - name: Prove August readiness from current C2 state
+      - name: Prove monthly readiness from current C2 state
         shell: bash
         run: |
           set -euo pipefail
           cd /tmp/monthly-run
           as_of=$(TZ=Europe/Paris date +%F)
+          extra=()
+          if [ "${{ github.event_name }}" = 'workflow_dispatch' ] && [ -n "${{ github.event.inputs.month || '' }}" ]; then
+            extra+=(--allow-backfill)
+          fi
           python scripts/check_monthly_readiness.py \
             --month "$MONTH" \
             --as-of "$as_of" \
@@ -110,8 +203,9 @@ jobs:
             --c2-summary homepage-summary.json \
             --c2-business-receipt /tmp/c2-business/c2-business-success.json \
             --receipt-dir /tmp/monthly-final-receipts \
-            --output /tmp/monthly-artifact/monthly-readiness-2026-08.json \
-            --fail-if-not-ready
+            --output "/tmp/monthly-artifact/monthly-readiness-$MONTH.json" \
+            --fail-if-not-ready \
+            "${extra[@]}"
 
       - name: Run two-month source guards with bounded BDR backfill
         shell: bash
@@ -122,27 +216,43 @@ jobs:
           python scripts/validate_monthly_source_guards_hardened.py \
             --month "$MONTH" \
             --c2-data data.json \
-            --output /tmp/monthly-artifact/monthly-source-guards-2026-08.json
+            --output "/tmp/monthly-artifact/monthly-source-guards-$MONTH.json"
           cp /tmp/monthly-bdr-registry.json config/bdr_station_brands.json
           rm -rf outputs/ufip outputs/c1
 
-      - name: Build August dataset with the integrated main engine
+      - name: Build monthly dataset with the integrated main engine
         shell: bash
         run: |
           set -euo pipefail
           cd /tmp/monthly-run
           cp config/bdr_station_brands.json /tmp/monthly-bdr-registry.json
-          python scripts/build_monthly_territorial_hardened.py \
+          C2_MAIN_SHA="$C2_MAIN_SHA" python scripts/build_monthly_territorial_hardened.py \
             --month "$MONTH" \
             --c2-data data.json \
-            --output /tmp/monthly-artifact/monthly-territories-2026-08.json
+            --output "/tmp/monthly-artifact/monthly-territories-$MONTH.json"
           cp /tmp/monthly-bdr-registry.json config/bdr_station_brands.json
           rm -rf outputs/ufip outputs/c1
 
-      - name: Compare functional results with the validated August prototype
+      - name: Compare August with the validated prototype when applicable
         shell: bash
         run: |
           set -euo pipefail
+          if [ "$MONTH" != '2026-08' ]; then
+            python - <<'PY'
+          import json, os
+          from pathlib import Path
+          month=os.environ['MONTH']
+          out={
+              'schema':'a4c-monthly-main-dry-run-equivalence-v1',
+              'month':month,
+              'status':'not_applicable_non_august',
+              'note':'Prototype equivalence is a one-time August 2026 migration proof.'
+          }
+          Path(f'/tmp/monthly-artifact/monthly-functional-equivalence-{month}.json').write_text(
+              json.dumps(out, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          PY
+            exit 0
+          fi
           curl --fail --location --silent --show-error \
             "https://raw.githubusercontent.com/FredericP555/carburantscorse2/${PROTOTYPE_REF}/outputs/monthly-territories-2026-08.json" \
             -o /tmp/validated-august-prototype.json
@@ -163,6 +273,7 @@ jobs:
           result={
               'schema':'a4c-monthly-main-dry-run-equivalence-v1',
               'month':'2026-08',
+              'status':'equal',
               'functional_sections_equal_to_validated_prototype':comparisons,
               'c1_release_tag':new['meta']['c1_release_tag'],
               'c2_engine':new['meta']['c2_engine'],
@@ -183,16 +294,16 @@ jobs:
           python scripts/audit_epci_monthly.py \
             --month "$MONTH" --epci-siren 242020105 --fuel SP95 \
             --c2-data data.json \
-            --output /tmp/monthly-artifact/calvi-balagne-sp95-2026-08-audit.json \
-            --markdown /tmp/monthly-artifact/calvi-balagne-sp95-2026-08-audit.md
+            --output "/tmp/monthly-artifact/calvi-balagne-sp95-$MONTH-audit.json" \
+            --markdown "/tmp/monthly-artifact/calvi-balagne-sp95-$MONTH-audit.md"
           cp /tmp/monthly-bdr-registry.json config/bdr_station_brands.json
           rm -rf outputs/ufip outputs/c1
           cp config/bdr_station_brands.json /tmp/monthly-bdr-registry.json
           python scripts/audit_monthly_territorial_coverage.py \
             --month "$MONTH" \
             --c2-data data.json \
-            --output /tmp/monthly-artifact/monthly-territorial-coverage-2026-08-audit.json \
-            --markdown /tmp/monthly-artifact/monthly-territorial-coverage-2026-08-audit.md
+            --output "/tmp/monthly-artifact/monthly-territorial-coverage-$MONTH-audit.json" \
+            --markdown "/tmp/monthly-artifact/monthly-territorial-coverage-$MONTH-audit.md"
           cp /tmp/monthly-bdr-registry.json config/bdr_station_brands.json
           rm -rf outputs/ufip outputs/c1
 
@@ -208,7 +319,7 @@ jobs:
           curl --fail --location --silent --show-error \
             "https://raw.githubusercontent.com/FredericP555/carburantscorse2/${PROTOTYPE_REF}/scripts/browser_smoke_monthly_widget.mjs" \
             -o /tmp/monthly-widget-tools/browser_smoke_monthly_widget.mjs
-          cp /tmp/monthly-artifact/monthly-territories-2026-08.json /tmp/monthly-web/outputs/monthly-territories-2026-08.json
+          cp "/tmp/monthly-artifact/monthly-territories-$MONTH.json" "/tmp/monthly-web/outputs/monthly-territories-$MONTH.json"
           cd /tmp/monthly-widget-tools
           npm install --no-save --no-package-lock playwright-core@1.55.0 >/dev/null
           cd /tmp/monthly-web
@@ -220,8 +331,8 @@ jobs:
             sleep 0.5
           done
           node /tmp/monthly-widget-tools/browser_smoke_monthly_widget.mjs \
-            --url 'http://127.0.0.1:8765/widgets/bilan-territorial/index.html?data=/outputs/monthly-territories-2026-08.json' \
-            --output /tmp/monthly-artifact/monthly-widget-browser-smoke-2026-08.json
+            --url "http://127.0.0.1:8765/widgets/bilan-territorial/index.html?data=/outputs/monthly-territories-$MONTH.json" \
+            --output "/tmp/monthly-artifact/monthly-widget-browser-smoke-$MONTH.json"
           kill "$server_pid" 2>/dev/null || true
           trap - EXIT
 
@@ -230,35 +341,30 @@ jobs:
         run: |
           set -euo pipefail
           cd /tmp/monthly-run
-          RECEIPT=/tmp/monthly-final-receipts/2026-08.json
-          python scripts/write_monthly_receipt.py \
-            --month "$MONTH" \
-            --dataset /tmp/monthly-artifact/monthly-territories-2026-08.json \
-            --readiness /tmp/monthly-artifact/monthly-readiness-2026-08.json \
-            --source-guards /tmp/monthly-artifact/monthly-source-guards-2026-08.json \
-            --browser-smoke /tmp/monthly-artifact/monthly-widget-browser-smoke-2026-08.json \
-            --widget /tmp/monthly-web/widgets/bilan-territorial/index.html \
-            --geography config/corse_station_geography_2026.csv \
-            --c2-business-receipt /tmp/c2-business/c2-business-success.json \
+          RECEIPT="/tmp/monthly-final-receipts/$MONTH.json"
+          common=(
+            --month "$MONTH"
+            --dataset "/tmp/monthly-artifact/monthly-territories-$MONTH.json"
+            --readiness "/tmp/monthly-artifact/monthly-readiness-$MONTH.json"
+            --source-guards "/tmp/monthly-artifact/monthly-source-guards-$MONTH.json"
+            --browser-smoke "/tmp/monthly-artifact/monthly-widget-browser-smoke-$MONTH.json"
+            --widget /tmp/monthly-web/widgets/bilan-territorial/index.html
+            --geography config/corse_station_geography_2026.csv
+            --c2-business-receipt /tmp/c2-business/c2-business-success.json
             --output "$RECEIPT"
+          )
+          python scripts/write_monthly_receipt.py "${common[@]}"
           test -s "$RECEIPT"
-          if python scripts/write_monthly_receipt.py \
-            --month "$MONTH" \
-            --dataset /tmp/monthly-artifact/monthly-territories-2026-08.json \
-            --readiness /tmp/monthly-artifact/monthly-readiness-2026-08.json \
-            --source-guards /tmp/monthly-artifact/monthly-source-guards-2026-08.json \
-            --browser-smoke /tmp/monthly-artifact/monthly-widget-browser-smoke-2026-08.json \
-            --widget /tmp/monthly-web/widgets/bilan-territorial/index.html \
-            --geography config/corse_station_geography_2026.csv \
-            --c2-business-receipt /tmp/c2-business/c2-business-success.json \
-            --output "$RECEIPT"; then
+          if python scripts/write_monthly_receipt.py "${common[@]}"; then
             echo 'Second receipt write unexpectedly succeeded' >&2
             exit 1
           fi
-          cp "$RECEIPT" /tmp/monthly-artifact/ephemeral-final-receipt-2026-08.json
+          cp "$RECEIPT" "/tmp/monthly-artifact/ephemeral-final-receipt-$MONTH.json"
 
       - name: Write dry-run manifest
         shell: bash
+        env:
+          TRIGGER_EVENT: ${{ github.event_name }}
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -270,9 +376,10 @@ jobs:
               if p.is_file():
                   files[p.name]=hashlib.sha256(p.read_bytes()).hexdigest()
           manifest={
-              'schema':'a4c-monthly-main-dry-run-v1',
+              'schema':'a4c-monthly-main-dry-run-v2',
               'status':'success',
-              'month':'2026-08',
+              'month':os.environ['MONTH'],
+              'trigger_event':os.environ.get('TRIGGER_EVENT'),
               'run_sha':os.environ.get('RUN_SHA'),
               'c2_main_sha':os.environ.get('C2_MAIN_SHA'),
               'c2_business_success_run_id':os.environ.get('BUSINESS_RUN_ID'),
@@ -290,7 +397,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: monthly-territorial-dry-run-2026-08
+          name: monthly-territorial-dry-run-${{ needs.prepare.outputs.month }}
           path: /tmp/monthly-artifact
           if-no-files-found: error
           retention-days: 90
