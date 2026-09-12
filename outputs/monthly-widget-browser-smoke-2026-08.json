@@ -1,6 +1,7 @@
 {
   "schema": "a4c-monthly-widget-browser-smoke-v3",
   "url": "http://127.0.0.1:8765/widgets/bilan-territorial/index.html?data=/outputs/monthly-territories-2026-08.json",
+  "dataset_url": "http://127.0.0.1:8765/outputs/monthly-territories-2026-08.json",
   "browser": "152.0.7977.82",
   "executablePath": "/usr/bin/google-chrome",
   "tests": {
@@ -10,6 +11,8 @@
         "scrollWidth": 1365,
         "innerWidth": 1365
       },
+      "datasetSha256": "25e03db71be99d2cd57fc408b741e6fa5197dc1a0b5fcdb58f50bdb174a14c7a",
+      "datasetMonth": "2026-08",
       "layout": {
         "cards": 4,
         "controls": 2,
@@ -38,6 +41,8 @@
         "scrollWidth": 390,
         "innerWidth": 390
       },
+      "datasetSha256": "25e03db71be99d2cd57fc408b741e6fa5197dc1a0b5fcdb58f50bdb174a14c7a",
+      "datasetMonth": "2026-08",
       "layout": {
         "cards": 1,
         "controls": 1,
@@ -69,5 +74,7 @@
       }
     }
   },
+  "dataset_sha256": "25e03db71be99d2cd57fc408b741e6fa5197dc1a0b5fcdb58f50bdb174a14c7a",
+  "dataset_month": "2026-08",
   "ok": true
 }
