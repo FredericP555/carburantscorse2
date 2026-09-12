@@ -16,7 +16,7 @@ def _amend(path: Path, resolvers) -> None:
     audit = resolvers[-1].audit() if resolvers else {
         "policy": {}, "applied_station_days": 0, "applied_ranges": [], "rejected_conflicts": []
     }
-    payload["schema"] = "a4c-monthly-source-guards-v3"
+    payload["schema"] = "a4c-monthly-source-guards-v4"
     payload["bdr_category_backfill"] = audit
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -24,6 +24,7 @@ def _amend(path: Path, resolvers) -> None:
 def main() -> None:
     args = core.parse_args()
     start, end = core.month_bounds(args.month)
+    prev_start, _prev_end = core.previous_month_bounds(start)
     output = core.ROOT / args.output
     resolvers = []
 
@@ -31,7 +32,7 @@ def main() -> None:
         resolver = monthly_bdr_category_resolver(
             legacy,
             registry,
-            window_start=start.date(),
+            window_start=prev_start.date(),
             window_end=end.date(),
         )
         resolvers.append(resolver)
