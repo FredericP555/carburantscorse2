@@ -81,6 +81,7 @@ jobs:
             echo 'Manual dry-run: duplicate gate intentionally bypassed.'
             exit 0
           fi
+          # Automatic mode is accepted only from the successful main publication verifier.
           test "$UPSTREAM_CONCLUSION" = 'success'
           test "$UPSTREAM_BRANCH" = 'main'
           test -n "$UPSTREAM_RUN_ID"
@@ -109,6 +110,7 @@ jobs:
                   and run.get('head_branch') == 'main'
                   and run.get('path') == monthly_path
               )
+          # Failed artifacts never block a retry; only a successful producer on main does.
           fake=lambda rid: {
               1:{'status':'completed','conclusion':'failure','head_branch':'main','path':monthly_path},
               2:{'status':'completed','conclusion':'success','head_branch':'main','path':monthly_path},
