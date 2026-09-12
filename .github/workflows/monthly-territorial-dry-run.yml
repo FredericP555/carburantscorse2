@@ -48,6 +48,7 @@ jobs:
           git worktree add --detach /tmp/monthly-run HEAD
           mkdir -p /tmp/monthly-artifact /tmp/monthly-final-receipts
           echo "RUN_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "C2_MAIN_SHA=$(git rev-parse origin/main)" >> "$GITHUB_ENV"
 
       - name: Resolve a still-current C2 business-success receipt
         env:
@@ -273,6 +274,7 @@ jobs:
               'status':'success',
               'month':'2026-08',
               'run_sha':os.environ.get('RUN_SHA'),
+              'c2_main_sha':os.environ.get('C2_MAIN_SHA'),
               'c2_business_success_run_id':os.environ.get('BUSINESS_RUN_ID'),
               'publication':'none',
               'repository_write':'none',
