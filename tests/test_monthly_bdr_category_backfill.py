@@ -1,6 +1,8 @@
 from datetime import date
 import unittest
 
+import pandas as pd
+
 from scripts.monthly_bdr_category_backfill import MonthlyBdrCategoryResolver
 
 
@@ -40,6 +42,13 @@ class MonthlyBdrCategoryBackfillTests(unittest.TestCase):
         self.assertEqual(audit["applied_gms_station_days"], 7)
         self.assertEqual(audit["applied_network_station_days"], 0)
         self.assertFalse(audit["policy"]["price_or_eligibility_modified"])
+
+    def test_pandas_timestamp_is_normalized_to_plain_date(self):
+        resolver = self._resolver(self._registry())
+        self.assertEqual(resolver("13120012", pd.Timestamp("2026-08-25")), "gms")
+        audit = resolver.audit()
+        self.assertEqual(audit["applied_station_days"], 1)
+        self.assertEqual(audit["applied_ranges"][0]["from"], "2026-08-25")
 
     def test_existing_c2_category_always_wins(self):
         resolver = self._resolver(self._registry(), legacy={"13120012": "network"})
