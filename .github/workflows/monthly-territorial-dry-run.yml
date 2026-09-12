@@ -388,6 +388,7 @@ jobs:
           check(url&&output&&/^\d{4}-(0[1-9]|1[0-2])$/.test(expectedMonth||''),'--url, --output and canonical --month are required');
           const widgetUrl=new URL(url); const dataParam=widgetUrl.searchParams.get('data'); check(dataParam,'data query parameter required');
           const datasetUrl=new URL(dataParam,widgetUrl).href;
+          const expectedLabel=new Intl.DateTimeFormat('fr-FR',{month:'long',year:'numeric'}).format(new Date(`${expectedMonth}-01T12:00:00`)).toLocaleLowerCase('fr-FR');
           const sha256=b=>createHash('sha256').update(b).digest('hex');
           const executablePath=browserPath();
           const browser=await chromium.launch({headless:true,executablePath,args:['--no-sandbox','--disable-dev-shm-usage']});
@@ -403,7 +404,8 @@ jobs:
             if(expectedSha===null) expectedSha=hash; check(hash===expectedSha,`${mode}: dataset bytes changed between contexts`);
             await page.waitForSelector('#app:not([hidden])',{timeout:15000});
             check((await page.locator('#error').innerText()).trim()==='',`${mode}: error panel not empty`);
-            check((await page.locator('#period').innerText()).includes(expectedMonth.slice(0,4)),`${mode}: period does not show expected year`);
+            const period=(await page.locator('#period').innerText()).toLocaleLowerCase('fr-FR');
+            check(period.includes(expectedLabel),`${mode}: period does not identify ${expectedLabel}`);
             return {hash,overflow:await noOverflow(page,mode)};
           }
           async function exercise(page,mode){
