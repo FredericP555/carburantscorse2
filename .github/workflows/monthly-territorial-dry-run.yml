@@ -40,11 +40,17 @@ jobs:
         id: target
         env:
           REQUESTED_MONTH: ${{ github.event.inputs.month || '' }}
+          EVENT_NAME: ${{ github.event_name }}
         shell: bash
         run: |
           set -euo pipefail
           as_of=$(TZ=Europe/Paris date +%F)
-          month=$(python - "$as_of" "$REQUESTED_MONTH" <<'PY'
+          requested="$REQUESTED_MONTH"
+          # PR-only migration proof: exercise a completed month different from August.
+          if [ "$EVENT_NAME" = 'pull_request' ]; then
+            requested='2026-07'
+          fi
+          month=$(python - "$as_of" "$requested" <<'PY'
           import re, sys
           from datetime import date, timedelta
           as_of=date.fromisoformat(sys.argv[1])
@@ -88,16 +94,58 @@ jobs:
           test "$UPSTREAM_CONCLUSION" = 'success'
           test "$UPSTREAM_BRANCH" = 'main'
           test -n "$UPSTREAM_RUN_ID"
+          upstream=$(gh api "repos/FredericP555/carburantscorse2/actions/runs/$UPSTREAM_RUN_ID")
+          test "$(jq -r '.status' <<<"$upstream")" = 'completed'
+          test "$(jq -r '.conclusion' <<<"$upstream")" = 'success'
+          test "$(jq -r '.head_branch' <<<"$upstream")" = 'main'
+          test "$(jq -r '.path' <<<"$upstream")" = '.github/workflows/verify-c2-publication.yml'
           echo "business_run_id=$UPSTREAM_RUN_ID" >> "$GITHUB_OUTPUT"
           artifact_name="monthly-territorial-dry-run-$MONTH"
-          existing=$(gh api \
-            "repos/FredericP555/carburantscorse2/actions/artifacts?name=$artifact_name&per_page=100" \
-            --jq '[.artifacts[] | select((.expired == false) and (.workflow_run.head_branch == "main"))] | length')
+          existing=$(python - "$artifact_name" <<'PY'
+          import json, subprocess, sys
+          artifact_name=sys.argv[1]
+          repo='FredericP555/carburantscorse2'
+          monthly_path='.github/workflows/monthly-territorial-dry-run.yml'
+          def successful_main_artifact(artifact, lookup):
+              if artifact.get('expired') is not False:
+                  return False
+              wr=artifact.get('workflow_run') or {}
+              if wr.get('head_branch') != 'main' or not wr.get('id'):
+                  return False
+              run=lookup(wr['id'])
+              return (
+                  run.get('status') == 'completed'
+                  and run.get('conclusion') == 'success'
+                  and run.get('head_branch') == 'main'
+                  and run.get('path') == monthly_path
+              )
+          # Contract tests: failed artifact must not block; successful main artifact must block;
+          # successful non-main artifact must not block.
+          fake=lambda rid: {
+              1:{'status':'completed','conclusion':'failure','head_branch':'main','path':monthly_path},
+              2:{'status':'completed','conclusion':'success','head_branch':'main','path':monthly_path},
+              3:{'status':'completed','conclusion':'success','head_branch':'feature','path':monthly_path},
+          }[rid]
+          assert not successful_main_artifact({'expired':False,'workflow_run':{'id':1,'head_branch':'main'}}, fake)
+          assert successful_main_artifact({'expired':False,'workflow_run':{'id':2,'head_branch':'main'}}, fake)
+          assert not successful_main_artifact({'expired':False,'workflow_run':{'id':3,'head_branch':'feature'}}, fake)
+          payload=json.loads(subprocess.check_output(
+              ['gh','api',f'repos/{repo}/actions/artifacts?name={artifact_name}&per_page=100'], text=True))
+          cache={}
+          def live_lookup(rid):
+              if rid not in cache:
+                  cache[rid]=json.loads(subprocess.check_output(
+                      ['gh','api',f'repos/{repo}/actions/runs/{rid}'], text=True))
+              return cache[rid]
+          matches=[a for a in payload.get('artifacts',[]) if successful_main_artifact(a, live_lookup)]
+          print(len(matches))
+          PY
+          )
           if [ "$existing" -gt 0 ]; then
             echo 'run_monthly=false' >> "$GITHUB_OUTPUT"
-            echo "Automatic dry-run for $MONTH already exists on main; no duplicate generated."
+            echo "Successful automatic dry-run for $MONTH already exists on main; no duplicate generated."
           else
-            echo "First eligible automatic dry-run for $MONTH; continuing from business-success run $UPSTREAM_RUN_ID."
+            echo "No successful main dry-run for $MONTH; continuing from business-success run $UPSTREAM_RUN_ID."
           fi
 
   monthly:
@@ -193,7 +241,7 @@ jobs:
           cd /tmp/monthly-run
           as_of=$(TZ=Europe/Paris date +%F)
           extra=()
-          if [ "${{ github.event_name }}" = 'workflow_dispatch' ] && [ -n "${{ github.event.inputs.month || '' }}" ]; then
+          if { [ "${{ github.event_name }}" = 'workflow_dispatch' ] && [ -n "${{ github.event.inputs.month || '' }}" ]; } || [ "${{ github.event_name }}" = 'pull_request' ]; then
             extra+=(--allow-backfill)
           fi
           python scripts/check_monthly_readiness.py \
@@ -285,19 +333,11 @@ jobs:
           print(json.dumps(result, ensure_ascii=False, indent=2))
           PY
 
-      - name: Run territorial coverage and Calvi SP95 audits
+      - name: Run territorial coverage and August Calvi diagnostic when applicable
         shell: bash
         run: |
           set -euo pipefail
           cd /tmp/monthly-run
-          cp config/bdr_station_brands.json /tmp/monthly-bdr-registry.json
-          python scripts/audit_epci_monthly.py \
-            --month "$MONTH" --epci-siren 242020105 --fuel SP95 \
-            --c2-data data.json \
-            --output "/tmp/monthly-artifact/calvi-balagne-sp95-$MONTH-audit.json" \
-            --markdown "/tmp/monthly-artifact/calvi-balagne-sp95-$MONTH-audit.md"
-          cp /tmp/monthly-bdr-registry.json config/bdr_station_brands.json
-          rm -rf outputs/ufip outputs/c1
           cp config/bdr_station_brands.json /tmp/monthly-bdr-registry.json
           python scripts/audit_monthly_territorial_coverage.py \
             --month "$MONTH" \
@@ -306,8 +346,18 @@ jobs:
             --markdown "/tmp/monthly-artifact/monthly-territorial-coverage-$MONTH-audit.md"
           cp /tmp/monthly-bdr-registry.json config/bdr_station_brands.json
           rm -rf outputs/ufip outputs/c1
+          if [ "$MONTH" = '2026-08' ]; then
+            cp config/bdr_station_brands.json /tmp/monthly-bdr-registry.json
+            python scripts/audit_epci_monthly.py \
+              --month "$MONTH" --epci-siren 242020105 --fuel SP95 \
+              --c2-data data.json \
+              --output "/tmp/monthly-artifact/calvi-balagne-sp95-$MONTH-audit.json" \
+              --markdown "/tmp/monthly-artifact/calvi-balagne-sp95-$MONTH-audit.md"
+            cp /tmp/monthly-bdr-registry.json config/bdr_station_brands.json
+            rm -rf outputs/ufip outputs/c1
+          fi
 
-      - name: Exercise the validated widget only in temporary storage
+      - name: Exercise the widget generically in temporary storage
         shell: bash
         run: |
           set -euo pipefail
@@ -316,10 +366,88 @@ jobs:
           curl --fail --location --silent --show-error \
             "https://raw.githubusercontent.com/FredericP555/carburantscorse2/${PROTOTYPE_REF}/widgets/bilan-territorial/index.html" \
             -o /tmp/monthly-web/widgets/bilan-territorial/index.html
-          curl --fail --location --silent --show-error \
-            "https://raw.githubusercontent.com/FredericP555/carburantscorse2/${PROTOTYPE_REF}/scripts/browser_smoke_monthly_widget.mjs" \
-            -o /tmp/monthly-widget-tools/browser_smoke_monthly_widget.mjs
           cp "/tmp/monthly-artifact/monthly-territories-$MONTH.json" "/tmp/monthly-web/outputs/monthly-territories-$MONTH.json"
+          cat > /tmp/monthly-widget-tools/browser_smoke_generic.mjs <<'JS'
+          import fs from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          import { createHash } from 'node:crypto';
+          import { chromium } from 'playwright-core';
+          function arg(name, fallback=null){ const i=process.argv.indexOf(name); return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback; }
+          function check(cond,msg){ if(!cond) throw new Error(msg); }
+          function browserPath(){
+            for(const p of ['/usr/bin/google-chrome','/usr/bin/google-chrome-stable','/usr/bin/chromium','/usr/bin/chromium-browser']) if(fs.existsSync(p)) return p;
+            for(const cmd of ['google-chrome','google-chrome-stable','chromium','chromium-browser']){ try{return execFileSync('which',[cmd],{encoding:'utf8'}).trim();}catch{} }
+            throw new Error('No Chrome/Chromium executable found on runner');
+          }
+          const url=arg('--url'); const output=arg('--output'); const expectedMonth=arg('--month');
+          check(url&&output&&/^\d{4}-(0[1-9]|1[0-2])$/.test(expectedMonth||''),'--url, --output and canonical --month are required');
+          const widgetUrl=new URL(url); const dataParam=widgetUrl.searchParams.get('data'); check(dataParam,'data query parameter required');
+          const datasetUrl=new URL(dataParam,widgetUrl).href;
+          const sha256=b=>createHash('sha256').update(b).digest('hex');
+          const executablePath=browserPath();
+          const browser=await chromium.launch({headless:true,executablePath,args:['--no-sandbox','--disable-dev-shm-usage']});
+          const report={schema:'a4c-monthly-widget-browser-smoke-v3',url,dataset_url:datasetUrl,browser:await browser.version(),executablePath,tests:{}};
+          let expectedSha=null;
+          async function noOverflow(page,label){ const x=await page.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,innerWidth:window.innerWidth})); check(x.scrollWidth<=x.innerWidth+1,`${label}: horizontal overflow`); return x; }
+          async function load(page,mode){
+            const responsePromise=page.waitForResponse(r=>r.url()===datasetUrl,{timeout:15000});
+            await page.goto(url,{waitUntil:'networkidle'}); const response=await responsePromise; check(response.ok(),`${mode}: dataset HTTP ${response.status()}`);
+            const bytes=await response.body(); const hash=sha256(bytes); const data=JSON.parse(bytes.toString('utf8'));
+            check(data?.meta?.month===expectedMonth,`${mode}: dataset month ${data?.meta?.month} != ${expectedMonth}`);
+            check(data?.meta?.epci_count_registry===19,`${mode}: registry must contain 19 EPCI`);
+            if(expectedSha===null) expectedSha=hash; check(hash===expectedSha,`${mode}: dataset bytes changed between contexts`);
+            await page.waitForSelector('#app:not([hidden])',{timeout:15000});
+            check((await page.locator('#error').innerText()).trim()==='',`${mode}: error panel not empty`);
+            check((await page.locator('#period').innerText()).includes(expectedMonth.slice(0,4)),`${mode}: period does not show expected year`);
+            return {hash,overflow:await noOverflow(page,mode)};
+          }
+          async function exercise(page,mode){
+            const out={};
+            for(const fuel of ['Gazole','SP95']){
+              await page.click(`[data-fuel="${fuel}"]`);
+              const opts=await page.locator('#epci option').evaluateAll(es=>es.map(e=>({value:e.value,label:e.textContent||''})));
+              check(opts.length===19,`${mode}/${fuel}: expected 19 EPCI, got ${opts.length}`);
+              let limited=0;
+              for(const o of opts){
+                await page.selectOption('#epci',o.value);
+                for(const id of ['mean','change','vsCorse','range','sample']){
+                  const t=await page.locator(`#${id}`).innerText(); check(!t.includes('NaN')&&!t.includes('undefined'),`${mode}/${fuel}/${o.label}: invalid ${id}`);
+                }
+                const sample=await page.locator('#sample').innerText(); check(sample.includes('station-jours')&&sample.includes('couverture temporelle'),`${mode}/${fuel}/${o.label}: incomplete sample note`);
+                check(await page.locator('#localities tr').count()>0,`${mode}/${fuel}/${o.label}: locality table empty`);
+                if(await page.locator('#limited').isVisible()) limited++;
+                await noOverflow(page,`${mode}/${fuel}/${o.label}`);
+              }
+              out[fuel]={epciTested:opts.length,horsClassement:limited};
+            }
+            return out;
+          }
+          async function dynamicInteractions(page,mode){
+            await page.click('[data-fuel="SP95"]');
+            const vals=await page.locator('#epci option').evaluateAll(es=>es.map(e=>e.value)); check(vals.length>=2,`${mode}: not enough EPCI for comparison`);
+            await page.selectOption('#compareA',vals[0]); await page.selectOption('#compareB',vals[1]);
+            const compare=await page.locator('#compareResult').innerText(); check(compare.trim()!==''&&!compare.includes('NaN'),`${mode}: comparison invalid`);
+            await page.fill('#litres','70'); const network=await page.locator('#calcResult').innerText(); check(network.includes('70 L')&&!network.includes('NaN'),`${mode}: calculator invalid`);
+            await page.selectOption('#bdrScope','all'); const all=await page.locator('#calcResult').innerText(); check(all.includes('70 L')&&!all.includes('NaN'),`${mode}: all-scope calculator invalid`);
+            return {compare,network,all};
+          }
+          {
+            const context=await browser.newContext({viewport:{width:1365,height:900},locale:'fr-FR'}); const page=await context.newPage(); const base=await load(page,'desktop');
+            const layout=await page.evaluate(()=>({cards:getComputedStyle(document.querySelector('.cards')).gridTemplateColumns.split(' ').filter(Boolean).length,controls:getComputedStyle(document.querySelector('.controls')).gridTemplateColumns.split(' ').filter(Boolean).length}));
+            check(layout.cards===4&&layout.controls===2,'desktop: unexpected grid layout');
+            const exhaustive=await exercise(page,'desktop'); const interactions=await dynamicInteractions(page,'desktop');
+            report.tests.desktop={ok:true,datasetSha256:base.hash,datasetMonth:expectedMonth,overflow:base.overflow,layout,exhaustive,interactions}; await context.close();
+          }
+          {
+            const context=await browser.newContext({viewport:{width:390,height:844},locale:'fr-FR',isMobile:true}); const page=await context.newPage(); const base=await load(page,'mobile');
+            const layout=await page.evaluate(()=>({cards:getComputedStyle(document.querySelector('.cards')).gridTemplateColumns.split(' ').filter(Boolean).length,controls:getComputedStyle(document.querySelector('.controls')).gridTemplateColumns.split(' ').filter(Boolean).length,buttonHeights:[...document.querySelectorAll('.fuel-buttons button')].map(e=>e.getBoundingClientRect().height)}));
+            check(layout.cards===1&&layout.controls===1,'mobile: unexpected grid layout'); check(layout.buttonHeights.every(h=>h>=44),'mobile: touch target below 44px');
+            const exhaustive=await exercise(page,'mobile'); const interactions=await dynamicInteractions(page,'mobile'); await noOverflow(page,'mobile final');
+            report.tests.mobile={ok:true,datasetSha256:base.hash,datasetMonth:expectedMonth,overflow:base.overflow,layout,exhaustive,interactions}; await context.close();
+          }
+          await browser.close(); report.dataset_sha256=expectedSha; report.dataset_month=expectedMonth; report.ok=true;
+          fs.mkdirSync(output.slice(0,output.lastIndexOf('/'))||'.',{recursive:true}); fs.writeFileSync(output,JSON.stringify(report,null,2)+'\n'); console.log(JSON.stringify(report,null,2));
+          JS
           cd /tmp/monthly-widget-tools
           npm install --no-save --no-package-lock playwright-core@1.55.0 >/dev/null
           cd /tmp/monthly-web
@@ -330,7 +458,8 @@ jobs:
             if curl -fsS http://127.0.0.1:8765/widgets/bilan-territorial/index.html >/dev/null; then break; fi
             sleep 0.5
           done
-          node /tmp/monthly-widget-tools/browser_smoke_monthly_widget.mjs \
+          node /tmp/monthly-widget-tools/browser_smoke_generic.mjs \
+            --month "$MONTH" \
             --url "http://127.0.0.1:8765/widgets/bilan-territorial/index.html?data=/outputs/monthly-territories-$MONTH.json" \
             --output "/tmp/monthly-artifact/monthly-widget-browser-smoke-$MONTH.json"
           kill "$server_pid" 2>/dev/null || true
@@ -376,7 +505,7 @@ jobs:
               if p.is_file():
                   files[p.name]=hashlib.sha256(p.read_bytes()).hexdigest()
           manifest={
-              'schema':'a4c-monthly-main-dry-run-v2',
+              'schema':'a4c-monthly-main-dry-run-v3',
               'status':'success',
               'month':os.environ['MONTH'],
               'trigger_event':os.environ.get('TRIGGER_EVENT'),
@@ -399,5 +528,5 @@ jobs:
         with:
           name: monthly-territorial-dry-run-${{ needs.prepare.outputs.month }}
           path: /tmp/monthly-artifact
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 90
