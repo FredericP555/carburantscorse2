@@ -7,9 +7,10 @@ on:
         description: 'Optional completed month YYYY-MM; blank means previous calendar month'
         required: false
         type: string
-  workflow_run:
-    workflows: ["Verify C2 publication end-to-end"]
-    types: [completed]
+  schedule:
+    # Two UTC slots cover 12:00 Europe/Paris across DST; the gate below keeps only one.
+    - cron: '0 10 * * 2'
+    - cron: '0 11 * * 2'
 
 permissions:
   contents: read
@@ -69,28 +70,40 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           MONTH: ${{ steps.target.outputs.month }}
           EVENT_NAME: ${{ github.event_name }}
-          UPSTREAM_CONCLUSION: ${{ github.event.workflow_run.conclusion || '' }}
-          UPSTREAM_BRANCH: ${{ github.event.workflow_run.head_branch || '' }}
-          UPSTREAM_RUN_ID: ${{ github.event.workflow_run.id || '' }}
+          EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
         shell: bash
         run: |
           set -euo pipefail
           echo 'run_monthly=true' >> "$GITHUB_OUTPUT"
           echo 'business_run_id=' >> "$GITHUB_OUTPUT"
-          if [ "$EVENT_NAME" != 'workflow_run' ]; then
+          if [ "$EVENT_NAME" = 'workflow_dispatch' ]; then
             echo 'Manual dry-run: duplicate gate intentionally bypassed.'
             exit 0
           fi
-          # Automatic mode is accepted only from the successful main publication verifier.
-          test "$UPSTREAM_CONCLUSION" = 'success'
-          test "$UPSTREAM_BRANCH" = 'main'
-          test -n "$UPSTREAM_RUN_ID"
-          upstream=$(gh api "repos/FredericP555/carburantscorse2/actions/runs/$UPSTREAM_RUN_ID")
-          test "$(jq -r '.status' <<<"$upstream")" = 'completed'
-          test "$(jq -r '.conclusion' <<<"$upstream")" = 'success'
-          test "$(jq -r '.head_branch' <<<"$upstream")" = 'main'
-          test "$(jq -r '.path' <<<"$upstream")" = '.github/workflows/verify-c2-publication.yml'
-          echo "business_run_id=$UPSTREAM_RUN_ID" >> "$GITHUB_OUTPUT"
+          test "$EVENT_NAME" = 'schedule'
+          selected=$(python - "$EVENT_SCHEDULE" <<'PY'
+          import sys
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          schedule=sys.argv[1]
+          try:
+              minute, hour, _dom, _month, dow = schedule.split()
+              minute=int(minute)
+              hour=int(hour)
+              dow=int(dow)
+          except Exception:
+              print('false')
+              raise SystemExit(0)
+          offset=int(datetime.now(ZoneInfo('Europe/Paris')).utcoffset().total_seconds() // 3600)
+          expected_utc_hour=(12-offset) % 24
+          print('true' if minute == 0 and dow == 2 and hour == expected_utc_hour else 'false')
+          PY
+          )
+          if [ "$selected" != 'true' ]; then
+            echo 'run_monthly=false' >> "$GITHUB_OUTPUT"
+            echo "Non-selected UTC companion slot for 12:00 Europe/Paris; no monthly run."
+            exit 0
+          fi
           artifact_name="monthly-territorial-dry-run-$MONTH"
           existing=$(python - "$artifact_name" <<'PY'
           import json, subprocess, sys
@@ -135,7 +148,7 @@ jobs:
             echo 'run_monthly=false' >> "$GITHUB_OUTPUT"
             echo "Successful automatic dry-run for $MONTH already exists on main; no duplicate generated."
           else
-            echo "No successful main dry-run for $MONTH; continuing from business-success run $UPSTREAM_RUN_ID."
+            echo "No successful main dry-run for $MONTH; continuing from the latest still-current C2 business-success receipt."
           fi
 
   monthly:
