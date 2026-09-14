@@ -28,8 +28,8 @@
       "classification_source": "auto",
       "brand_source": "officiel",
       "first_seen": "2026-09-08",
-      "last_seen": "2026-09-08",
-      "verified_at": "2026-09-08T01:38:24.651444+00:00",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
       "brand_valid_from": "2026-09-08",
       "brand_history": []
     },
@@ -40,8 +40,8 @@
       "classification_source": "auto",
       "brand_source": "officiel",
       "first_seen": "2026-09-08",
-      "last_seen": "2026-09-08",
-      "verified_at": "2026-09-08T01:38:24.651444+00:00",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
       "brand_valid_from": "2026-09-08",
       "brand_history": []
     },
@@ -177,6 +177,18 @@
       "brand_valid_from": "2026-09-08",
       "brand_history": []
     },
+    "13008014": {
+      "enseigne": "Avia",
+      "segment": "inconnu",
+      "detail": "inconnu",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
+      "brand_valid_from": "2026-09-14",
+      "brand_history": []
+    },
     "13008017": {
       "enseigne": "TotalEnergies Access",
       "segment": "gms_lowcost",
@@ -232,8 +244,8 @@
       "classification_source": "auto",
       "brand_source": "officiel",
       "first_seen": "2026-09-08",
-      "last_seen": "2026-09-08",
-      "verified_at": "2026-09-08T01:38:24.651444+00:00",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
       "brand_valid_from": "2026-09-08",
       "brand_history": []
     },
@@ -247,6 +259,234 @@
       "last_seen": "2026-09-08",
       "verified_at": "2026-09-08T01:38:24.651444+00:00",
       "brand_valid_from": "2026-09-08",
+      "brand_history": []
+    },
+    "13010001": {
+      "enseigne": "Auchan",
+      "segment": "gms_lowcost",
+      "detail": "gms",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
+      "brand_valid_from": "2026-09-14",
+      "brand_history": []
+    },
+    "13010005": {
+      "enseigne": "Esso Express",
+      "segment": "gms_lowcost",
+      "detail": "lowcost_major",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
+      "brand_valid_from": "2026-09-14",
+      "brand_history": []
+    },
+    "13010011": {
+      "enseigne": "TotalEnergies Access",
+      "segment": "gms_lowcost",
+      "detail": "lowcost_major",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
+      "brand_valid_from": "2026-09-14",
+      "brand_history": []
+    },
+    "13011003": {
+      "enseigne": "Avia",
+      "segment": "inconnu",
+      "detail": "inconnu",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
+      "brand_valid_from": "2026-09-14",
+      "brand_history": []
+    },
+    "13011017": {
+      "enseigne": "TotalEnergies Access",
+      "segment": "gms_lowcost",
+      "detail": "lowcost_major",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
+      "brand_valid_from": "2026-09-14",
+      "brand_history": []
+    },
+    "13011018": {
+      "enseigne": "Intermarché",
+      "segment": "gms_lowcost",
+      "detail": "gms",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
+      "brand_valid_from": "2026-09-14",
+      "brand_history": []
+    },
+    "13011019": {
+      "enseigne": "Indépendant sans enseigne",
+      "segment": "inconnu",
+      "detail": "inconnu",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
+      "brand_valid_from": "2026-09-14",
+      "brand_history": []
+    },
+    "13011022": {
+      "enseigne": "Intermarché Contact",
+      "segment": "gms_lowcost",
+      "detail": "gms",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
+      "brand_valid_from": "2026-09-14",
+      "brand_history": []
+    },
+    "13011023": {
+      "enseigne": "Indépendant sans enseigne",
+      "segment": "inconnu",
+      "detail": "inconnu",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
+      "brand_valid_from": "2026-09-14",
+      "brand_history": []
+    },
+    "13011025": {
+      "enseigne": "ENI",
+      "segment": "traditionnel",
+      "detail": "major_tradi",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
+      "brand_valid_from": "2026-09-14",
+      "brand_history": []
+    },
+    "13011026": {
+      "enseigne": "Auchan",
+      "segment": "gms_lowcost",
+      "detail": "gms",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
+      "brand_valid_from": "2026-09-14",
+      "brand_history": []
+    },
+    "13011027": {
+      "enseigne": "Carrefour Contact",
+      "segment": "gms_lowcost",
+      "detail": "gms",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
+      "brand_valid_from": "2026-09-14",
+      "brand_history": []
+    },
+    "13011028": {
+      "enseigne": "Carrefour Contact",
+      "segment": "gms_lowcost",
+      "detail": "gms",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
+      "brand_valid_from": "2026-09-14",
+      "brand_history": []
+    },
+    "13012016": {
+      "enseigne": "Intermarché",
+      "segment": "gms_lowcost",
+      "detail": "gms",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
+      "brand_valid_from": "2026-09-14",
+      "brand_history": []
+    },
+    "13012022": {
+      "enseigne": "TotalEnergies Access",
+      "segment": "gms_lowcost",
+      "detail": "lowcost_major",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
+      "brand_valid_from": "2026-09-14",
+      "brand_history": []
+    },
+    "13012024": {
+      "enseigne": "Auchan",
+      "segment": "gms_lowcost",
+      "detail": "gms",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
+      "brand_valid_from": "2026-09-14",
+      "brand_history": []
+    },
+    "13012025": {
+      "enseigne": "Esso",
+      "segment": "traditionnel",
+      "detail": "major_tradi",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
+      "brand_valid_from": "2026-09-14",
+      "brand_history": []
+    },
+    "13012028": {
+      "enseigne": "Carrefour Market",
+      "segment": "gms_lowcost",
+      "detail": "gms",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
+      "brand_valid_from": "2026-09-14",
+      "brand_history": []
+    },
+    "13012029": {
+      "enseigne": "Intermarché",
+      "segment": "gms_lowcost",
+      "detail": "gms",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "verified_at": "2026-09-14T12:33:10.793275+00:00",
+      "brand_valid_from": "2026-09-14",
       "brand_history": []
     },
     "13013017": {
@@ -367,5 +607,5 @@
       "brand_history": []
     }
   },
-  "generated_at": "2026-09-08T01:38:38.280708+00:00"
+  "generated_at": "2026-09-14T12:33:10.793275+00:00"
 }
