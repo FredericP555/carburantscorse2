@@ -24,6 +24,49 @@ class StationBrandResolverTests(unittest.TestCase):
     def test_unrecognized_brand_fails_closed(self):
         self.assertEqual(classify_brand("Nouvelle enseigne inconnue"), ("inconnu", "inconnu"))
 
+    def test_avia_brand_correction_maps_to_traditional_network(self):
+        observations = [
+            {
+                "station_id": "13008018", "department": "13", "pop": "R",
+                "is_motorway": False, "date": date(2026, 9, 16),
+            },
+            {
+                "station_id": "13008018", "department": "13", "pop": "R",
+                "is_motorway": False, "date": date(2026, 9, 18),
+            },
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            registry_path = root / "registry.json"
+            corrections = root / "corrections.csv"
+            corrections.write_text(
+                "cle,segment,detail,justification\n"
+                "Avia,traditionnel,marque_tradi,Avia appartient au réseau traditionnel\n",
+                encoding="utf-8",
+            )
+
+            result = resolve_from_observations(
+                observations,
+                {},
+                registry_path=registry_path,
+                corrections_path=corrections,
+                fetcher=lambda _sid: ("Avia", None),
+                today=date(2026, 9, 21),
+                now=datetime(2026, 9, 21, 20, 0, tzinfo=timezone.utc),
+            )
+            saved = load_registry(registry_path)
+            entry = saved["stations"]["13008018"]
+
+            self.assertEqual(entry["segment"], "traditionnel")
+            self.assertEqual(entry["detail"], "marque_tradi")
+            self.assertEqual(entry["classification_source"], "correction_marque")
+            self.assertEqual(entry["brand_valid_from"], "2026-09-16")
+            self.assertEqual(result["categories"]["13008018"], "network")
+            self.assertEqual(
+                classification_for_day("13008018", date(2026, 9, 16), {}, saved),
+                "network",
+            )
+
     def test_unverified_known_ids_enter_bounded_reverification_set(self):
         legacy = {"13000001": "gms"}
         registry = {
