@@ -7,6 +7,7 @@ import io
 import os
 from collections import Counter
 from datetime import date
+from urllib.error import HTTPError
 from unittest.mock import patch
 import unittest
 
