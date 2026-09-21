@@ -131,7 +131,7 @@ class StationBrandResolverTests(unittest.TestCase):
             root = Path(tmp)
             registry_path = root / "registry.json"
             corrections = root / "corrections.csv"
-            corrections.write_text("cle,segment,detail,justification\\n", encoding="utf-8")
+            corrections.write_text("cle,segment,detail,justification\n", encoding="utf-8")
 
             resolve_from_observations(
                 observations,
@@ -171,7 +171,7 @@ class StationBrandResolverTests(unittest.TestCase):
             root = Path(tmp)
             registry_path = root / "registry.json"
             corrections = root / "corrections.csv"
-            corrections.write_text("cle,segment,detail,justification\\n", encoding="utf-8")
+            corrections.write_text("cle,segment,detail,justification\n", encoding="utf-8")
 
             resolve_from_observations(
                 first_observations,
