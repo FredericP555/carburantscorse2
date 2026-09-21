@@ -307,6 +307,28 @@ def observed_bdr_ids(observations: Iterable[dict]) -> set[str]:
     return ids
 
 
+def observed_bdr_date_bounds(observations: Iterable[dict]) -> dict[str, tuple[date, date]]:
+    """Return first/last observed source dates for eligible BDR station IDs."""
+    bounds: dict[str, tuple[date, date]] = {}
+    for row in observations:
+        if str(row.get("department") or "") != "13":
+            continue
+        if bool(row.get("is_motorway")) or str(row.get("pop") or "") == "A":
+            continue
+        station_id = str(row.get("station_id") or "").strip()
+        if not station_id:
+            continue
+        observed = _date_value(row.get("date") or row.get("timestamp"))
+        if observed is None:
+            continue
+        current = bounds.get(station_id)
+        if current is None:
+            bounds[station_id] = (observed, observed)
+        else:
+            bounds[station_id] = (min(current[0], observed), max(current[1], observed))
+    return bounds
+
+
 def _history_record(entry: dict, valid_to: date) -> dict | None:
     if not entry:
         return None
@@ -339,7 +361,9 @@ def resolve_from_observations(
 ) -> dict:
     registry = load_registry(registry_path)
     by_id, by_brand = load_corrections(corrections_path)
-    observed_ids = observed_bdr_ids(observations)
+    observation_rows = list(observations)
+    observed_ids = observed_bdr_ids(observation_rows)
+    observed_bounds = observed_bdr_date_bounds(observation_rows)
     today = today or date.today()
     now = now or datetime.now(timezone.utc)
     pending = ids_to_fetch(
@@ -364,6 +388,9 @@ def resolve_from_observations(
     errors: dict[str, str] = {}
     for station_id in pending:
         old = stations.get(station_id, {})
+        observed_first, observed_last = observed_bounds.get(station_id, (today, today))
+        old_first = _date_value(old.get("first_seen"))
+        first_seen_day = min(d for d in (old_first, observed_first) if d is not None)
         brand, error = fetched.get(station_id, (None, "not fetched"))
         if brand:
             segment, detail, source = classify_station(station_id, brand, by_id, by_brand)
@@ -373,21 +400,29 @@ def resolve_from_observations(
                 str(old.get("detail") or ""), str(old.get("classification_source") or ""),
             )
             new_identity = (brand, segment, detail, source)
-            if old and old_identity != new_identity:
+            old_resolved = bool(old.get("enseigne")) and old.get("segment") in {"gms_lowcost", "traditionnel"}
+            if old_resolved and old_identity != new_identity:
+                # A real change of a previously resolved brand is only valid from verification.
                 previous = _history_record(old, today - timedelta(days=1))
                 if previous:
                     history.append(previous)
                 valid_from = today.isoformat()
             else:
-                valid_from = str(old.get("brand_valid_from") or old.get("first_seen") or today.isoformat())
+                # New IDs (and IDs that were previously unresolved) are valid from the first
+                # source observation, not from the later date when the official page is checked.
+                old_valid_from = _date_value(old.get("brand_valid_from"))
+                valid_from_day = min(
+                    d for d in (old_valid_from, first_seen_day) if d is not None
+                )
+                valid_from = valid_from_day.isoformat()
             entry = {
                 "enseigne": brand,
                 "segment": segment,
                 "detail": detail,
                 "classification_source": source,
                 "brand_source": "officiel",
-                "first_seen": old.get("first_seen") or today.isoformat(),
-                "last_seen": today.isoformat(),
+                "first_seen": first_seen_day.isoformat(),
+                "last_seen": observed_last.isoformat(),
                 "verified_at": now.isoformat(),
                 "brand_valid_from": valid_from,
                 "brand_history": history,
@@ -395,23 +430,27 @@ def resolve_from_observations(
         elif old.get("enseigne") and old.get("segment") != "inconnu":
             errors[station_id] = error or "official brand unavailable during reverification"
             entry = dict(old)
-            entry["last_seen"] = today.isoformat()
+            entry["last_seen"] = observed_last.isoformat()
         else:
             errors[station_id] = error or "official brand unavailable"
             if station_id in legacy_categories:
                 # Keep legacy fallback; a transient failure must not turn a historically known
                 # station into an unknown recent station.
                 continue
+            old_valid_from = _date_value(old.get("brand_valid_from"))
+            valid_from_day = min(
+                d for d in (old_valid_from, first_seen_day) if d is not None
+            )
             entry = {
                 "enseigne": old.get("enseigne") or "",
                 "segment": "inconnu",
                 "detail": "inconnu",
                 "classification_source": old.get("classification_source") or "auto",
                 "brand_source": "non_resolu",
-                "first_seen": old.get("first_seen") or today.isoformat(),
-                "last_seen": today.isoformat(),
+                "first_seen": first_seen_day.isoformat(),
+                "last_seen": observed_last.isoformat(),
                 "verified_at": old.get("verified_at") or "",
-                "brand_valid_from": old.get("brand_valid_from") or today.isoformat(),
+                "brand_valid_from": valid_from_day.isoformat(),
                 "brand_history": list(old.get("brand_history") or []),
             }
         if stations.get(station_id) != entry:

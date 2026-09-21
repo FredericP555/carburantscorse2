@@ -116,6 +116,88 @@ class StationBrandResolverTests(unittest.TestCase):
             self.assertEqual(second["brand_fetch_count"], 0)
             self.assertEqual(calls, ["13999999"])
 
+    def test_new_station_is_valid_from_first_observed_source_date(self):
+        observations = [
+            {
+                "station_id": "13400019", "department": "13", "pop": "R",
+                "is_motorway": False, "date": date(2026, 9, 18),
+            },
+            {
+                "station_id": "13400019", "department": "13", "pop": "R",
+                "is_motorway": False, "date": date(2026, 9, 20),
+            },
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            registry_path = root / "registry.json"
+            corrections = root / "corrections.csv"
+            corrections.write_text("cle,segment,detail,justification\\n", encoding="utf-8")
+
+            resolve_from_observations(
+                observations,
+                {},
+                registry_path=registry_path,
+                corrections_path=corrections,
+                fetcher=lambda _sid: ("TotalEnergies", None),
+                today=date(2026, 9, 21),
+                now=datetime(2026, 9, 21, 12, 39, tzinfo=timezone.utc),
+            )
+            saved = load_registry(registry_path)
+            entry = saved["stations"]["13400019"]
+            self.assertEqual(entry["first_seen"], "2026-09-18")
+            self.assertEqual(entry["last_seen"], "2026-09-20")
+            self.assertEqual(entry["brand_valid_from"], "2026-09-18")
+            from scripts.resolve_new_bdr_station_brands import classification_for_day
+            self.assertEqual(
+                classification_for_day("13400019", date(2026, 9, 18), {}, saved),
+                "network",
+            )
+
+    def test_unresolved_retry_keeps_original_first_observed_date(self):
+        first_observations = [
+            {
+                "station_id": "13999996", "department": "13", "pop": "R",
+                "is_motorway": False, "date": date(2026, 9, 18),
+            },
+        ]
+        second_observations = [
+            *first_observations,
+            {
+                "station_id": "13999996", "department": "13", "pop": "R",
+                "is_motorway": False, "date": date(2026, 9, 21),
+            },
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            registry_path = root / "registry.json"
+            corrections = root / "corrections.csv"
+            corrections.write_text("cle,segment,detail,justification\\n", encoding="utf-8")
+
+            resolve_from_observations(
+                first_observations,
+                {},
+                registry_path=registry_path,
+                corrections_path=corrections,
+                fetcher=lambda _sid: (None, "temporary failure"),
+                today=date(2026, 9, 21),
+                now=datetime(2026, 9, 21, 12, 0, tzinfo=timezone.utc),
+            )
+            resolve_from_observations(
+                second_observations,
+                {},
+                registry_path=registry_path,
+                corrections_path=corrections,
+                fetcher=lambda _sid: ("TotalEnergies", None),
+                today=date(2026, 9, 22),
+                now=datetime(2026, 9, 22, 7, 0, tzinfo=timezone.utc),
+            )
+            saved = load_registry(registry_path)
+            entry = saved["stations"]["13999996"]
+            self.assertEqual(entry["first_seen"], "2026-09-18")
+            self.assertEqual(entry["last_seen"], "2026-09-21")
+            self.assertEqual(entry["brand_valid_from"], "2026-09-18")
+            self.assertEqual(entry["segment"], "traditionnel")
+
     def test_unresolved_is_retried_and_not_classified(self):
         observations = [
             {"station_id": "13999996", "department": "13", "pop": "R", "is_motorway": False},
