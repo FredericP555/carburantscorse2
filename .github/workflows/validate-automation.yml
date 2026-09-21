@@ -64,6 +64,21 @@ jobs:
           python scripts/build_v2_production_candidate.py
           --tag-prefix "$C1_V2_TAG_PREFIX"
           --release-tag "${{ steps.c1.outputs.release_tag }}"
+      - name: Run read-only retrospective Total Corsica 45-day dry-run
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          before=$(sha256sum data.json | awk '{print $1}')
+          python scripts/audit_total_corsica_45d_retrospective.py \
+            --release-tag "${{ steps.c1.outputs.release_tag }}"
+          after=$(sha256sum data.json | awk '{print $1}')
+          echo "data.json before=$before"
+          echo "data.json after =$after"
+          test "$before" = "$after"
+          git diff --exit-code -- data.json
+
       - name: Exercise decoded per-fuel freshness contract
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -87,4 +102,8 @@ jobs:
             outputs/c1/shared_release_tag.txt
             outputs/c1/corse_station_brands.json
             config/bdr_station_brands.json
+            outputs/retrospective-total-corsica-45d/summary.json
+            outputs/retrospective-total-corsica-45d/weekly.csv
+            outputs/retrospective-total-corsica-45d/daily.csv
+            outputs/retrospective-total-corsica-45d/changed_station_days.csv
           retention-days: 14
