@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
+from carburantscorse2 import r2_guard_v2 as r2_guard
 from carburantscorse2 import reliability_policy_v2 as policy
 
 
@@ -38,6 +41,66 @@ def decision(*, fuel="Gazole", age_days=90, is_total=True, shield=True, price=No
         rotterdam_stale_price_admissible=r2,
     )
 
+
+class CorsicaPerFuelUfipGuardTests(unittest.TestCase):
+    def test_sp95_guard_uses_sp95_phase_and_corsica_threshold(self):
+        declared = datetime(2026, 7, 15, tzinfo=timezone.utc)
+        phase = SimpleNamespace(started_on=date(2026, 3, 12))
+        with (
+            patch("carburantscorse2.r2_guard_v2.shield_phase.phase_for_day", return_value=phase) as phase_for_day,
+            patch("carburantscorse2.r2_guard_v2.rotterdam.admissible_since", return_value=True) as admissible,
+        ):
+            self.assertTrue(
+                r2_guard.corsica_shield_price_admissible(
+                    declared, DAY, "SP95", bouclier_metadata={"SP95": {}}
+                )
+            )
+        phase_for_day.assert_called_once_with({"SP95": {}}, "SP95", DAY)
+        self.assertEqual(admissible.call_args.args[:3], (declared.date(), DAY, "corsica"))
+        self.assertEqual(admissible.call_args.kwargs["phase_started_on"], phase.started_on)
+
+    def test_pre_phase_declaration_starts_ufip_window_at_phase_start(self):
+        declared = datetime(2026, 3, 25, tzinfo=timezone.utc)
+        phase = SimpleNamespace(started_on=date(2026, 4, 8))
+        with (
+            patch("carburantscorse2.r2_guard_v2.shield_phase.phase_for_day", return_value=phase),
+            patch("carburantscorse2.r2_guard_v2.rotterdam.admissible_since", return_value=True) as admissible,
+        ):
+            self.assertTrue(
+                r2_guard.corsica_shield_price_admissible(
+                    declared, DAY, "Gazole", bouclier_metadata={"Gazole": {}}
+                )
+            )
+        self.assertEqual(admissible.call_args.args[0], phase.started_on)
+
+
+class BdrBehaviourPreservationTests(unittest.TestCase):
+    def test_bdr_double_cap_still_requires_nonprincipal_liveness(self):
+        last = datetime(2026, 7, 1, tzinfo=timezone.utc)
+        result = policy.evaluate(
+            day=DAY, region_kind="mainland", target_fuel="Gazole",
+            last_declared_at=last, last_price=2.25, latest_price_valid=True,
+            is_total=True, shield_effective=True, applicable_cap=2.25,
+            phase_started_on=date(2026, 4, 8), activity_by_fuel={},
+            gazole_price=2.25, gazole_cap=2.25, sp95_price=1.99, sp95_cap=1.99,
+            rotterdam_stale_price_admissible=True,
+        )
+        self.assertFalse(result.eligible)
+        self.assertEqual(result.reason, "double_plafond_bdr_sans_vivacite_autre_carburant")
+
+    def test_bdr_double_cap_with_recent_e10_liveness_and_r2_stays_eligible(self):
+        last = datetime(2026, 7, 1, tzinfo=timezone.utc)
+        result = policy.evaluate(
+            day=DAY, region_kind="mainland", target_fuel="Gazole",
+            last_declared_at=last, last_price=2.25, latest_price_valid=True,
+            is_total=True, shield_effective=True, applicable_cap=2.25,
+            phase_started_on=date(2026, 4, 8),
+            activity_by_fuel={"E10": datetime(2026, 9, 10, tzinfo=timezone.utc)},
+            gazole_price=2.25, gazole_cap=2.25, sp95_price=1.99, sp95_cap=1.99,
+            rotterdam_stale_price_admissible=True,
+        )
+        self.assertTrue(result.eligible)
+        self.assertEqual(result.reason, "double_plafond_bdr_vivacite_et_rotterdam")
 
 class TotalCorsicaShieldNo45DayCutoffTests(unittest.TestCase):
     def test_gazole_total_at_cap_survives_90_days_when_ufip_guard_is_admissible(self):
