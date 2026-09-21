@@ -79,6 +79,24 @@ jobs:
           test "$before" = "$after"
           git diff --exit-code -- data.json
 
+      - name: Build guarded one-time historical correction candidate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          before=$(sha256sum data.json | awk '{print $1}')
+          python scripts/build_total_corsica_45d_historical_correction.py \
+            --release-tag "a4c-v2-shared-20260921T160119Z-35622254213"
+          python scripts/build_homepage_summary.py \
+            --data outputs/historical-correction-total-corsica-45d/candidate.json \
+            --output outputs/historical-correction-total-corsica-45d/homepage-summary.json
+          after=$(sha256sum data.json | awk '{print $1}')
+          echo "historical-correction data.json before=$before"
+          echo "historical-correction data.json after =$after"
+          test "$before" = "$after"
+          git diff --exit-code -- data.json
+
       - name: Exercise decoded per-fuel freshness contract
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -106,4 +124,7 @@ jobs:
             outputs/retrospective-total-corsica-45d/weekly.csv
             outputs/retrospective-total-corsica-45d/daily.csv
             outputs/retrospective-total-corsica-45d/changed_station_days.csv
+            outputs/historical-correction-total-corsica-45d/candidate.json
+            outputs/historical-correction-total-corsica-45d/report.json
+            outputs/historical-correction-total-corsica-45d/homepage-summary.json
           retention-days: 14
