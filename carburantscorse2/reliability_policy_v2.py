@@ -94,14 +94,18 @@ def evaluate(*, day: date, region_kind: str, target_fuel: str,
         return Decision(False, "ancien_pas_au_plafond", age)
 
     activity_by_fuel = activity_by_fuel or {}
+    if region_kind == "corsica":
+        # Total Corsica is evaluated per fuel. Beyond normal freshness, age itself no longer
+        # expires a price at the active cap; UFIP/R2 is the fail-closed continuation guard.
+        if rotterdam_stale_price_admissible is True:
+            return Decision(True, "bouclier_total_ufip_admissible", age)
+        if rotterdam_stale_price_admissible is False:
+            return Decision(False, "bouclier_total_ufip_verrouille", age)
+        return Decision(False, "bouclier_total_ufip_indisponible", age)
+
+    # BDR/mainland behaviour is deliberately unchanged.
     both_capped = at_cap(gazole_price, gazole_cap) and at_cap(sp95_price, sp95_cap)
     if both_capped:
-        if region_kind == "corsica":
-            if rotterdam_stale_price_admissible is True:
-                return Decision(True, "double_plafond_rotterdam_admissible", age)
-            if rotterdam_stale_price_admissible is False:
-                return Decision(False, "double_plafond_rotterdam_verrouille", age)
-            return Decision(False, "double_plafond_rotterdam_indisponible", age)
         if not recent_nonprincipal_liveness(activity_by_fuel=activity_by_fuel, day=day):
             return Decision(False, "double_plafond_bdr_sans_vivacite_autre_carburant", age)
         if rotterdam_stale_price_admissible is True:
