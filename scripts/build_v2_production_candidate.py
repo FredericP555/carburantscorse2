@@ -7,9 +7,9 @@ Initial activation performs the agreed controlled transition only:
 - complete weekly series and Gazole margins switch from 2026-07-27;
 - future runs are append-only once ``meta.v2.active`` is present.
 
-Station-brand/category changes are date-aware. The legacy BDR category period stays frozen and a
-newly verified brand applies only from its verification date. The builder never writes data.json
-directly. Promotion is a separate guarded step.
+Station-brand/category changes are date-aware. The legacy BDR category period stays frozen;
+new station brands apply from their first eligible observation, while later brand changes remain
+prospective. The builder never writes data.json directly. Promotion is a separate guarded step.
 """
 from __future__ import annotations
 
@@ -28,6 +28,7 @@ import pandas as pd
 from a4c_common.corse_brand import TOTAL, classify_registry_entry
 from a4c_common.price_math import at_cap
 from a4c_common.shared_release import download_shared_rotterdam_assets, load_shared_observations
+from a4c_common.source_freshness import max_date_by_fuel
 from carburantscorse2 import r2_guard_v2, reliability_policy_v2, shield_phase_v2
 from carburantscorse2.publication import build_gap_series, build_publication_state, load_bdr_categories, unknown_recent_bdr_stations
 from carburantscorse2.publication_margin import build_margin_series
