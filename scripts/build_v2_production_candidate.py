@@ -196,12 +196,18 @@ def _evaluate_v2(state: pd.DataFrame, *, bouclier: dict, event_guards, corse_sta
         else:
             region_kind="mainland"; territory_r2="bdr"; raw_entry=bdr_entries.get(sid) if isinstance(bdr_entries,dict) else None; entry=bdr_entry_for_day(raw_entry,day); is_total=_is_total_brand((entry or {}).get("enseigne") if isinstance(entry,dict) else None); territory_label="BdR"
         r2_verdict=None; age=reliability_policy_v2.age_days(last_declared,day); both_capped=at_cap(gazole_price,gazole_cap) and at_cap(sp95_price,sp95_cap)
-        if fuel in PRINCIPAL_FUELS and age is not None and age >= reliability_policy_v2.NORMAL_MAX_AGE_DAYS and both_capped:
-            r2_calls += 1
+        if fuel in PRINCIPAL_FUELS and age is not None and age >= reliability_policy_v2.NORMAL_MAX_AGE_DAYS:
             try:
-                r2_verdict=r2_guard_v2.stale_price_admissible(last_declared,day,territory_r2,bouclier_metadata=bouclier)
-                if r2_verdict: r2_true += 1
-                else: r2_false += 1
+                if region_kind == "corsica" and is_total and target_phase is not None and at_cap(_as_float(row.price), target_phase.cap):
+                    r2_calls += 1
+                    r2_verdict=r2_guard_v2.corsica_shield_price_admissible(
+                        last_declared, day, fuel, bouclier_metadata=bouclier
+                    )
+                elif region_kind == "mainland" and both_capped:
+                    r2_calls += 1
+                    r2_verdict=r2_guard_v2.stale_price_admissible(last_declared,day,territory_r2,bouclier_metadata=bouclier)
+                if r2_verdict is True: r2_true += 1
+                elif r2_verdict is False: r2_false += 1
             except Exception as exc:
                 r2_unavailable += 1; r2_errors[f"{type(exc).__name__}: {exc}"] += 1; r2_verdict=None
         price_aberrant=getattr(row,"price_aberrant",True); latest_price_valid=False if pd.isna(price_aberrant) else not bool(price_aberrant)
