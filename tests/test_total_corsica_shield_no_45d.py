@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
-import unittest
 from types import SimpleNamespace
+import unittest
 from unittest.mock import patch
 
 from carburantscorse2 import r2_guard_v2 as r2_guard
@@ -14,7 +14,7 @@ PHASE_START = date(2026, 6, 1)
 
 
 def decision(*, fuel="Gazole", age_days=90, is_total=True, shield=True, price=None,
-             cap=None, r2=True):
+             cap=None, r2=True, phase_start=PHASE_START):
     if price is None:
         price = 2.25 if fuel == "Gazole" else 1.99
     if cap is None:
@@ -78,11 +78,21 @@ class BdrBehaviourPreservationTests(unittest.TestCase):
     def test_bdr_double_cap_still_requires_nonprincipal_liveness(self):
         last = datetime(2026, 7, 1, tzinfo=timezone.utc)
         result = policy.evaluate(
-            day=DAY, region_kind="mainland", target_fuel="Gazole",
-            last_declared_at=last, last_price=2.25, latest_price_valid=True,
-            is_total=True, shield_effective=True, applicable_cap=2.25,
-            phase_started_on=date(2026, 4, 8), activity_by_fuel={},
-            gazole_price=2.25, gazole_cap=2.25, sp95_price=1.99, sp95_cap=1.99,
+            day=DAY,
+            region_kind="mainland",
+            target_fuel="Gazole",
+            last_declared_at=last,
+            last_price=2.25,
+            latest_price_valid=True,
+            is_total=True,
+            shield_effective=True,
+            applicable_cap=2.25,
+            phase_started_on=date(2026, 4, 8),
+            activity_by_fuel={},
+            gazole_price=2.25,
+            gazole_cap=2.25,
+            sp95_price=1.99,
+            sp95_cap=1.99,
             rotterdam_stale_price_admissible=True,
         )
         self.assertFalse(result.eligible)
@@ -91,16 +101,26 @@ class BdrBehaviourPreservationTests(unittest.TestCase):
     def test_bdr_double_cap_with_recent_e10_liveness_and_r2_stays_eligible(self):
         last = datetime(2026, 7, 1, tzinfo=timezone.utc)
         result = policy.evaluate(
-            day=DAY, region_kind="mainland", target_fuel="Gazole",
-            last_declared_at=last, last_price=2.25, latest_price_valid=True,
-            is_total=True, shield_effective=True, applicable_cap=2.25,
+            day=DAY,
+            region_kind="mainland",
+            target_fuel="Gazole",
+            last_declared_at=last,
+            last_price=2.25,
+            latest_price_valid=True,
+            is_total=True,
+            shield_effective=True,
+            applicable_cap=2.25,
             phase_started_on=date(2026, 4, 8),
             activity_by_fuel={"E10": datetime(2026, 9, 10, tzinfo=timezone.utc)},
-            gazole_price=2.25, gazole_cap=2.25, sp95_price=1.99, sp95_cap=1.99,
+            gazole_price=2.25,
+            gazole_cap=2.25,
+            sp95_price=1.99,
+            sp95_cap=1.99,
             rotterdam_stale_price_admissible=True,
         )
         self.assertTrue(result.eligible)
         self.assertEqual(result.reason, "double_plafond_bdr_vivacite_et_rotterdam")
+
 
 class TotalCorsicaShieldNo45DayCutoffTests(unittest.TestCase):
     def test_gazole_total_at_cap_survives_90_days_when_ufip_guard_is_admissible(self):
@@ -113,7 +133,24 @@ class TotalCorsicaShieldNo45DayCutoffTests(unittest.TestCase):
         self.assertTrue(decision(fuel="Gazole", age_days=45, r2=True).eligible)
 
     def test_very_old_total_price_can_remain_valid_under_effective_shield(self):
-        self.assertTrue(decision(fuel="Gazole", age_days=180, r2=True, phase_start=date(2026, 1, 1)).eligible)\n\n    def test_price_already_stale_before_phase_is_not_resurrected(self):\n        self.assertFalse(decision(fuel="Gazole", age_days=180, r2=True, phase_start=date(2026, 8, 1)).eligible)
+        self.assertTrue(
+            decision(
+                fuel="Gazole",
+                age_days=180,
+                r2=True,
+                phase_start=date(2026, 1, 1),
+            ).eligible
+        )
+
+    def test_price_already_stale_before_phase_is_not_resurrected(self):
+        self.assertFalse(
+            decision(
+                fuel="Gazole",
+                age_days=180,
+                r2=True,
+                phase_start=date(2026, 8, 1),
+            ).eligible
+        )
 
     def test_ufip_guard_still_blocks_extension(self):
         self.assertFalse(decision(fuel="Gazole", age_days=90, r2=False).eligible)
