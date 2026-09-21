@@ -5,6 +5,7 @@ import tempfile
 import unittest
 
 from scripts.resolve_new_bdr_station_brands import (
+    classification_for_day,
     classify_brand,
     ids_to_fetch,
     load_registry,
@@ -147,9 +148,46 @@ class StationBrandResolverTests(unittest.TestCase):
             self.assertEqual(entry["first_seen"], "2026-09-18")
             self.assertEqual(entry["last_seen"], "2026-09-20")
             self.assertEqual(entry["brand_valid_from"], "2026-09-18")
-            from scripts.resolve_new_bdr_station_brands import classification_for_day
             self.assertEqual(
                 classification_for_day("13400019", date(2026, 9, 18), {}, saved),
+                "network",
+            )
+
+    def test_new_station_validity_is_clamped_to_temporal_policy_start(self):
+        observations = [
+            {
+                "station_id": "13999995", "department": "13", "pop": "R",
+                "is_motorway": False, "date": date(2026, 9, 1),
+            },
+            {
+                "station_id": "13999995", "department": "13", "pop": "R",
+                "is_motorway": False, "date": date(2026, 9, 3),
+            },
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            registry_path = root / "registry.json"
+            corrections = root / "corrections.csv"
+            corrections.write_text("cle,segment,detail,justification\n", encoding="utf-8")
+
+            resolve_from_observations(
+                observations,
+                {},
+                registry_path=registry_path,
+                corrections_path=corrections,
+                fetcher=lambda _sid: ("TotalEnergies", None),
+                today=date(2026, 9, 21),
+                now=datetime(2026, 9, 21, 12, 0, tzinfo=timezone.utc),
+            )
+            saved = load_registry(registry_path)
+            entry = saved["stations"]["13999995"]
+            self.assertEqual(entry["first_seen"], "2026-09-01")
+            self.assertEqual(entry["brand_valid_from"], "2026-09-08")
+            self.assertIsNone(
+                classification_for_day("13999995", date(2026, 9, 7), {}, saved)
+            )
+            self.assertEqual(
+                classification_for_day("13999995", date(2026, 9, 8), {}, saved),
                 "network",
             )
 
