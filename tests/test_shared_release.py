@@ -7,6 +7,7 @@ import io
 import os
 from collections import Counter
 from datetime import date
+from urllib.error import HTTPError
 from unittest.mock import patch
 import unittest
 
@@ -16,6 +17,7 @@ from a4c_common.shared_release import (
     SCHEMA,
     _asset_url,
     _decode_snapshot,
+    _request_bytes,
     _request_headers,
     _select_shared_release,
 )
@@ -105,6 +107,37 @@ class SharedReleaseTests(unittest.TestCase):
             asset_headers = _request_headers("https://github.com/x/y/releases/download/tag/data.gz")
         self.assertEqual(api_headers.get("Authorization"), "Bearer test-token")
         self.assertNotIn("Authorization", asset_headers)
+
+    def test_request_retries_transient_504_then_succeeds(self):
+        transient_1 = HTTPError("https://example.test/data", 504, "Gateway Time-out", None, None)
+        transient_2 = HTTPError("https://example.test/data", 504, "Gateway Time-out", None, None)
+        response = io.BytesIO(b"ok")
+        with (
+            patch(
+                "a4c_common.shared_release.urllib.request.urlopen",
+                side_effect=[transient_1, transient_2, response],
+            ) as urlopen,
+            patch("a4c_common.shared_release.time.sleep") as sleep,
+        ):
+            self.assertEqual(_request_bytes("https://example.test/data"), b"ok")
+
+        self.assertEqual(urlopen.call_count, 3)
+        self.assertEqual([call.args[0] for call in sleep.call_args_list], [2, 5])
+
+    def test_request_does_not_retry_non_transient_404(self):
+        not_found = HTTPError("https://example.test/data", 404, "Not Found", None, None)
+        with (
+            patch(
+                "a4c_common.shared_release.urllib.request.urlopen",
+                side_effect=not_found,
+            ) as urlopen,
+            patch("a4c_common.shared_release.time.sleep") as sleep,
+        ):
+            with self.assertRaises(HTTPError):
+                _request_bytes("https://example.test/data")
+
+        urlopen.assert_called_once()
+        sleep.assert_not_called()
 
     def test_decode_validates_checksum_manifest_and_restores_types(self):
         payload, meta = snapshot_fixture()

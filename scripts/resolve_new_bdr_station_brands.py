@@ -411,8 +411,9 @@ def resolve_from_observations(
                 # New IDs (and IDs that were previously unresolved) are valid from the first
                 # source observation, not from the later date when the official page is checked.
                 old_valid_from = _date_value(old.get("brand_valid_from"))
-                valid_from_day = min(
-                    d for d in (old_valid_from, first_seen_day) if d is not None
+                valid_from_day = max(
+                    TEMPORAL_CATEGORY_START,
+                    min(d for d in (old_valid_from, first_seen_day) if d is not None),
                 )
                 valid_from = valid_from_day.isoformat()
             entry = {
@@ -438,8 +439,9 @@ def resolve_from_observations(
                 # station into an unknown recent station.
                 continue
             old_valid_from = _date_value(old.get("brand_valid_from"))
-            valid_from_day = min(
-                d for d in (old_valid_from, first_seen_day) if d is not None
+            valid_from_day = max(
+                TEMPORAL_CATEGORY_START,
+                min(d for d in (old_valid_from, first_seen_day) if d is not None),
             )
             entry = {
                 "enseigne": old.get("enseigne") or "",
@@ -462,7 +464,7 @@ def resolve_from_observations(
     result_registry["policy"] = {
         "legacy_frozen_through": LEGACY_FROZEN_THROUGH.isoformat(),
         "temporal_categories_from": TEMPORAL_CATEGORY_START.isoformat(),
-        "legacy": "published category remains authoritative through the frozen boundary; later verified brand/category changes apply only from their verification date",
+        "legacy": "published category remains authoritative through the frozen boundary; new IDs apply no earlier than the temporal start, while later changes to resolved brands remain prospective",
         "new_ids": "official brand -> explicit A4C segment/detail; unrecognized brands remain inconnu; Esso Express and TotalEnergies Access are gms_lowcost",
         "brand_reverify_days": reverify_days,
         "brand_reverify_limit_per_run": reverify_limit,

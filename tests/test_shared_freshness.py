@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 import unittest
 
+from scripts.build_v2_production_candidate import _source_max_date_by_fuel
 from scripts.check_shared_freshness import evaluate_shared_freshness
 
 
@@ -39,6 +40,38 @@ class SharedFreshnessTests(unittest.TestCase):
             max_release_age_hours=12,
             max_source_age_days=4,
         )
+
+    def test_builder_refreshes_per_fuel_dates_from_current_c1_observations(self):
+        observations = [
+            {"fuel": "Gazole", "date": date(2026, 9, 13)},
+            {"fuel": "SP95", "date": date(2026, 9, 13)},
+            {"fuel": "E10", "date": date(2026, 9, 13)},
+            {"fuel": "Gazole", "date": date(2026, 9, 20)},
+            {"fuel": "SP95", "date": date(2026, 9, 20)},
+            {"fuel": "E10", "date": date(2026, 9, 20)},
+        ]
+        baseline_by_fuel = {
+            "E10": "2026-09-13",
+            "Gazole": "2026-09-13",
+            "SP95": "2026-09-13",
+        }
+        current = _source_max_date_by_fuel(observations)
+        self.assertNotEqual(current, baseline_by_fuel)
+        self.assertEqual(
+            current,
+            {
+                "Gazole": "2026-09-20",
+                "SP95": "2026-09-20",
+                "E10": "2026-09-20",
+            },
+        )
+
+    def test_builder_requires_all_three_fuel_freshness_dates(self):
+        with self.assertRaisesRegex(RuntimeError, "E10"):
+            _source_max_date_by_fuel([
+                {"fuel": "Gazole", "date": date(2026, 9, 20)},
+                {"fuel": "SP95", "date": date(2026, 9, 20)},
+            ])
 
     def test_fresh_release_and_advanced_stock_pass(self):
         report = self.evaluate(candidate(), baseline())

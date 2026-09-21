@@ -15,6 +15,8 @@ import io
 import json
 import os
 from pathlib import Path
+import time
+import urllib.error
 import urllib.request
 from datetime import date, datetime
 from typing import Iterable
@@ -31,6 +33,8 @@ SCHEMA = "a4c-official-13-20-v1"
 CORSE_BRANDS_SCHEMA = "a4c-corsica-station-brands-v2"
 REQUIRED_DEPARTMENTS = {"13", "20"}
 REQUIRED_FUELS = {"Gazole", "SP95", "E10"}
+TRANSIENT_HTTP_STATUS = {429, 500, 502, 503, 504}
+RETRY_DELAYS_SECONDS = (2, 5, 10)
 
 
 def _request_headers(url: str) -> dict[str, str]:
@@ -42,9 +46,21 @@ def _request_headers(url: str) -> dict[str, str]:
 
 
 def _request_bytes(url: str, *, timeout: int = 120) -> bytes:
-    req = urllib.request.Request(url, headers=_request_headers(url))
-    with urllib.request.urlopen(req, timeout=timeout) as response:
-        return response.read()
+    """Fetch bytes, retrying only transient HTTP/network failures."""
+    for attempt in range(len(RETRY_DELAYS_SECONDS) + 1):
+        req = urllib.request.Request(url, headers=_request_headers(url))
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as response:
+                return response.read()
+        except urllib.error.HTTPError as exc:
+            retryable = exc.code in TRANSIENT_HTTP_STATUS
+            if not retryable or attempt >= len(RETRY_DELAYS_SECONDS):
+                raise
+        except (urllib.error.URLError, TimeoutError):
+            if attempt >= len(RETRY_DELAYS_SECONDS):
+                raise
+        time.sleep(RETRY_DELAYS_SECONDS[attempt])
+    raise RuntimeError("unreachable request retry state")
 
 
 def _request_json(url: str, *, timeout: int = 60):

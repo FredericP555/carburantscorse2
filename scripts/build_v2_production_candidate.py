@@ -7,9 +7,9 @@ Initial activation performs the agreed controlled transition only:
 - complete weekly series and Gazole margins switch from 2026-07-27;
 - future runs are append-only once ``meta.v2.active`` is present.
 
-Station-brand/category changes are date-aware. The legacy BDR category period stays frozen and a
-newly verified brand applies only from its verification date. The builder never writes data.json
-directly. Promotion is a separate guarded step.
+Station-brand/category changes are date-aware. The legacy BDR category period stays frozen;
+new station brands apply from their first eligible observation, while later brand changes remain
+prospective. The builder never writes data.json directly. Promotion is a separate guarded step.
 """
 from __future__ import annotations
 
@@ -28,6 +28,7 @@ import pandas as pd
 from a4c_common.corse_brand import TOTAL, classify_registry_entry
 from a4c_common.price_math import at_cap
 from a4c_common.shared_release import download_shared_rotterdam_assets, load_shared_observations
+from a4c_common.source_freshness import max_date_by_fuel
 from carburantscorse2 import r2_guard_v2, reliability_policy_v2, shield_phase_v2
 from carburantscorse2.publication import build_gap_series, build_publication_state, load_bdr_categories, unknown_recent_bdr_stations
 from carburantscorse2.publication_margin import build_margin_series
@@ -91,6 +92,17 @@ def _default_end() -> date:
 
 def _last_complete_sunday(day: date) -> date:
     return day - timedelta(days=(day.weekday() + 1) % 7)
+
+
+def _source_max_date_by_fuel(observations: list[dict]) -> dict[str, str]:
+    """Derive current C1 per-fuel freshness from the decoded pinned observations."""
+    values = max_date_by_fuel(observations)
+    missing = [fuel for fuel in ALL_FUELS if not values.get(fuel)]
+    if missing:
+        raise RuntimeError(
+            "Pinned C1 snapshot is missing required per-fuel max dates: " + ", ".join(missing)
+        )
+    return {fuel: values[fuel] for fuel in ALL_FUELS}
 
 
 def _publication_guard_start(baseline_last: date, target_end: date) -> date:
@@ -228,6 +240,7 @@ def main() -> None:
     fetch=download_shared_rotterdam_assets(ROOT/"outputs"/"ufip",tag_prefix=args.tag_prefix,release_tag=args.release_tag,registry_output=CORSE_REGISTRY,tag_output=C1_TAG)
     meta=json.loads(C1_META.read_text(encoding="utf-8")); years=sorted(int(y) for y in meta.get("years",[]))
     observations,source=load_shared_observations(years,tag_prefix=args.tag_prefix,release_tag=args.release_tag)
+    source_max_by_fuel=_source_max_date_by_fuel(observations)
     source_max=date.fromisoformat(str(source.get("shared_source_max_date"))); target_end=min(requested_end,source_max)
     baseline_last=date.fromisoformat(baseline["DATA"]["gazole"]["sp95"]["daily"]["all"][-1]["date"])
     if target_end < baseline_last: raise RuntimeError(f"Pinned C1 source is older than baseline: {target_end} < {baseline_last}")
@@ -267,7 +280,7 @@ def main() -> None:
     observed=pd.read_csv(ROTTERDAM_OBSERVED); ufip_last=None if observed.empty else str(pd.to_datetime(observed["date"]).max().date())
     perimeter_guard_from=_publication_guard_start(baseline_last,target_end)
     unknown=unknown_recent_bdr_stations(v2_state,since=pd.Timestamp(perimeter_guard_from))
-    new_meta=deepcopy(baseline_meta); new_meta.update({"generated_at":pd.Timestamp.now(tz="UTC").isoformat(),"publication_mode":"v2-append-only" if already_active else "v2-controlled-transition","baseline_source":"data.json","previous_daily_cutoff":baseline_last.isoformat(),"requested_daily_target_end":requested_end.isoformat(),"daily_target_end":target_end.isoformat(),"weekly_complete_through":weekly_end.isoformat(),"official_source_max_date":source_max.isoformat(),"official_ingestion_source":source.get("kind"),"official_shared_release_tag":args.release_tag,"official_shared_release_published_at":source.get("release_published_at"),"official_shared_sha256":source.get("sha256"),"official_shared_source_max_date":source.get("shared_source_max_date"),"bouclier":bouclier,"ufip_last_observed_date":ufip_last,"unknown_recent_bdr_stations":unknown,"bdr_perimeter_guard_from":perimeter_guard_from.isoformat(),"bdr_category_policy":{"legacy_frozen_through":"2026-09-07","temporal_from":"2026-09-08","registry":"config/bdr_station_brands.json"},"v2":{"active":True,"version":"A4C-V2-2026-07-23","daily_switch_date":SWITCH_DAY.isoformat(),"weekly_switch_date":WEEKLY_SWITCH.isoformat(),"history_before_switch_preserved":True,"weekly_overlap_2026_07_20_preserved":True,"controlled_transition_applied":not already_active or bool((baseline_meta.get("v2") or {}).get("controlled_transition_applied")),"c1_release_tag":args.release_tag,"event_reopening_rule":"open rupture -> later same-fuel declaration; open closure -> later any-fuel station declaration; explicit end wins"}})
+    new_meta=deepcopy(baseline_meta); new_meta.update({"generated_at":pd.Timestamp.now(tz="UTC").isoformat(),"publication_mode":"v2-append-only" if already_active else "v2-controlled-transition","baseline_source":"data.json","previous_daily_cutoff":baseline_last.isoformat(),"requested_daily_target_end":requested_end.isoformat(),"daily_target_end":target_end.isoformat(),"weekly_complete_through":weekly_end.isoformat(),"official_source_max_date":source_max.isoformat(),"official_ingestion_source":source.get("kind"),"official_shared_release_tag":args.release_tag,"official_shared_release_published_at":source.get("release_published_at"),"official_shared_sha256":source.get("sha256"),"official_shared_source_max_date":source.get("shared_source_max_date"),"official_shared_source_max_date_by_fuel":source_max_by_fuel,"bouclier":bouclier,"ufip_last_observed_date":ufip_last,"unknown_recent_bdr_stations":unknown,"bdr_perimeter_guard_from":perimeter_guard_from.isoformat(),"bdr_category_policy":{"legacy_frozen_through":"2026-09-07","temporal_from":"2026-09-08","registry":"config/bdr_station_brands.json"},"v2":{"active":True,"version":"A4C-V2-2026-07-23","daily_switch_date":SWITCH_DAY.isoformat(),"weekly_switch_date":WEEKLY_SWITCH.isoformat(),"history_before_switch_preserved":True,"weekly_overlap_2026_07_20_preserved":True,"controlled_transition_applied":not already_active or bool((baseline_meta.get("v2") or {}).get("controlled_transition_applied")),"c1_release_tag":args.release_tag,"event_reopening_rule":"open rupture -> later same-fuel declaration; open closure -> later any-fuel station declaration; explicit end wins"}})
     candidate["meta"]=new_meta
     output=ROOT/args.output; summary_path=ROOT/args.summary; output.parent.mkdir(parents=True,exist_ok=True); summary_path.parent.mkdir(parents=True,exist_ok=True)
     output.write_text(json.dumps(candidate,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
