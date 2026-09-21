@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 import unittest
 
+from scripts.build_v2_production_candidate import _source_max_date_by_fuel
 from scripts.check_shared_freshness import evaluate_shared_freshness
 
 
