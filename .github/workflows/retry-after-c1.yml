@@ -1,20 +1,6 @@
 name: Retry C2 after fresh C1 release
 
 on:
-  schedule:
-    # Monday follow-ups at 11:47, 14:47, 17:47 and 20:47 Europe/Paris.
-    # Two UTC slots per local time cover CET/CEST; the gate below keeps only one.
-    - cron: '47 9 * * 1'
-    - cron: '47 10 * * 1'
-    - cron: '47 12 * * 1'
-    - cron: '47 13 * * 1'
-    - cron: '47 15 * * 1'
-    - cron: '47 16 * * 1'
-    - cron: '47 18 * * 1'
-    - cron: '47 19 * * 1'
-    # Final safety follow-up Tuesday at 07:47 Europe/Paris.
-    - cron: '47 5 * * 2'
-    - cron: '47 6 * * 2'
   push:
     branches:
       - main
