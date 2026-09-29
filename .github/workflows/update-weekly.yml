@@ -1,10 +1,6 @@
 name: Update carburantscorse2 weekly
 
 on:
-  schedule:
-    # Two UTC slots cover 08:07 Europe/Paris across DST; the gate below keeps only one.
-    - cron: '7 6 * * 1'
-    - cron: '7 7 * * 1'
   workflow_dispatch:
 
 permissions:
