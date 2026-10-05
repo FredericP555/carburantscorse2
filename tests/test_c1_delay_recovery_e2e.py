@@ -98,17 +98,16 @@ class DelayedC1RecoveryEndToEndTests(unittest.TestCase):
         self.assertIn("gh workflow run update-weekly.yml", self.watchdog)
         self.assertIn("local_hour in {9, 10}", self.watchdog)
 
-    def test_step_5_retry_has_repeated_monday_slots_and_tuesday_safety_net(self):
-        self.assertIn("local_hour in {11, 14, 17, 20}", self.retry)
-        self.assertIn("local_dow == 2 and local_hour == 7", self.retry)
-        for cron in (
-            "47 9 * * 1",
-            "47 12 * * 1",
-            "47 15 * * 1",
-            "47 18 * * 1",
-            "47 5 * * 2",
-        ):
-            self.assertIn(cron, self.retry)
+    def test_step_5_retry_uses_external_dispatch_with_safe_push_dry_run(self):
+        self.assertIn("workflow_dispatch:", self.retry)
+        self.assertNotIn("cron:", self.retry)
+
+        self.assertIn("push:", self.retry)
+        self.assertIn("dry_run = event == 'push'", self.retry)
+        self.assertIn("steps.clock.outputs.dry_run != 'true'", self.retry)
+
+        self.assertIn("steps.state.outputs.action == 'full-update'", self.retry)
+        self.assertIn("gh workflow run update-weekly.yml", self.retry)
 
 
 if __name__ == "__main__":
