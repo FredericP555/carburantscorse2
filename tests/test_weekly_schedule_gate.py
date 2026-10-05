@@ -23,6 +23,16 @@ class WeeklyScheduleGateTests(unittest.TestCase):
             "An external workflow_dispatch must be accepted directly without a GitHub cron.",
         )
 
+    def test_bot_triggered_updates_explicitly_dispatch_business_verification(self):
+        self.assertIn("actions: write", WORKFLOW)
+        self.assertIn("github.actor == 'github-actions[bot]'", WORKFLOW)
+        self.assertIn("github.ref_name == github.event.repository.default_branch", WORKFLOW)
+        self.assertIn("gh workflow run verify-c2-publication.yml", WORKFLOW)
+
+        commit_step = WORKFLOW.index("name: Commit production data, registry and homepage summary together")
+        verify_step = WORKFLOW.index("name: Dispatch C2 business verification for bot-triggered updates")
+        self.assertLess(commit_step, verify_step)
+
     def test_gate_selects_only_the_matching_utc_hour(self):
         self.assertIn("scheduled_hour = int(parts[1])", WORKFLOW)
         self.assertIn("run = scheduled_hour == expected_utc_hour", WORKFLOW)
