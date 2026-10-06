@@ -194,11 +194,14 @@ jobs:
           echo "C2_MAIN_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
       - name: Resolve a still-current C2 business-success receipt
+        id: business
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
+          echo 'business_ready=false' >> "$GITHUB_OUTPUT"
+          echo 'wait_reason=business_success_missing' >> "$GITHUB_OUTPUT"
           cd /tmp/monthly-run
           tag=$(python - <<'PY'
           import json
@@ -240,12 +243,19 @@ jobs:
               fi
             fi
           done <<< "$candidates"
-          test -n "$found"
+          if [ -z "$found" ]; then
+            echo "No still-current C2 business-success receipt yet; monthly generation will wait for a retry."
+            exit 0
+          fi
           test -s /tmp/c2-business/c2-business-success.json
           echo "BUSINESS_RUN_ID=$found" >> "$GITHUB_ENV"
+          echo 'business_ready=true' >> "$GITHUB_OUTPUT"
+          echo 'wait_reason=' >> "$GITHUB_OUTPUT"
           echo "Using C2 business-success run $found"
 
       - name: Prove monthly readiness from current C2 state
+        id: readiness
+        if: steps.business.outputs.business_ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -263,10 +273,54 @@ jobs:
             --c2-business-receipt /tmp/c2-business/c2-business-success.json \
             --receipt-dir /tmp/monthly-final-receipts \
             --output "/tmp/monthly-artifact/monthly-readiness-$MONTH.json" \
-            --fail-if-not-ready \
             "${extra[@]}"
+          classification=$(python - "/tmp/monthly-artifact/monthly-readiness-$MONTH.json" <<'PY'
+          import json, sys
+          print(json.load(open(sys.argv[1], encoding='utf-8'))['readiness_class'])
+          PY
+          )
+          failed=$(python - "/tmp/monthly-artifact/monthly-readiness-$MONTH.json" <<'PY'
+          import json, sys
+          print(','.join(json.load(open(sys.argv[1], encoding='utf-8'))['failed_checks']))
+          PY
+          )
+          case "$classification" in
+            ready)
+              echo 'monthly_ready=true' >> "$GITHUB_OUTPUT"
+              echo 'wait_reason=' >> "$GITHUB_OUTPUT"
+              ;;
+            retryable_not_ready)
+              echo 'monthly_ready=false' >> "$GITHUB_OUTPUT"
+              echo "wait_reason=readiness:$failed" >> "$GITHUB_OUTPUT"
+              echo "Monthly prerequisites not ready yet ($failed); waiting for the next retry."
+              ;;
+            *)
+              echo "Fatal monthly readiness failure ($failed); refusing to downgrade it to a retryable wait." >&2
+              cat "/tmp/monthly-artifact/monthly-readiness-$MONTH.json" >&2
+              exit 2
+              ;;
+          esac
+
+      - name: Record retryable monthly wait
+        if: always() && (steps.business.outputs.business_ready != 'true' || steps.readiness.outputs.monthly_ready == 'false')
+        env:
+          BUSINESS_WAIT_REASON: ${{ steps.business.outputs.wait_reason }}
+          READINESS_WAIT_REASON: ${{ steps.readiness.outputs.wait_reason }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          reason="${BUSINESS_WAIT_REASON:-${READINESS_WAIT_REASON:-not_ready}}"
+          echo "Monthly report not ready yet: $reason"
+          {
+            echo "### Monthly report waiting"
+            echo
+            echo "Target month: $MONTH"
+            echo "Reason: $reason"
+            echo "No canonical monthly artifact was created; a later retry may continue."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run two-month source guards with bounded BDR backfill
+        if: steps.readiness.outputs.monthly_ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -280,6 +334,7 @@ jobs:
           rm -rf outputs/ufip outputs/c1
 
       - name: Build monthly dataset with the integrated main engine
+        if: steps.readiness.outputs.monthly_ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -293,6 +348,7 @@ jobs:
           rm -rf outputs/ufip outputs/c1
 
       - name: Compare August with the validated prototype when applicable
+        if: steps.readiness.outputs.monthly_ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -345,6 +401,7 @@ jobs:
           PY
 
       - name: Run territorial coverage and August Calvi diagnostic when applicable
+        if: steps.readiness.outputs.monthly_ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -385,6 +442,7 @@ jobs:
           fi
 
       - name: Exercise the widget generically in temporary storage
+        if: steps.readiness.outputs.monthly_ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -495,6 +553,7 @@ jobs:
           trap - EXIT
 
       - name: Create and re-check an ephemeral final receipt
+        if: steps.readiness.outputs.monthly_ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -520,6 +579,7 @@ jobs:
           cp "$RECEIPT" "/tmp/monthly-artifact/ephemeral-final-receipt-$MONTH.json"
 
       - name: Write dry-run manifest
+        if: steps.readiness.outputs.monthly_ready == 'true'
         shell: bash
         env:
           TRIGGER_EVENT: ${{ github.event_name }}
@@ -552,7 +612,7 @@ jobs:
           PY
 
       - name: Upload dry-run evidence only
-        if: always()
+        if: always() && steps.readiness.outputs.monthly_ready == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: monthly-territorial-dry-run-${{ needs.prepare.outputs.month }}
