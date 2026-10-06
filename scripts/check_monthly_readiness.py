@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import argparse
 import calendar
-from datetime import date
+from datetime import date, timedelta
 import hashlib
 import json
 from pathlib import Path
@@ -62,6 +62,18 @@ def previous_calendar_month(as_of: date) -> str:
     return (first - pd.Timedelta(days=1)).strftime("%Y-%m")
 
 
+def last_weekday_on_or_before(day: date) -> date:
+    """Return the latest Monday-Friday date on or before *day*.
+
+    UFIP/Rotterdam observations are business-day observations. The monthly guard must not
+    require a synthetic Saturday/Sunday quote merely because a calendar month ends on a weekend.
+    """
+    current = day
+    while current.weekday() >= 5:
+        current -= timedelta(days=1)
+    return current
+
+
 def add_check(checks: list[dict], key: str, ok: bool, detail: str) -> None:
     checks.append({"key": key, "ok": bool(ok), "detail": detail})
 
@@ -111,6 +123,12 @@ def main() -> None:
     summary_daily_raw = source.get("daily_data_through")
     summary_daily = date.fromisoformat(str(summary_daily_raw)[:10]) if summary_daily_raw else None
     summary_snapshot = str(source.get("c1_snapshot_sha256") or "").removeprefix("sha256:").lower()
+    ufip_last_raw = source.get("ufip_last_observed_date")
+    try:
+        ufip_last_observed = date.fromisoformat(str(ufip_last_raw)[:10]) if ufip_last_raw else None
+    except ValueError:
+        ufip_last_observed = None
+    ufip_required_through = last_weekday_on_or_before(end)
 
     add_check(checks, "c1_release_pinned", bool(release_tag), f"c1_release_tag={release_tag}")
     add_check(checks, "c2_summary_release_matches", summary_tag == release_tag, f"summary={summary_tag}, data={release_tag}")
@@ -118,6 +136,12 @@ def main() -> None:
     add_check(checks, "c2_summary_snapshot_matches", bool(snapshot_sha) and summary_snapshot == snapshot_sha, f"summary={summary_snapshot}, data={snapshot_sha}")
     add_check(checks, "c2_complete_through_month_end", daily_target is not None and daily_target >= end, f"daily_target={daily_target}, month_end={end}")
     add_check(checks, "c2_success_state_is_post_month_end", daily_target is not None and daily_target > end, f"daily_target={daily_target}, required_after={end}")
+    add_check(
+        checks,
+        "ufip_covers_month_end",
+        ufip_last_observed is not None and ufip_last_observed >= ufip_required_through,
+        f"ufip_last_observed={ufip_last_observed}, required_through={ufip_required_through}",
+    )
 
     data_sha = sha256_file(c2_path)
     summary_sha = sha256_file(summary_path)
@@ -181,6 +205,8 @@ def main() -> None:
         "period_end": end.isoformat(),
         "as_of": as_of.isoformat(),
         "c2_daily_target_end": daily_target.isoformat() if daily_target else None,
+        "ufip_last_observed_date": ufip_last_observed.isoformat() if ufip_last_observed else None,
+        "ufip_required_through": ufip_required_through.isoformat(),
         "c2_business_success_commit": receipt_commit,
         "c2_business_success_data_sha256": data_sha,
         "c2_business_success_summary_sha256": summary_sha,
