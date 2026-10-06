@@ -18,6 +18,11 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 FINAL_RECEIPT_SCHEMA = "a4c-monthly-final-receipt-v1"
+RETRYABLE_CHECK_KEYS = frozenset({
+    "c2_complete_through_month_end",
+    "c2_success_state_is_post_month_end",
+    "ufip_covers_month_end",
+})
 
 
 def parse_args() -> argparse.Namespace:
@@ -76,6 +81,16 @@ def last_weekday_on_or_before(day: date) -> date:
 
 def add_check(checks: list[dict], key: str, ok: bool, detail: str) -> None:
     checks.append({"key": key, "ok": bool(ok), "detail": detail})
+
+
+def classify_readiness(checks: list[dict]) -> tuple[str, list[str]]:
+    """Classify failed readiness checks without weakening fail-closed semantics."""
+    failed = [str(c.get("key")) for c in checks if c.get("ok") is not True]
+    if not failed:
+        return "ready", []
+    if set(failed).issubset(RETRYABLE_CHECK_KEYS):
+        return "retryable_not_ready", failed
+    return "fatal_not_ready", failed
 
 
 def load_object(path: Path, label: str) -> dict:
@@ -196,10 +211,13 @@ def main() -> None:
     else:
         add_check(checks, "month_not_already_finalized", True, f"receipt={receipt_path} absent")
 
-    ready = all(c["ok"] for c in checks)
+    readiness_class, failed_checks = classify_readiness(checks)
+    ready = readiness_class == "ready"
     result = {
         "schema": "a4c-monthly-readiness-v2",
         "ready": ready,
+        "readiness_class": readiness_class,
+        "failed_checks": failed_checks,
         "month": month,
         "period_start": start.isoformat(),
         "period_end": end.isoformat(),
