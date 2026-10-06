@@ -66,6 +66,8 @@ station_id,ville_source,adresse_source,localite,commune,confiance,epci_siren,epc
 20213004,Penta-di-Casinca,Rt10,Folelli,Penta-di-Casinca,B,200073252,CC de la Castagniccia-Casinca,BANATIC/DGCL,2026-09-09
 20213005,Sorbo-Ocagnano,Lieu-dit Querciolo,Querciolo,Sorbo-Ocagnano,A,200073252,CC de la Castagniccia-Casinca,BANATIC/DGCL,2026-09-09
 20213007,Penta-di-Casinca,FOLELLI,Folelli,Penta-di-Casinca,A,200073252,CC de la Castagniccia-Casinca,BANATIC/DGCL,2026-09-09
+20213008,Penta-di-Casinca,Avenue de Folelli,Folelli,Penta-di-Casinca,A,200073252,CC de la Castagniccia-Casinca,BANATIC/DGCL,2026-10-06
+20214003,Calenzana,QUARTIER ANNUNZIATA,Calenzana,Calenzana,C,242020105,CC de Calvi Balagne,BANATIC/DGCL,2026-10-06
 20215001,Vescovato,ARENA,Arena,Vescovato,A,200073252,CC de la Castagniccia-Casinca,BANATIC/DGCL,2026-09-09
 20217001,Saint-Florent,Route Calvi,Saint-Florent,Saint-Florent,C,200073120,CC Nebbiu - Conca d'Oro,BANATIC/DGCL,2026-09-09
 20217004,Saint-Florent,"36, rue principale",Saint-Florent,Saint-Florent,C,200073120,CC Nebbiu - Conca d'Oro,BANATIC/DGCL,2026-09-09
@@ -106,6 +108,7 @@ station_id,ville_source,adresse_source,localite,commune,confiance,epci_siren,epc
 20260003,Calvi,Lieu dit Alzeta,Calvi,Calvi,C,242020105,CC de Calvi Balagne,BANATIC/DGCL,2026-09-09
 20270001,Aléria,ROUTE N 198,Cateraggio,Aléria,B,200015162,CC de l'Oriente,BANATIC/DGCL,2026-09-09
 20270003,Aléria,Rn 198 Cateragghju,Cateraggio,Aléria,A,200015162,CC de l'Oriente,BANATIC/DGCL,2026-09-09
+20270004,Aléria,T10,Cateraggio,Aléria,A,200015162,CC de l'Oriente,BANATIC/DGCL,2026-10-06
 20290002,Lucciana,Casamozza - RN 193,Casamozza,Lucciana,A,200036499,CC de Marana-Golo,BANATIC/DGCL,2026-09-09
 20290003,Borgo,Lieu-dit Revinco - RN 193,Revinco,Borgo,A,200036499,CC de Marana-Golo,BANATIC/DGCL,2026-09-09
 20290008,Lucciana,"Rond-point de Casamozza, T20",Casamozza,Lucciana,A,200036499,CC de Marana-Golo,BANATIC/DGCL,2026-09-09
