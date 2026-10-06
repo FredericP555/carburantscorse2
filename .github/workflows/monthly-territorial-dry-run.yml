@@ -71,17 +71,18 @@ jobs:
           MONTH: ${{ steps.target.outputs.month }}
           EVENT_NAME: ${{ github.event_name }}
           EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
+          REQUESTED_MONTH: ${{ github.event.inputs.month || '' }}
         shell: bash
         run: |
           set -euo pipefail
           echo 'run_monthly=true' >> "$GITHUB_OUTPUT"
           echo 'business_run_id=' >> "$GITHUB_OUTPUT"
-          if [ "$EVENT_NAME" = 'workflow_dispatch' ]; then
-            echo 'Manual dry-run: duplicate gate intentionally bypassed.'
+          if [ "$EVENT_NAME" = 'workflow_dispatch' ] && [ -n "$REQUESTED_MONTH" ]; then
+            echo 'Explicit manual backfill: duplicate gate intentionally bypassed.'
             exit 0
           fi
-          test "$EVENT_NAME" = 'schedule'
-          selected=$(python - "$EVENT_SCHEDULE" <<'PY'
+          if [ "$EVENT_NAME" = 'schedule' ]; then
+            selected=$(python - "$EVENT_SCHEDULE" <<'PY'
           import sys
           from datetime import datetime
           from zoneinfo import ZoneInfo
@@ -98,11 +99,17 @@ jobs:
           expected_utc_hour=(12-offset) % 24
           print('true' if minute == 0 and dow == 2 and hour == expected_utc_hour else 'false')
           PY
-          )
-          if [ "$selected" != 'true' ]; then
-            echo 'run_monthly=false' >> "$GITHUB_OUTPUT"
-            echo "Non-selected UTC companion slot for 12:00 Europe/Paris; no monthly run."
-            exit 0
+            )
+            if [ "$selected" != 'true' ]; then
+              echo 'run_monthly=false' >> "$GITHUB_OUTPUT"
+              echo "Non-selected UTC companion slot for 12:00 Europe/Paris; no monthly run."
+              exit 0
+            fi
+          elif [ "$EVENT_NAME" = 'workflow_dispatch' ]; then
+            echo 'Automatic workflow_dispatch without explicit month: duplicate gate enforced.'
+          else
+            echo "Unsupported monthly trigger: $EVENT_NAME" >&2
+            exit 2
           fi
           artifact_name="monthly-territorial-dry-run-$MONTH"
           existing=$(python - "$artifact_name" <<'PY'
