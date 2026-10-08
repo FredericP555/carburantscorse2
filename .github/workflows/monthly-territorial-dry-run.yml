@@ -7,11 +7,6 @@ on:
         description: 'Optional completed month YYYY-MM; blank means previous calendar month'
         required: false
         type: string
-  schedule:
-    # Two UTC slots cover 12:00 Europe/Paris across DST; the gate below keeps only one.
-    - cron: '0 10 * * 2'
-    - cron: '0 11 * * 2'
-
 permissions:
   contents: read
   actions: read
@@ -70,7 +65,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           MONTH: ${{ steps.target.outputs.month }}
           EVENT_NAME: ${{ github.event_name }}
-          EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
           REQUESTED_MONTH: ${{ github.event.inputs.month || '' }}
         shell: bash
         run: |
@@ -81,31 +75,7 @@ jobs:
             echo 'Explicit manual backfill: duplicate gate intentionally bypassed.'
             exit 0
           fi
-          if [ "$EVENT_NAME" = 'schedule' ]; then
-            selected=$(python - "$EVENT_SCHEDULE" <<'PY'
-          import sys
-          from datetime import datetime
-          from zoneinfo import ZoneInfo
-          schedule=sys.argv[1]
-          try:
-              minute, hour, _dom, _month, dow = schedule.split()
-              minute=int(minute)
-              hour=int(hour)
-              dow=int(dow)
-          except Exception:
-              print('false')
-              raise SystemExit(0)
-          offset=int(datetime.now(ZoneInfo('Europe/Paris')).utcoffset().total_seconds() // 3600)
-          expected_utc_hour=(12-offset) % 24
-          print('true' if minute == 0 and dow == 2 and hour == expected_utc_hour else 'false')
-          PY
-            )
-            if [ "$selected" != 'true' ]; then
-              echo 'run_monthly=false' >> "$GITHUB_OUTPUT"
-              echo "Non-selected UTC companion slot for 12:00 Europe/Paris; no monthly run."
-              exit 0
-            fi
-          elif [ "$EVENT_NAME" = 'workflow_dispatch' ]; then
+          if [ "$EVENT_NAME" = 'workflow_dispatch' ]; then
             echo 'Automatic workflow_dispatch without explicit month: duplicate gate enforced.'
           else
             echo "Unsupported monthly trigger: $EVENT_NAME" >&2
