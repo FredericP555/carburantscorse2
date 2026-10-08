@@ -7,10 +7,12 @@ WORKFLOW = (ROOT / ".github" / "workflows" / "monthly-territorial-dry-run.yml").
 
 
 class MonthlyCloudflareGateTests(unittest.TestCase):
-    def test_existing_github_schedule_is_kept_during_migration_stage(self):
-        self.assertIn("schedule:", WORKFLOW)
-        self.assertIn("cron: '0 10 * * 2'", WORKFLOW)
-        self.assertIn("cron: '0 11 * * 2'", WORKFLOW)
+    def test_github_schedule_is_removed_after_cloudflare_validation(self):
+        self.assertNotIn("schedule:", WORKFLOW)
+        self.assertNotIn("cron: '0 10 * * 2'", WORKFLOW)
+        self.assertNotIn("cron: '0 11 * * 2'", WORKFLOW)
+        self.assertNotIn("EVENT_SCHEDULE", WORKFLOW)
+        self.assertNotIn("Non-selected UTC companion slot", WORKFLOW)
 
     def test_blank_workflow_dispatch_enforces_duplicate_gate(self):
         self.assertIn("REQUESTED_MONTH: ${{ github.event.inputs.month || '' }}", WORKFLOW)
@@ -44,7 +46,7 @@ class MonthlyCloudflareGateTests(unittest.TestCase):
         )
 
     def test_only_supported_triggers_are_accepted(self):
-        self.assertIn("elif [ \"$EVENT_NAME\" = 'workflow_dispatch' ]; then", WORKFLOW)
+        self.assertIn("if [ \"$EVENT_NAME\" = 'workflow_dispatch' ]; then", WORKFLOW)
         self.assertIn('echo "Unsupported monthly trigger: $EVENT_NAME" >&2', WORKFLOW)
         self.assertIn("exit 2", WORKFLOW)
 
