@@ -46,7 +46,7 @@ class MonthlyCloudflareGateTests(unittest.TestCase):
         )
 
     def test_only_supported_triggers_are_accepted(self):
-        self.assertIn("elif [ \"$EVENT_NAME\" = 'workflow_dispatch' ]; then", WORKFLOW)
+        self.assertIn("if [ \"$EVENT_NAME\" = 'workflow_dispatch' ]; then", WORKFLOW)
         self.assertIn('echo "Unsupported monthly trigger: $EVENT_NAME" >&2', WORKFLOW)
         self.assertIn("exit 2", WORKFLOW)
 
