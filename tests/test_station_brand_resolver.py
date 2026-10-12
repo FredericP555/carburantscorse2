@@ -8,6 +8,7 @@ from scripts.resolve_new_bdr_station_brands import (
     classification_for_day,
     classify_brand,
     ids_to_fetch,
+    load_corrections,
     load_registry,
     resolve_from_observations,
     resolved_categories,
@@ -21,8 +22,61 @@ class StationBrandResolverTests(unittest.TestCase):
         self.assertEqual(classify_brand("Esso"), ("traditionnel", "major_tradi"))
         self.assertEqual(classify_brand("E.Leclerc"), ("gms_lowcost", "gms"))
 
+    def test_independent_without_brand_is_explicitly_traditional(self):
+        self.assertEqual(
+            classify_brand("Indépendant sans enseigne"),
+            ("traditionnel", "marque_tradi"),
+        )
+
     def test_unrecognized_brand_fails_closed(self):
         self.assertEqual(classify_brand("Nouvelle enseigne inconnue"), ("inconnu", "inconnu"))
+        self.assertEqual(classify_brand("Proxi"), ("inconnu", "inconnu"))
+
+    def test_proxi_is_corrected_by_station_id_only(self):
+        by_id, by_brand = load_corrections()
+        self.assertIn("13129001", by_id)
+        self.assertEqual(by_id["13129001"]["segment"], "traditionnel")
+        self.assertEqual(by_id["13129001"]["detail"], "marque_tradi")
+        self.assertIn("Proxi est une enseigne de commerce de proximité", by_id["13129001"]["justification"])
+        self.assertNotIn("proxi", by_brand)
+
+        observations = [
+            {
+                "station_id": "13129001", "department": "13", "pop": "R",
+                "is_motorway": False, "date": date(2026, 10, 8),
+            },
+            {
+                "station_id": "13360004", "department": "13", "pop": "R",
+                "is_motorway": False, "date": date(2026, 10, 9),
+            },
+        ]
+        brands = {
+            "13129001": "Proxi",
+            "13360004": "Indépendant sans enseigne",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            registry_path = Path(tmp) / "registry.json"
+            result = resolve_from_observations(
+                observations,
+                {},
+                registry_path=registry_path,
+                fetcher=lambda sid: (brands[sid], None),
+                today=date(2026, 10, 12),
+                now=datetime(2026, 10, 12, 7, 0, tzinfo=timezone.utc),
+            )
+            saved = load_registry(registry_path)
+
+            proxi = saved["stations"]["13129001"]
+            self.assertEqual(proxi["segment"], "traditionnel")
+            self.assertEqual(proxi["detail"], "marque_tradi")
+            self.assertEqual(proxi["classification_source"], "correction_id")
+            self.assertEqual(result["categories"]["13129001"], "network")
+
+            independent = saved["stations"]["13360004"]
+            self.assertEqual(independent["segment"], "traditionnel")
+            self.assertEqual(independent["detail"], "marque_tradi")
+            self.assertEqual(independent["classification_source"], "auto")
+            self.assertEqual(result["categories"]["13360004"], "network")
 
     def test_avia_brand_correction_maps_to_traditional_network(self):
         observations = [
