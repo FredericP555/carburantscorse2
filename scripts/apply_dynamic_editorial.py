@@ -128,58 +128,77 @@ function buildSp95PriceAnalysis(){
   const discountText=discount==null?'':` La remise TotalEnergies de −20 c/L du 1er septembre au 15 novembre 2022, suivie par VITO, a ramené l'écart moyen de cette période à <strong>${editorialSigned(discount)} c/L</strong> — preuve que la surcharge n'est pas une fatalité.`;
   return `<p style="margin-bottom:8px">Sur la période ${editorialMonthYear(p.start)} – ${editorialMonthYear(p.end)}, l'écart HT Corse/BdR sur le <strong>SP95</strong> s'établit en moyenne à <strong>${editorialSigned(spMeanAll)} c/L</strong> toutes stations confondues et à <strong>${editorialSigned(spMeanNet)} c/L</strong> réseau vs réseau. La Corse ne commercialise pas d'E10, alors que ce carburant a largement pris la place du SP95 sur le continent.${e10Text}</p><p style="margin-bottom:8px">Les grandes surfaces des Bouches-du-Rhône tirent la référence « toutes stations » vers le bas, tandis que la Corse n'en compte aucune.${gmsText} En 2022, quand TotalEnergies a baissé ses prix, VITO a immédiatement suivi sur toute l'île : un acteur pratiquant des prix plus bas peut donc entraîner le marché corse.</p><p style="margin-bottom:8px">${trendText} Les zones jaunes correspondent aux périodes où le bouclier TotalEnergies est effectivement contraignant.${editorialBouclierStatus('SP95')}${discountText}</p><p style="color:#991b1b;font-weight:600">Comme pour le Gazole, la sanction du 17 novembre 2025 n'a produit aucun effet correctif : l'écart SP95 a atteint <strong>+19,6 c/L HT</strong> en décembre 2025 — son niveau le plus élevé depuis 2022 — dans les semaines suivant immédiatement la publication de la décision.</p>`;
 }
+(s)=>Date.parse(s+"T00:00:00Z")
+
+function editorialMarginFullYear(rows,year){
+  const vals=rows.filter(r=>r.date>=`${year}-01-01`&&r.date<=`${year}-12-31`);
+  return vals.length>=48 && vals[0].date<=`${year}-01-15` && vals[vals.length-1].date>=`${year}-12-15`;
+}
+
+function editorialMarginWeekly(all,net,end){
+  const a=all.filter(r=>r.date<=end);
+  const n=net.filter(r=>r.date<=end);
+  if(a.length<2||n.length<2) return null;
+  const latest=a[a.length-1],previous=a[a.length-2],latestNet=n[n.length-1],previousNet=n[n.length-2];
+  if(latest.date!==latestNet.date || previous.date!==previousNet.date ||
+      periodUtc(latest.date)-periodUtc(previous.date)!==7*86400000 ||
+      periodUtc(latestNet.date)-periodUtc(previousNet.date)!==7*86400000) return null;
+  const nums=[latest.ecart,previous.ecart,latestNet.ecart,previousNet.ecart].map(Number);
+  if(!nums.every(Number.isFinite))return null;
+  return {date:latest.date,all:nums[0],net:nums[2],allChange:nums[0]-nums[1],netChange:nums[2]-nums[3]};
+}
+
+function editorialMarginVariation(v){
+  if(Math.abs(v)<0.005)return 'stable';
+  return v>0?`en hausse de ${editorialPlain(v,2)} c€/L`:`en baisse de ${editorialPlain(-v,2)} c€/L`;
+}
+
 function buildMarginAnalysis(){
   const all=MARGES_GZ&&Array.isArray(MARGES_GZ.all)?MARGES_GZ.all:[];
   const net=MARGES_GZ&&Array.isArray(MARGES_GZ.reseau)?MARGES_GZ.reseau:[];
   const p=editorialCommonPeriod(all,net);
   if(!p)return ANALYSE_MARGE_GZ;
+
+  // A stable 2022–2025 historical comparison prevents the commercial 2026 cap
+  // from silently replacing the reference used to document the earlier widening.
   const start23=p.start>'2023-01-01'?p.start:'2023-01-01';
   const corse=editorialMean(all,'corse',start23,p.end);
   const bdr=editorialMean(all,'bdr',start23,p.end);
-  const firstYear=new Date(p.start+'T12:00:00').getFullYear();
-  const lastFullYear=new Date(p.end+'T12:00:00').getFullYear()-1;
-  const firstGap=editorialYearMean(all,firstYear,'ecart');
-  const lastGap=lastFullYear>=firstYear?editorialYearMean(all,lastFullYear,'ecart'):null;
-  const pct=(firstGap!=null&&lastGap!=null&&firstGap!==0)?(lastGap-firstGap)/Math.abs(firstGap)*100:null;
-  const evolution=(firstGap!=null&&lastGap!=null)?`L'écart annuel moyen toutes stations est passé de <strong>${editorialSigned(firstGap)} c/L en ${firstYear}</strong> à <strong>${editorialSigned(lastGap)} c/L en ${lastFullYear}</strong>, ${editorialEvolutionText(pct)}.`:'';
+  const baseReady=editorialMarginFullYear(all,2022)&&editorialMarginFullYear(all,2025);
+  const firstGap=baseReady?editorialYearMean(all,2022,'ecart'):null;
+  const lastGap=baseReady?editorialYearMean(all,2025,'ecart'):null;
+  const change=firstGap!=null&&lastGap!=null?lastGap-firstGap:null;
+  const pct=firstGap?change/Math.abs(firstGap)*100:null;
+  const historic=baseReady
+    ? `L'écart annuel moyen toutes stations est passé de <strong>${editorialSigned(firstGap)} c€/L en 2022</strong> à <strong>${editorialSigned(lastGap)} c€/L en 2025</strong>, soit ${change>=0?'une aggravation':'une réduction'} de <strong>${editorialPlain(Math.abs(change))} c€/L (${editorialPlain(Math.abs(pct),0)} %)</strong>.`
+    : 'Les données ne couvrent pas encore deux années complètes permettant une comparaison historique fiable.';
+  const janAug2022=editorialMean(all,'ecart','2022-01-01','2022-08-31');
+  const janAug2025=editorialMean(all,'ecart','2025-01-01','2025-08-31');
+  const preDiscount=(baseReady&&janAug2022!=null&&janAug2025!=null)
+    ? `Sur les seuls mois de janvier à août, avant les remises de fin 2022, l'écart passe de <strong>${editorialSigned(janAug2022)} à ${editorialSigned(janAug2025)} c€/L</strong> entre 2022 et 2025, soit <strong>${editorialPlain(Math.abs(janAug2025-janAug2022))} c€/L ${janAug2025>=janAug2022?'de plus':'de moins'}</strong>.`
+    : '';
+  const lastFullYear=Number(p.end.slice(0,4))-1;
+  const extraYear=lastFullYear>2025&&editorialMarginFullYear(all,lastFullYear)
+    ? lastFullYear:null;
+  const shieldRanges=getBouclierRanges('Gazole');
+  const affected=extraYear!=null&&shieldRanges.some(r=>r.d1<=`${extraYear}-12-31`&&r.d2>=`${extraYear}-01-01`);
+  const recentAnnual=extraYear!=null
+    ? ` En ${extraYear}, l'écart annuel observé est de <strong>${editorialSigned(editorialYearMean(all,extraYear,'ecart'))} c€/L</strong>${affected?', sur une année influencée par le bouclier tarifaire':''}.`
+    : '';
 
-  const sanctionStart='2025-11-17';
-  const sanctionEnd='2025-12-31';
-  const gapAfter=editorialMax(all,'ecart',sanctionStart,sanctionEnd);
-  const corseAfter=editorialMax(all,'corse',sanctionStart,sanctionEnd);
-  const gapThrough=editorialMax(all,'ecart',null,sanctionEnd);
-  const corseThrough=editorialMax(all,'corse',null,sanctionEnd);
-  const gapOverall=editorialMax(all,'ecart');
-  const corseOverall=editorialMax(all,'corse');
-  const gapWasRecord=!!(gapAfter&&gapThrough&&gapAfter.date===gapThrough.date&&Number(gapAfter.ecart)===Number(gapThrough.ecart));
-  const corseWasRecord=!!(corseAfter&&corseThrough&&corseAfter.date===corseThrough.date&&Number(corseAfter.corse)===Number(corseThrough.corse));
-  let recordText='';
-  if(gapAfter&&corseAfter){
-    recordText=`Fait le plus significatif : dans les semaines suivant la sanction du 17 novembre 2025, l'écart de marge a atteint <strong>${editorialSigned(Number(gapAfter.ecart))} c/L</strong> la semaine du <strong>${editorialLongDate(gapAfter.date)}</strong>, tandis que la marge corse a culminé à <strong>${editorialSigned(Number(corseAfter.corse))} c/L</strong> la semaine du <strong>${editorialLongDate(corseAfter.date)}</strong>.`;
-    if(gapWasRecord&&corseWasRecord){
-      recordText+=' Ces deux niveaux constituaient alors des records depuis 2022.';
-    }else if(gapWasRecord){
-      recordText+=' L’écart de marge constituait alors un record depuis 2022.';
-    }else if(corseWasRecord){
-      recordText+=' La marge corse constituait alors un record depuis 2022.';
-    }
-
-    const gapLater=gapOverall&&Number(gapOverall.ecart)>Number(gapAfter.ecart);
-    const corseLater=corseOverall&&Number(corseOverall.corse)>Number(corseAfter.corse);
-    if(gapLater&&corseLater&&gapOverall.date===corseOverall.date){
-      recordText+=` Depuis, le record d'écart de marge a été porté à <strong>${editorialSigned(Number(gapOverall.ecart))} c/L</strong> et celui de la marge corse à <strong>${editorialSigned(Number(corseOverall.corse))} c/L</strong>, tous deux la semaine du <strong>${editorialLongDate(gapOverall.date)}</strong>.`;
-    }else{
-      if(gapLater){
-        recordText+=` Depuis, le record d'écart de marge a été porté à <strong>${editorialSigned(Number(gapOverall.ecart))} c/L</strong> la semaine du <strong>${editorialLongDate(gapOverall.date)}</strong>.`;
-      }
-      if(corseLater){
-        recordText+=` Depuis, le record de marge corse a été porté à <strong>${editorialSigned(Number(corseOverall.corse))} c/L</strong> la semaine du <strong>${editorialLongDate(corseOverall.date)}</strong>.`;
-      }
-    }
-    recordText+=' Les données observées dans les semaines suivant la décision ne montrent donc aucun effet correctif immédiat sur ces indicateurs.';
-  }
-
-  return `<p style="margin-bottom:8px">La marge de distribution, c'est tout ce qui sépare le prix du carburant à sa sortie du marché de gros (cotation Rotterdam) du prix hors taxes payé à la pompe. C'est la part qui revient à la chaîne de distribution dans son ensemble. Il s'agit d'une marge théorique, car elle part d'un prix de référence : des groupes intégrés spécialisés dans le trading, comme TotalEnergies, ENI ou Rubis, peuvent en réalité s'approvisionner en dessous de ce cours — leur marge réelle est donc probablement supérieure à celle calculée ici.</p><p style="margin-bottom:8px"><em>La marge de distribution est calculée en soustrayant du prix HT à la pompe l'accise sur les carburants (différenciée selon la zone et la période) et la cotation Rotterdam du Gazole publiée par l'UFIP. Ce qui reste représente ce que les distributeurs conservent pour couvrir leurs coûts et dégager un bénéfice.</em></p><p style="margin-bottom:8px">De ${editorialMonthYear(start23)} à ${editorialMonthYear(p.end)}, la marge de distribution en Corse s'établit en moyenne à <strong>${editorialSigned(corse)} c/L</strong>, contre <strong>${editorialSigned(bdr)} c/L</strong> dans les Bouches-du-Rhône (toutes stations). ${evolution} Si les seuls coûts d'insularité expliquaient cet écart, celui-ci devrait rester relativement stable dans le temps. En septembre-octobre 2022, la remise TotalEnergies a comprimé les marges à leur niveau le plus bas de la période analysée, montrant la capacité des opérateurs à absorber des baisses significatives.</p>${recordText?`<p style="color:#991b1b;font-weight:600">${recordText}</p>`:''}`;
+  const gapRecord=editorialMax(all,'ecart');
+  const corseRecord=editorialMax(all,'corse');
+  const afterSanction=gapRecord?.date>='2025-11-17'&&corseRecord?.date>='2025-11-17';
+  const records=gapRecord&&corseRecord
+    ? `Les records relevés depuis 2022 ${afterSanction?'ont même été établis après la sanction du 17 novembre 2025 :':'sont :'} <strong>${editorialSigned(Number(gapRecord.ecart))} c€/L</strong> d'écart la semaine du <strong>${editorialLongDate(gapRecord.date)}</strong> et <strong>${editorialSigned(Number(corseRecord.corse))} c€/L</strong> de marge apparente corse la semaine du <strong>${editorialLongDate(corseRecord.date)}</strong>.`
+    : '';
+  const w=editorialMarginWeekly(all,net,p.end);
+  const weekly=w
+    ? `À la semaine du <strong>${editorialLongDate(w.date)}</strong>, l'écart atteint <strong>${editorialSigned(w.all,2)} c€/L</strong> toutes stations BdR (${editorialMarginVariation(w.allChange)}) et <strong>${editorialSigned(w.net,2)} c€/L</strong> face au réseau traditionnel (${editorialMarginVariation(w.netChange)}).`
+    : `Les dernières semaines ne permettent pas encore de calculer une évolution hebdomadaire sur deux relevés comparables.`;
+  const ufip=window.A4C_DATA_META?.ufip_last_observed_date;
+  const source=`Dernière semaine de marge disponible : ${editorialLongDate(p.end)}${ufip?` · Dernière cotation UFIP observée : ${editorialLongDate(ufip)}`:''}.`;
+  return `<p style="margin-bottom:8px">La <strong>marge apparente</strong> du gazole correspond au prix à la pompe hors TVA et accise, diminué de la cotation Rotterdam (UFIP). Elle couvre les coûts et la rémunération de la distribution : <strong>ce n'est pas un bénéfice net</strong>.</p><p style="margin-bottom:8px"><strong>1 — UN ÉCART DE MARGE QUI S'EST CREUSÉ</strong> De ${editorialMonthYear(start23)} à ${editorialMonthYear(p.end)}, la marge apparente moyenne s'établit à <strong>${editorialSigned(corse)} c€/L en Corse</strong>, contre <strong>${editorialSigned(bdr)} c€/L dans les Bouches-du-Rhône</strong>. ${historic} ${preDiscount}${recentAnnual} <strong>L'insularité ne suffit pas à expliquer cette évolution sans chiffrage des coûts supplémentaires.</strong></p><p style="margin-bottom:6px"><strong>2 — LE BOUCLIER ATTÉNUE L'ÉCART SANS EN EFFACER LES CAUSES</strong> ${records} ${weekly} <strong>Une baisse conjoncturelle sous plafonnement commercial ne démontre pas que les causes de l'aggravation historique ont disparu.</strong></p><p style="font-size:0.75em;color:#64748b">${source}</p>`;
 }
 function syncDynamicPeriodLabels(){
   const y=getLatestDataYear();
