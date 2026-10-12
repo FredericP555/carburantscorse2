@@ -39,6 +39,7 @@ LOW_COST_MAJORS = ["total access", "totalenergies access", "esso express"]
 MAJORS = [
     "total", "totalenergies", "elan", "esso", "shell", "bp", "agip", "eni", "mobil",
 ]
+INDEPENDENT_WITHOUT_BRAND = "Indépendant sans enseigne"
 SEGMENTS = {"gms_lowcost", "traditionnel", "inconnu"}
 DETAILS = {"gms", "lowcost_major", "major_tradi", "marque_tradi", "inconnu"}
 
@@ -110,6 +111,8 @@ def classify_brand(brand: str | None) -> tuple[str, str]:
         return "gms_lowcost", "gms"
     if any(_norm(candidate) in normalized for candidate in MAJORS):
         return "traditionnel", "major_tradi"
+    if normalized == _norm(INDEPENDENT_WITHOUT_BRAND):
+        return "traditionnel", "marque_tradi"
     return "inconnu", "inconnu"
 
 
@@ -465,7 +468,7 @@ def resolve_from_observations(
         "legacy_frozen_through": LEGACY_FROZEN_THROUGH.isoformat(),
         "temporal_categories_from": TEMPORAL_CATEGORY_START.isoformat(),
         "legacy": "published category remains authoritative through the frozen boundary; new IDs apply no earlier than the temporal start, while later changes to resolved brands remain prospective",
-        "new_ids": "official brand -> explicit A4C segment/detail; unrecognized brands remain inconnu; Esso Express and TotalEnergies Access are gms_lowcost",
+        "new_ids": "official brand -> explicit A4C segment/detail; Indépendant sans enseigne is traditionnel; other unrecognized brands remain inconnu; Esso Express and TotalEnergies Access are gms_lowcost",
         "brand_reverify_days": reverify_days,
         "brand_reverify_limit_per_run": reverify_limit,
     }
