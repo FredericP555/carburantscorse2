@@ -34,7 +34,11 @@ class DynamicEditorialTests(unittest.TestCase):
         self.assertIn('function buildMarginAnalysis()', HTML)
         self.assertIn("editorialMean(all,'corse',start23,p.end)", HTML)
         self.assertIn("editorialMean(all,'bdr',start23,p.end)", HTML)
-        self.assertIn("editorialYearMean(all,firstYear,'ecart')", HTML)
+        self.assertIn("editorialYearMean(all,2022,'ecart')", HTML)
+        self.assertIn("editorialYearMean(all,2025,'ecart')", HTML)
+        self.assertIn('function editorialMarginWeekly(all,net,end)', HTML)
+        self.assertIn("function editorialMarginFullYear(rows,year)", HTML)
+        self.assertIn("buildMarginAnalysis()", HTML)
 
     def test_analysis_panel_uses_dynamic_builders(self):
         self.assertIn('panel.innerHTML=buildMarginAnalysis();', HTML)
