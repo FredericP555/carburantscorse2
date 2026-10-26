@@ -1130,7 +1130,7 @@
       "brand_source": "officiel",
       "first_seen": "2026-08-28",
       "last_seen": "2026-10-12",
-      "verified_at": "2026-10-19T15:48:27.789200+00:00",
+      "verified_at": "2026-10-26T07:08:11.667859+00:00",
       "brand_valid_from": "2026-09-08",
       "brand_history": []
     },
@@ -1837,8 +1837,8 @@
       "classification_source": "auto",
       "brand_source": "officiel",
       "first_seen": "2026-09-09",
-      "last_seen": "2026-10-07",
-      "verified_at": "2026-10-19T15:48:27.789200+00:00",
+      "last_seen": "2026-10-24",
+      "verified_at": "2026-10-26T07:08:11.667859+00:00",
       "brand_valid_from": "2026-09-09",
       "brand_history": []
     },
@@ -2521,8 +2521,8 @@
       "classification_source": "auto",
       "brand_source": "officiel",
       "first_seen": "2026-09-14",
-      "last_seen": "2026-10-16",
-      "verified_at": "2026-10-19T15:48:27.789200+00:00",
+      "last_seen": "2026-10-21",
+      "verified_at": "2026-10-26T07:08:11.667859+00:00",
       "brand_valid_from": "2026-09-14",
       "brand_history": []
     },
@@ -3005,7 +3005,103 @@
       "verified_at": "2026-10-19T15:48:27.789200+00:00",
       "brand_valid_from": "2026-09-21",
       "brand_history": []
+    },
+    "13870001": {
+      "enseigne": "Système U",
+      "segment": "gms_lowcost",
+      "detail": "gms",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-29",
+      "last_seen": "2026-10-23",
+      "verified_at": "2026-10-26T07:08:11.667859+00:00",
+      "brand_valid_from": "2026-09-29",
+      "brand_history": []
+    },
+    "13870002": {
+      "enseigne": "Indépendant sans enseigne",
+      "segment": "traditionnel",
+      "detail": "marque_tradi",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-25",
+      "last_seen": "2026-10-20",
+      "verified_at": "2026-10-26T07:08:11.667859+00:00",
+      "brand_valid_from": "2026-09-25",
+      "brand_history": []
+    },
+    "13880001": {
+      "enseigne": "Intermarché",
+      "segment": "gms_lowcost",
+      "detail": "gms",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-30",
+      "last_seen": "2026-09-30",
+      "verified_at": "2026-10-26T07:08:11.667859+00:00",
+      "brand_valid_from": "2026-09-30",
+      "brand_history": []
+    },
+    "13880002": {
+      "enseigne": "Intermarché",
+      "segment": "gms_lowcost",
+      "detail": "gms",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-30",
+      "last_seen": "2026-09-30",
+      "verified_at": "2026-10-26T07:08:11.667859+00:00",
+      "brand_valid_from": "2026-09-30",
+      "brand_history": []
+    },
+    "13890000": {
+      "enseigne": "Indépendant sans enseigne",
+      "segment": "traditionnel",
+      "detail": "marque_tradi",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-25",
+      "last_seen": "2026-10-23",
+      "verified_at": "2026-10-26T07:08:11.667859+00:00",
+      "brand_valid_from": "2026-09-25",
+      "brand_history": []
+    },
+    "13910001": {
+      "enseigne": "Système U",
+      "segment": "gms_lowcost",
+      "detail": "gms",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-25",
+      "last_seen": "2026-10-22",
+      "verified_at": "2026-10-26T07:08:11.667859+00:00",
+      "brand_valid_from": "2026-09-25",
+      "brand_history": []
+    },
+    "13920005": {
+      "enseigne": "Esso",
+      "segment": "traditionnel",
+      "detail": "major_tradi",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-25",
+      "last_seen": "2026-10-19",
+      "verified_at": "2026-10-26T07:08:11.667859+00:00",
+      "brand_valid_from": "2026-09-25",
+      "brand_history": []
+    },
+    "13990002": {
+      "enseigne": "Avia",
+      "segment": "traditionnel",
+      "detail": "marque_tradi",
+      "classification_source": "correction_marque",
+      "brand_source": "officiel",
+      "first_seen": "2026-09-25",
+      "last_seen": "2026-10-23",
+      "verified_at": "2026-10-26T07:08:11.667859+00:00",
+      "brand_valid_from": "2026-09-25",
+      "brand_history": []
     }
   },
-  "generated_at": "2026-10-19T15:48:27.789200+00:00"
+  "generated_at": "2026-10-26T07:08:11.667859+00:00"
 }
