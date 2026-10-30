@@ -82,7 +82,7 @@ def inspect(station_id):
                 "final_url": response_url,
                 "headers": safe_headers(response.headers),
                 "response_bytes": len(raw.encode("utf-8")),
-                "brand_label_in_text": bool(re.search(r"Marque\\s*:", raw, flags=re.I)),
+                "brand_label_in_text": bool(re.search(r"Marque\s*:", raw, flags=re.I)),
                 "extracted_brand": brand,
             })
             if brand:
