@@ -18,7 +18,7 @@ import urllib.error
 import urllib.request
 
 from scripts.resolve_new_bdr_station_brands import (
-    STATION_URL, USER_AGENT, classify_station,
+    STATION_URL, USER_AGENT, TextTokens, classify_station,
     extract_brand_from_html, load_corrections,
 )
 
@@ -85,6 +85,20 @@ def inspect(station_id):
                 "brand_label_in_text": bool(re.search(r"Marque\s*:", raw, flags=re.I)),
                 "extracted_brand": brand,
             })
+            if not brand:
+                # Inspect only structure and short visible text from the official page.
+                # A 200 can be an error page or a station page without the brand field.
+                from html import unescape
+                match = re.search(r"<title[^>]*>(.*?)</title\\s*>", raw, flags=re.I | re.S)
+                result["page_title"] = unescape(re.sub(r"\\s+", " ", match.group(1)).strip()) if match else None
+                parser = TextTokens()
+                parser.feed(raw)
+                markers = ("station", "marque", "introuvable", "erreur", "carburant", "recherche")
+                result["official_page_text_markers"] = [
+                    token[:170] for token in parser.tokens
+                    if any(marker in token.casefold() for marker in markers)
+                ][:20]
+                result["official_page_text_tail"] = parser.tokens[-12:]
             if brand:
                 by_id, by_brand = load_corrections()
                 segment, detail, source = classify_station(station_id, brand, by_id, by_brand)
