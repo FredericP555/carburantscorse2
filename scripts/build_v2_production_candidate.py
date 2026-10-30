@@ -37,6 +37,7 @@ from scripts.resolve_new_bdr_station_brands import (
     _entry_for_day as bdr_entry_for_day,
     classification_for_day,
     load_registry,
+    observed_bdr_ids,
     resolve_from_observations,
     resolved_categories,
 )
@@ -140,9 +141,71 @@ def _recent_bdr_observations(observations: list[dict], days: int = 30) -> list[d
     return [r for r in rows if r["date"] >= cutoff]
 
 
+def _historical_unresolved_rows(
+    observations: list[dict],
+    legacy: dict[str, str],
+    registry: dict,
+    recent_ids: set[str],
+) -> tuple[set[str], list[dict]]:
+    """Backfill real historical observations; do not manufacture station dates."""
+    stations = registry.get("stations") or {}
+    missing = {
+        sid for sid in legacy
+        if sid not in recent_ids and (
+            not stations.get(sid)
+            or not stations[sid].get("enseigne")
+            or stations[sid].get("segment") == "inconnu"
+        )
+    }
+    rows = [
+        r for r in observations
+        if str(r.get("station_id") or "") in missing
+        and str(r.get("department") or "") == "13"
+        and not bool(r.get("is_motorway"))
+        and str(r.get("pop") or "") != "A"
+    ]
+    return missing, rows
+
+
+def _brand_quality_summary(legacy: dict[str, str], registry: dict) -> dict:
+    stations = registry.get("stations") or {}
+    without_name = sorted(sid for sid in legacy if not (stations.get(sid) or {}).get("enseigne"))
+    unclassified = sorted(
+        sid for sid in legacy
+        if (stations.get(sid) or {}).get("enseigne")
+        and (stations[sid].get("segment") not in {"gms_lowcost", "traditionnel"})
+    )
+    return {
+        "historical_station_count": len(legacy),
+        "missing_enseigne_count": len(without_name),
+        "missing_enseigne_ids": without_name,
+        "identified_but_unclassified_count": len(unclassified),
+        "identified_but_unclassified_ids": unclassified,
+    }
+
+
 def _resolve_bdr(observations: list[dict], legacy: dict[str, str]) -> dict:
-    recent_summary = resolve_from_observations(_recent_bdr_observations(observations), legacy, registry_path=BDR_REGISTRY)
-    return {"recent": {k: v for k, v in recent_summary.items() if k != "categories"}}
+    recent_rows = _recent_bdr_observations(observations)
+    recent_summary = resolve_from_observations(recent_rows, legacy, registry_path=BDR_REGISTRY)
+    missing, historical_rows = _historical_unresolved_rows(
+        observations, legacy, load_registry(BDR_REGISTRY), observed_bdr_ids(recent_rows)
+    )
+    historical_observed = observed_bdr_ids(historical_rows)
+    historical_summary = (
+        resolve_from_observations(historical_rows, legacy, registry_path=BDR_REGISTRY)
+        if historical_rows else {}
+    )
+    return {
+        "recent": {k: v for k, v in recent_summary.items() if k != "categories"},
+        "historical_backfill": {
+            "candidates_outside_recent_window": len(missing),
+            "candidates_with_source_observations": len(historical_observed),
+            "without_source_observations": sorted(missing - historical_observed),
+            "brand_fetch_count": historical_summary.get("brand_fetch_count", 0),
+            "unresolved_ids": historical_summary.get("unresolved_ids", []),
+            "unresolved_reasons": historical_summary.get("unresolved_reasons", {}),
+        },
+    }
 
 
 def _candidate_stale_bdr_ids(state: pd.DataFrame, bouclier: dict, start: date, end: date) -> set[str]:
@@ -259,6 +322,7 @@ def main() -> None:
     state=build_publication_state(pd.DataFrame(observations),global_end=pd.Timestamp(target_end),bdr_category_resolver=resolver)
     stale_ids=_candidate_stale_bdr_ids(state,bouclier,SWITCH_DAY,target_end); resolution["stale_total_candidates"]=_resolve_stale_bdr_candidates(observations,stale_ids,legacy)
     registry=load_registry(BDR_REGISTRY); resolver=_bdr_category_resolver(legacy,registry)
+    resolution["brand_quality"] = _brand_quality_summary(legacy, registry)
     state=build_publication_state(pd.DataFrame(observations),global_end=pd.Timestamp(target_end),bdr_category_resolver=resolver)
 
     from scripts.v2_event_guards import EventGuards

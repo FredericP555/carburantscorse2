@@ -37,7 +37,7 @@ GMS = [
 ]
 LOW_COST_MAJORS = ["total access", "totalenergies access", "esso express"]
 MAJORS = [
-    "total", "totalenergies", "elan", "esso", "shell", "bp", "agip", "eni", "mobil",
+    "total", "totalenergies", "elan", "esso", "shell", "bp", "agip", "eni", "mobil", "dyneff",
 ]
 INDEPENDENT_WITHOUT_BRAND = "Indépendant sans enseigne"
 SEGMENTS = {"gms_lowcost", "traditionnel", "inconnu"}
@@ -272,12 +272,12 @@ def ids_to_fetch(
     stale: list[tuple[date, str]] = []
     for station_id in ids:
         entry = stations.get(station_id)
-        if station_id not in legacy_categories and (
-            not entry or entry.get("segment") == "inconnu" or not entry.get("enseigne")
-        ):
+        # A known historical category does not establish an exact station brand.
+        # Missing register entries must not be left in the bounded recheck queue.
+        if entry is None:
             mandatory.append(station_id)
             continue
-        if entry is not None and (entry.get("segment") == "inconnu" or not entry.get("enseigne")):
+        if entry.get("segment") == "inconnu" or not entry.get("enseigne"):
             mandatory.append(station_id)
             continue
         verified = _verified_day(entry)
@@ -404,7 +404,7 @@ def resolve_from_observations(
             )
             new_identity = (brand, segment, detail, source)
             old_resolved = bool(old.get("enseigne")) and old.get("segment") in {"gms_lowcost", "traditionnel"}
-            if old_resolved and old_identity != new_identity:
+            if old.get("enseigne") and old_identity != new_identity:
                 # A real change of a previously resolved brand is only valid from verification.
                 previous = _history_record(old, today - timedelta(days=1))
                 if previous:
@@ -435,6 +435,26 @@ def resolve_from_observations(
             errors[station_id] = error or "official brand unavailable during reverification"
             entry = dict(old)
             entry["last_seen"] = observed_last.isoformat()
+        elif old.get("enseigne") and old.get("brand_source") == "officiel":
+            # A previously verified official name can be classified with an
+            # improved dictionary even when this week's HTTP lookup fails.
+            segment, detail, source = classify_station(station_id, old["enseigne"], by_id, by_brand)
+            entry = dict(old)
+            entry["last_seen"] = observed_last.isoformat()
+            if segment != "inconnu":
+                history = [dict(item) for item in (old.get("brand_history") or []) if isinstance(item, dict)]
+                previous = _history_record(old, today - timedelta(days=1))
+                if previous:
+                    history.append(previous)
+                entry.update({
+                    "segment": segment,
+                    "detail": detail,
+                    "classification_source": source,
+                    "brand_valid_from": today.isoformat(),
+                    "brand_history": history,
+                })
+            else:
+                errors[station_id] = error or "official brand unavailable"
         else:
             errors[station_id] = error or "official brand unavailable"
             if station_id in legacy_categories:
@@ -488,6 +508,7 @@ def resolve_from_observations(
         "resolved_this_run": sum(1 for sid in pending if fetched.get(sid, (None, None))[0]),
         "unresolved_this_run": len(errors),
         "unresolved_ids": sorted(errors),
+        "unresolved_reasons": dict(sorted(errors.items())),
         "incremental_category_count": len(resolved),
         "categories": resolved,
     }
