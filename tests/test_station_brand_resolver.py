@@ -449,5 +449,34 @@ class HistoricalBackfillTests(unittest.TestCase):
         self.assertEqual(audit["identified_but_unclassified_ids"], ["13130005"])
 
 
+    def test_official_search_results_enrich_only_five_identified_station_brands(self):
+        """Official 30 Oct 2026 search rows: name | brand. No inference for missing IDs."""
+        registry = load_registry()
+        stations = registry["stations"]
+        self.assertEqual(stations["13013011"]["enseigne"], "GAROUCHA")
+        self.assertEqual(stations["13920010"]["enseigne"], "Dyneff")
+        for sid in ("13013011", "13920010"):
+            self.assertEqual(stations[sid]["brand_source"], "officiel")
+            self.assertEqual(stations[sid]["brand_source_detail"], "recherche_officielle_page_resultats")
+            self.assertEqual(stations[sid]["brand_valid_from"], "2026-10-30")
+            self.assertEqual(classification_for_day(
+                sid, date(2026, 10, 25), {"13013011": "network", "13920010": "network"}, registry
+            ), "network")
+            self.assertEqual(classification_for_day(
+                sid, date(2026, 10, 30), {"13013011": "network", "13920010": "network"}, registry
+            ), "network")
+        for sid in ("13120001", "13530003", "13740003"):
+            self.assertNotIn(sid, stations)
+        for sid in ("13130005", "13340004", "13600024"):
+            entry = stations[sid]
+            self.assertEqual(entry["enseigne"], "Dyneff")
+            self.assertEqual(entry["segment"], "traditionnel")
+            self.assertEqual(entry["brand_valid_from"], "2026-10-30")
+            self.assertEqual(entry["brand_history"][-1]["segment"], "inconnu")
+            self.assertEqual(entry["brand_history"][-1]["valid_to"], "2026-10-29")
+        by_id, by_brand = load_corrections()
+        self.assertNotIn("13013011", by_id)
+        self.assertEqual(by_brand["garoucha"]["segment"], "traditionnel")
+
 if __name__ == "__main__":
     unittest.main()
