@@ -89,8 +89,8 @@ def inspect(station_id):
                 # Inspect only structure and short visible text from the official page.
                 # A 200 can be an error page or a station page without the brand field.
                 from html import unescape
-                match = re.search(r"<title[^>]*>(.*?)</title\\s*>", raw, flags=re.I | re.S)
-                result["page_title"] = unescape(re.sub(r"\\s+", " ", match.group(1)).strip()) if match else None
+                match = re.search(r"<title[^>]*>(.*?)</title\s*>", raw, flags=re.I | re.S)
+                result["page_title"] = unescape(re.sub(r"\s+", " ", match.group(1)).strip()) if match else None
                 parser = TextTokens()
                 parser.feed(raw)
                 markers = ("station", "marque", "introuvable", "erreur", "carburant", "recherche")
