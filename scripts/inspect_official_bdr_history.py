@@ -86,6 +86,21 @@ for sid in IDS:
     report["stations"][sid]["same_normalized_address_2026"] = sorted(exact, key=lambda x: x["id"])
     report["stations"][sid]["nearest_2026_within_2km"] = sorted(close, key=lambda x: x["distance_m"])[:8]
 
+
+CANDIDATES = ("13120012", "13120008", "13530004", "13530001", "13740001", "13740004")
+report["nearby_ids_year_coverage"] = {}
+for cid in CANDIDATES:
+    o = sorted((r for r in rows if r["station_id"] == cid), key=lambda r: r["timestamp"])
+    yr2025 = [r for r in o if r["source_year"] == 2025]
+    yr2026 = [r for r in o if r["source_year"] == 2026]
+    report["nearby_ids_year_coverage"][cid] = {
+        "total_count": len(o),
+        "count_2025": len(yr2025), "count_2026": len(yr2026),
+        "first_2025": compact(yr2025[0]) if yr2025 else None,
+        "last_2025": compact(yr2025[-1]) if yr2025 else None,
+        "first_2026": compact(yr2026[0]) if yr2026 else None,
+    }
+
 print("OFFICIAL_STATION_HISTORY_JSON_START", flush=True)
 print(json.dumps(report, ensure_ascii=False, default=list, indent=2), flush=True)
 print("OFFICIAL_STATION_HISTORY_JSON_END", flush=True)
