@@ -28,6 +28,60 @@ class StationBrandResolverTests(unittest.TestCase):
             ("traditionnel", "marque_tradi"),
         )
 
+    def test_dyneff_brand_is_traditional(self):
+        self.assertEqual(classify_brand("Dyneff"), ("traditionnel", "major_tradi"))
+
+    def test_historical_brand_missing_from_registry_is_mandatory(self):
+        legacy = {"13920010": "network", "13000001": "gms"}
+        registry = {"stations": {"13000001": {
+            "enseigne": "Intermarché", "segment": "gms_lowcost",
+            "verified_at": "2026-10-28T00:00:00Z",
+        }}}
+        self.assertEqual(
+            ids_to_fetch(
+                {"13920010", "13000001"}, legacy, registry,
+                today=date(2026, 10, 30), limit=0,
+            ),
+            ["13920010"],
+        )
+
+    def test_dyneff_from_official_cache_survives_fetch_failure(self):
+        observations = [{
+            "station_id": "13130005", "department": "13", "pop": "R",
+            "is_motorway": False, "date": date(2026, 10, 12),
+        }]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "registry.json"
+            path.write_text(json.dumps({
+                "schema": "a4c-bdr-station-brands-v2",
+                "stations": {"13130005": {
+                    "enseigne": "Dyneff", "segment": "inconnu",
+                    "detail": "inconnu", "brand_source": "officiel",
+                    "first_seen": "2026-09-08", "last_seen": "2026-10-12",
+                    "brand_valid_from": "2026-09-08",
+                    "verified_at": "2026-10-26T07:00:00Z",
+                    "brand_history": [],
+                }},
+            }), encoding="utf-8")
+            result = resolve_from_observations(
+                observations, {"13130005": "network"},
+                registry_path=path,
+                fetcher=lambda _sid: (None, "HTTPError 503"),
+                today=date(2026, 10, 30),
+                now=datetime(2026, 10, 30, 7, 0, tzinfo=timezone.utc),
+            )
+            entry = load_registry(path)["stations"]["13130005"]
+            self.assertEqual(entry["enseigne"], "Dyneff")
+            self.assertEqual(entry["segment"], "traditionnel")
+            self.assertEqual(entry["brand_valid_from"], "2026-10-30")
+            self.assertEqual(entry["verified_at"], "2026-10-26T07:00:00Z")
+            self.assertEqual(result["unresolved_this_run"], 0)
+            self.assertEqual(
+                classification_for_day("13130005", date(2026, 9, 10),
+                                       {"13130005": "network"}, load_registry(path)),
+                "network",
+            )
+
     def test_unrecognized_brand_fails_closed(self):
         self.assertEqual(classify_brand("Nouvelle enseigne inconnue"), ("inconnu", "inconnu"))
         self.assertEqual(classify_brand("Proxi"), ("inconnu", "inconnu"))
@@ -365,6 +419,34 @@ class StationBrandResolverTests(unittest.TestCase):
             self.assertEqual(second["brand_fetch_count"], 1)
             self.assertEqual(second["categories"]["13999996"], "network")
             self.assertEqual(resolved_categories(load_registry(registry_path))["13999996"], "network")
+
+
+
+class HistoricalBackfillTests(unittest.TestCase):
+    def test_backfill_looks_beyond_30_days_without_inventing_observations(self):
+        from scripts.build_v2_production_candidate import (
+            _brand_quality_summary, _historical_unresolved_rows,
+        )
+        legacy = {"13920010": "network", "13013011": "network",
+                  "13130005": "network", "13000001": "gms"}
+        registry = {"stations": {
+            "13130005": {"enseigne": "Dyneff", "segment": "inconnu"},
+            "13000001": {"enseigne": "Intermarché", "segment": "gms_lowcost"},
+        }}
+        observations = [
+            {"station_id": "13920010", "department": "13", "pop": "R",
+             "is_motorway": False, "date": date(2026, 9, 24)},
+            {"station_id": "13000001", "department": "13", "pop": "R",
+             "is_motorway": False, "date": date(2026, 10, 25)},
+        ]
+        missing, rows = _historical_unresolved_rows(
+            observations, legacy, registry, recent_ids={"13000001", "13130005"}
+        )
+        self.assertEqual(missing, {"13920010", "13013011"})
+        self.assertEqual([row["station_id"] for row in rows], ["13920010"])
+        audit = _brand_quality_summary(legacy, registry)
+        self.assertEqual(audit["missing_enseigne_ids"], ["13013011", "13920010"])
+        self.assertEqual(audit["identified_but_unclassified_ids"], ["13130005"])
 
 
 if __name__ == "__main__":
