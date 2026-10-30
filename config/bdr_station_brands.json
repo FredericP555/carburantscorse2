@@ -537,6 +537,20 @@
       "brand_valid_from": "2026-09-14",
       "brand_history": []
     },
+    "13013011": {
+      "enseigne": "GAROUCHA",
+      "segment": "traditionnel",
+      "detail": "marque_tradi",
+      "classification_source": "correction_marque",
+      "brand_source": "officiel",
+      "brand_source_detail": "recherche_officielle_page_resultats",
+      "brand_source_url": "https://www.prix-carburants.gouv.fr/recherche/?page=2&limit=100&sort=Gazole&direction=asc",
+      "brand_evidence_date": "2026-10-30",
+      "last_seen": "2026-10-29",
+      "verified_at": "2026-10-30T14:00:00+00:00",
+      "brand_valid_from": "2026-10-30",
+      "brand_history": []
+    },
     "13013012": {
       "enseigne": "Indépendant sans enseigne",
       "segment": "traditionnel",
@@ -1124,15 +1138,26 @@
     },
     "13130005": {
       "enseigne": "Dyneff",
-      "segment": "inconnu",
-      "detail": "inconnu",
+      "segment": "traditionnel",
+      "detail": "major_tradi",
       "classification_source": "auto",
       "brand_source": "officiel",
       "first_seen": "2026-08-28",
       "last_seen": "2026-10-12",
       "verified_at": "2026-10-26T16:48:43.731182+00:00",
-      "brand_valid_from": "2026-09-08",
-      "brand_history": []
+      "brand_valid_from": "2026-10-30",
+      "brand_history": [
+        {
+          "enseigne": "Dyneff",
+          "segment": "inconnu",
+          "detail": "inconnu",
+          "classification_source": "auto",
+          "brand_source": "officiel",
+          "valid_from": "2026-09-08",
+          "valid_to": "2026-10-29",
+          "verified_at": "2026-10-26T16:48:43.731182+00:00"
+        }
+      ]
     },
     "13130006": {
       "enseigne": "TotalEnergies Access",
@@ -1832,15 +1857,26 @@
     },
     "13340004": {
       "enseigne": "Dyneff",
-      "segment": "inconnu",
-      "detail": "inconnu",
+      "segment": "traditionnel",
+      "detail": "major_tradi",
       "classification_source": "auto",
       "brand_source": "officiel",
       "first_seen": "2026-09-09",
       "last_seen": "2026-10-24",
       "verified_at": "2026-10-26T16:48:43.731182+00:00",
-      "brand_valid_from": "2026-09-09",
-      "brand_history": []
+      "brand_valid_from": "2026-10-30",
+      "brand_history": [
+        {
+          "enseigne": "Dyneff",
+          "segment": "inconnu",
+          "detail": "inconnu",
+          "classification_source": "auto",
+          "brand_source": "officiel",
+          "valid_from": "2026-09-09",
+          "valid_to": "2026-10-29",
+          "verified_at": "2026-10-26T16:48:43.731182+00:00"
+        }
+      ]
     },
     "13340005": {
       "enseigne": "Shell",
@@ -2516,15 +2552,26 @@
     },
     "13600024": {
       "enseigne": "Dyneff",
-      "segment": "inconnu",
-      "detail": "inconnu",
+      "segment": "traditionnel",
+      "detail": "major_tradi",
       "classification_source": "auto",
       "brand_source": "officiel",
       "first_seen": "2026-09-14",
       "last_seen": "2026-10-21",
       "verified_at": "2026-10-26T16:48:43.731182+00:00",
-      "brand_valid_from": "2026-09-14",
-      "brand_history": []
+      "brand_valid_from": "2026-10-30",
+      "brand_history": [
+        {
+          "enseigne": "Dyneff",
+          "segment": "inconnu",
+          "detail": "inconnu",
+          "classification_source": "auto",
+          "brand_source": "officiel",
+          "valid_from": "2026-09-14",
+          "valid_to": "2026-10-29",
+          "verified_at": "2026-10-26T16:48:43.731182+00:00"
+        }
+      ]
     },
     "13600026": {
       "enseigne": "Avia",
@@ -3090,6 +3137,20 @@
       "brand_valid_from": "2026-09-25",
       "brand_history": []
     },
+    "13920010": {
+      "enseigne": "Dyneff",
+      "segment": "traditionnel",
+      "detail": "major_tradi",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "brand_source_detail": "recherche_officielle_page_resultats",
+      "brand_source_url": "https://www.prix-carburants.gouv.fr/recherche/?page=2&limit=100&sort=Gazole&direction=asc",
+      "brand_evidence_date": "2026-10-30",
+      "last_seen": "2026-09-24",
+      "verified_at": "2026-10-30T14:00:00+00:00",
+      "brand_valid_from": "2026-10-30",
+      "brand_history": []
+    },
     "13990002": {
       "enseigne": "Avia",
       "segment": "traditionnel",
@@ -3103,5 +3164,5 @@
       "brand_history": []
     }
   },
-  "generated_at": "2026-10-26T16:48:43.731182+00:00"
+  "generated_at": "2026-10-30T14:00:00+00:00"
 }
