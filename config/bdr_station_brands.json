@@ -2094,6 +2094,18 @@
       "brand_valid_from": "2026-09-14",
       "brand_history": []
     },
+    "13400020": {
+      "enseigne": "Indépendant sans enseigne",
+      "segment": "traditionnel",
+      "detail": "marque_tradi",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2026-10-30",
+      "last_seen": "2026-10-30",
+      "verified_at": "2026-11-02T07:07:48.050924+00:00",
+      "brand_valid_from": "2026-10-30",
+      "brand_history": []
+    },
     "13410004": {
       "enseigne": "Carrefour Contact",
       "segment": "gms_lowcost",
@@ -3164,5 +3176,5 @@
       "brand_history": []
     }
   },
-  "generated_at": "2026-10-30T14:00:00+00:00"
+  "generated_at": "2026-11-02T07:07:48.050924+00:00"
 }
