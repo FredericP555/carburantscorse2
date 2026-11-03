@@ -1,0 +1,16 @@
+{
+  "artifact_run": 41694981076,
+  "artifact_id": 13260527371,
+  "artifact_sha256": "bb96899f9c99b70acd99d1f629b40bb6ed427711f9ae4ea08e7f415045bb5d11",
+  "window": [
+    "2026-10-26",
+    "2026-11-01"
+  ],
+  "bdr_eligibility_changes": 0,
+  "method": "Published baseline plus same-input NEW minus OLD filter delta. No source revision applied. C1 aggregates rebuilt from corrected rounded daily points. C2 station-day weighted means.",
+  "r2_unavailable": 0,
+  "baseline_sha256": "dfea5f97f6c8a07a0e1346ada29895f1984d7ef06f1d7913e88ca73156a75967",
+  "station_days_sha256": "48e42f7b59c5509cffd1b72f888fabbb78eacdfa838b3667c7fea3778b5a165a",
+  "baseline_commit": "a62b3a331e3894c9e22a9aa7c90ff2e6db40f665",
+  "summary_sha256": "f529d6cc442c3bac1ecacf79dad153160d1c63bd1eec878d5ca3634aa6a22f4d"
+}
