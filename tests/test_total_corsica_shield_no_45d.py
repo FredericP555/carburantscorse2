@@ -161,8 +161,8 @@ class TotalCorsicaShieldNo45DayCutoffTests(unittest.TestCase):
     def test_non_total_does_not_get_the_exception(self):
         self.assertFalse(decision(fuel="Gazole", age_days=90, is_total=False, r2=True).eligible)
 
-    def test_price_not_at_cap_does_not_get_the_exception(self):
-        self.assertFalse(decision(fuel="Gazole", age_days=90, price=2.24, r2=True).eligible)
+    def test_price_above_cap_does_not_get_the_exception(self):
+        self.assertFalse(decision(fuel="Gazole", age_days=90, price=2.26, r2=True).eligible)
 
     def test_no_effective_shield_means_normal_staleness_rule(self):
         self.assertFalse(decision(fuel="Gazole", age_days=90, shield=False, r2=True).eligible)

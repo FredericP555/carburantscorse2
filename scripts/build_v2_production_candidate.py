@@ -26,7 +26,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 from a4c_common.corse_brand import TOTAL, classify_registry_entry
-from a4c_common.price_math import at_cap
+from a4c_common.price_math import at_or_below_cap
 from a4c_common.shared_release import download_shared_rotterdam_assets, load_shared_observations
 from a4c_common.source_freshness import max_date_by_fuel
 from carburantscorse2 import r2_guard_v2, reliability_policy_v2, shield_phase_v2
@@ -215,7 +215,7 @@ def _candidate_stale_bdr_ids(state: pd.DataFrame, bouclier: dict, start: date, e
         last = _as_datetime(getattr(row, "source_timestamp", None))
         if last is None or (pd.Timestamp(row.date).date() - last.date()).days < reliability_policy_v2.NORMAL_MAX_AGE_DAYS: continue
         phase = shield_phase_v2.phase_for_day(bouclier, str(row.fuel), pd.Timestamp(row.date).date())
-        if phase is not None and at_cap(_as_float(row.price), phase.cap): ids.add(str(row.station_id))
+        if phase is not None and at_or_below_cap(_as_float(row.price), phase.cap): ids.add(str(row.station_id))
     return ids
 
 
@@ -258,10 +258,10 @@ def _evaluate_v2(state: pd.DataFrame, *, bouclier: dict, event_guards, corse_sta
             region_kind="corsica"; territory_r2="corsica"; is_total=classify_registry_entry(corse_stations.get(sid),on_date=day) == TOTAL; territory_label="Corse"
         else:
             region_kind="mainland"; territory_r2="bdr"; raw_entry=bdr_entries.get(sid) if isinstance(bdr_entries,dict) else None; entry=bdr_entry_for_day(raw_entry,day); is_total=_is_total_brand((entry or {}).get("enseigne") if isinstance(entry,dict) else None); territory_label="BdR"
-        r2_verdict=None; age=reliability_policy_v2.age_days(last_declared,day); both_capped=at_cap(gazole_price,gazole_cap) and at_cap(sp95_price,sp95_cap)
+        r2_verdict=None; age=reliability_policy_v2.age_days(last_declared,day); both_capped=at_or_below_cap(gazole_price,gazole_cap) and at_or_below_cap(sp95_price,sp95_cap)
         if fuel in PRINCIPAL_FUELS and age is not None and age >= reliability_policy_v2.NORMAL_MAX_AGE_DAYS:
             try:
-                if region_kind == "corsica" and is_total and target_phase is not None and at_cap(_as_float(row.price), target_phase.cap):
+                if region_kind == "corsica" and is_total and target_phase is not None and at_or_below_cap(_as_float(row.price), target_phase.cap):
                     r2_calls += 1
                     r2_verdict=r2_guard_v2.corsica_shield_price_admissible(
                         last_declared, day, fuel, bouclier_metadata=bouclier

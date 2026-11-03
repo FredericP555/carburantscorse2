@@ -61,3 +61,7 @@ La hauteur de `950px` fonctionne correctement sur smartphone pour la vue par dé
 ---
 
 Publié dans le cadre des travaux d'A4C — *Agissons contre la cherté des carburants en Corse*.
+
+### Prix Total sous plafond
+
+Pour les prochains calculs, l’exception de fraîcheur Total accepte un prix au plafond ou inférieur au plafond, avec la tolérance supérieure existante de 0,001 €/L. Les contrôles de phase effective, de rupture/fermeture, de validité et UFIP/R2 restent applicables, ainsi que les conditions d’activité propres au territoire. La détection du bouclier continue à rechercher des prix effectivement au plafond. Cette évolution ne réécrit pas les journées déjà publiées. Un prix reconduit reste une hypothèse méthodologique, pas une nouvelle déclaration de la station.
