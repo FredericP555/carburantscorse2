@@ -28,3 +28,10 @@ def at_cap(price, cap, *, below_milli: int = 2, above_milli: int = 1) -> bool:
     if p is None or c is None:
         return False
     return c - below_milli <= p <= c + above_milli
+
+
+def at_or_below_cap(price, cap, *, above_milli: int = 1) -> bool:
+    """A positive price covered by the ceiling, including the existing rounding tolerance."""
+    p = to_milli_eur(price)
+    c = to_milli_eur(cap)
+    return p is not None and c is not None and 0 < p <= c + above_milli and c > 0

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Mapping
 
-from a4c_common.price_math import at_cap, finite_number
+from a4c_common.price_math import at_or_below_cap, finite_number
 
 NORMAL_MAX_AGE_DAYS = 45
 PRINCIPAL_FUELS = frozenset({"Gazole", "SP95"})
@@ -90,21 +90,21 @@ def evaluate(*, day: date, region_kind: str, target_fuel: str,
         return Decision(False, "phase_plafond_absente_ou_invalide", age)
     if not declaration_eligible_for_phase(last_declared_at, phase_started_on):
         return Decision(False, "pas_de_resurrection_a_entree_plafond", age)
-    if not at_cap(last_price, applicable_cap):
-        return Decision(False, "ancien_pas_au_plafond", age)
+    if not at_or_below_cap(last_price, applicable_cap):
+        return Decision(False, "ancien_au_dessus_du_plafond", age)
 
     activity_by_fuel = activity_by_fuel or {}
     if region_kind == "corsica":
         # Total Corsica is evaluated per fuel. Beyond normal freshness, age itself no longer
-        # expires a price at the active cap; UFIP/R2 is the fail-closed continuation guard.
+        # expires a price at or below the active cap; UFIP/R2 is the fail-closed continuation guard.
         if rotterdam_stale_price_admissible is True:
             return Decision(True, "bouclier_total_ufip_admissible", age)
         if rotterdam_stale_price_admissible is False:
             return Decision(False, "bouclier_total_ufip_verrouille", age)
         return Decision(False, "bouclier_total_ufip_indisponible", age)
 
-    # BDR/mainland behaviour is deliberately unchanged.
-    both_capped = at_cap(gazole_price, gazole_cap) and at_cap(sp95_price, sp95_cap)
+    # BDR keeps its activity/R2 requirements for prices at or below both caps.
+    both_capped = at_or_below_cap(gazole_price, gazole_cap) and at_or_below_cap(sp95_price, sp95_cap)
     if both_capped:
         if not recent_nonprincipal_liveness(activity_by_fuel=activity_by_fuel, day=day):
             return Decision(False, "double_plafond_bdr_sans_vivacite_autre_carburant", age)
