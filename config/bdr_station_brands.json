@@ -33,6 +33,18 @@
       "brand_valid_from": "2026-09-08",
       "brand_history": []
     },
+    "13001002": {
+      "enseigne": "",
+      "segment": "inconnu",
+      "detail": "inconnu",
+      "classification_source": "auto",
+      "brand_source": "non_resolu",
+      "first_seen": "2025-01-09",
+      "last_seen": "2025-03-14",
+      "verified_at": "",
+      "brand_valid_from": "2026-09-08",
+      "brand_history": []
+    },
     "13002007": {
       "enseigne": "Avia",
       "segment": "traditionnel",
@@ -669,6 +681,18 @@
       "last_seen": "2026-09-14",
       "verified_at": "2026-09-14T18:12:23.911095+00:00",
       "brand_valid_from": "2026-09-14",
+      "brand_history": []
+    },
+    "13015013": {
+      "enseigne": "",
+      "segment": "inconnu",
+      "detail": "inconnu",
+      "classification_source": "auto",
+      "brand_source": "non_resolu",
+      "first_seen": "2025-01-01",
+      "last_seen": "2025-12-31",
+      "verified_at": "",
+      "brand_valid_from": "2026-09-08",
       "brand_history": []
     },
     "13015016": {
@@ -2669,6 +2693,18 @@
       "brand_valid_from": "2026-09-22",
       "brand_history": []
     },
+    "13640001": {
+      "enseigne": "",
+      "segment": "inconnu",
+      "detail": "inconnu",
+      "classification_source": "auto",
+      "brand_source": "non_resolu",
+      "first_seen": "2025-01-02",
+      "last_seen": "2025-12-04",
+      "verified_at": "",
+      "brand_valid_from": "2026-09-08",
+      "brand_history": []
+    },
     "13650002": {
       "enseigne": "Esso",
       "segment": "traditionnel",
@@ -2787,6 +2823,18 @@
       "last_seen": "2026-10-17",
       "verified_at": "2026-10-19T09:48:06.288103+00:00",
       "brand_valid_from": "2026-09-19",
+      "brand_history": []
+    },
+    "13700012": {
+      "enseigne": "",
+      "segment": "inconnu",
+      "detail": "inconnu",
+      "classification_source": "auto",
+      "brand_source": "non_resolu",
+      "first_seen": "2025-01-02",
+      "last_seen": "2025-12-22",
+      "verified_at": "",
+      "brand_valid_from": "2026-09-08",
       "brand_history": []
     },
     "13700013": {
@@ -3137,6 +3185,18 @@
       "brand_valid_from": "2026-09-25",
       "brand_history": []
     },
+    "13920004": {
+      "enseigne": "Carrefour Market",
+      "segment": "gms_lowcost",
+      "detail": "gms",
+      "classification_source": "auto",
+      "brand_source": "officiel",
+      "first_seen": "2025-01-07",
+      "last_seen": "2026-03-04",
+      "verified_at": "2026-11-03T21:49:56.911562+00:00",
+      "brand_valid_from": "2026-09-08",
+      "brand_history": []
+    },
     "13920005": {
       "enseigne": "Esso",
       "segment": "traditionnel",
@@ -3176,5 +3236,5 @@
       "brand_history": []
     }
   },
-  "generated_at": "2026-11-02T07:07:48.050924+00:00"
+  "generated_at": "2026-11-03T21:49:56.911562+00:00"
 }
