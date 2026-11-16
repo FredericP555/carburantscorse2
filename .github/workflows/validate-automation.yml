@@ -83,6 +83,8 @@ jobs:
           path: |
             outputs/v2-production-candidate.json
             outputs/v2-production-summary.json
+            outputs/c2-exclusions.csv.gz
+            outputs/c2-exclusions.json
             outputs/ufip/c1_shared_meta.json
             outputs/c1/shared_release_tag.txt
             outputs/c1/corse_station_brands.json

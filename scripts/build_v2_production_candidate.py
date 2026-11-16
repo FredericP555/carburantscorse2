@@ -25,6 +25,10 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 
+from a4c_common.exclusion_evidence import decision_row, write_evidence
+from a4c_common.corse_brand import registry_entry_for_date
+
+
 from a4c_common.corse_brand import TOTAL, classify_registry_entry
 from a4c_common.price_math import at_or_below_cap
 from a4c_common.shared_release import download_shared_rotterdam_assets, load_shared_observations
@@ -226,7 +230,7 @@ def _resolve_stale_bdr_candidates(observations: list[dict], station_ids: set[str
     return {"candidate_ids": len(station_ids), **{k: summary[k] for k in ("resolved_this_run", "unresolved_this_run", "unresolved_ids")}}
 
 
-def _evaluate_v2(state: pd.DataFrame, *, bouclier: dict, event_guards, corse_stations: dict, start: date, end: date) -> tuple[pd.DataFrame, dict]:
+def _evaluate_v2(state: pd.DataFrame, *, bouclier: dict, event_guards, corse_stations: dict, start: date, end: date, decision_rows: list | None = None) -> tuple[pd.DataFrame, dict]:
     key_rows = {(str(r.station_id), pd.Timestamp(r.date).date(), str(r.fuel)): r for r in state.itertuples(index=False)}
     bdr_entries = (load_registry(BDR_REGISTRY).get("stations") or {})
     reasons = Counter(); reasons_by_territory = Counter(); r2_calls = r2_true = r2_false = r2_unavailable = 0; r2_errors = Counter()
@@ -275,6 +279,9 @@ def _evaluate_v2(state: pd.DataFrame, *, bouclier: dict, event_guards, corse_sta
                 r2_unavailable += 1; r2_errors[f"{type(exc).__name__}: {exc}"] += 1; r2_verdict=None
         price_aberrant=getattr(row,"price_aberrant",True); latest_price_valid=False if pd.isna(price_aberrant) else not bool(price_aberrant)
         decision=reliability_policy_v2.evaluate(day=day,region_kind=region_kind,target_fuel=fuel,last_declared_at=last_declared,last_price=_as_float(row.price),latest_price_valid=latest_price_valid,target_rupture_active=event_guards.rupture_active(sid,fuel,day),independently_inactive=event_guards.independently_inactive(sid,day),is_total=is_total,shield_effective=target_phase is not None,applicable_cap=target_phase.cap if target_phase else None,phase_started_on=target_phase.started_on if target_phase else None,activity_by_fuel=activity,gazole_price=gazole_price,gazole_cap=gazole_cap,sp95_price=sp95_price,sp95_cap=sp95_cap,rotterdam_stale_price_admissible=r2_verdict)
+        if decision_rows is not None and day >= end - timedelta(days=7) and fuel in {"Gazole", "SP95"}:
+            identity = (registry_entry_for_date(corse_stations.get(sid), day) if department == "20" else entry) or {}
+            decision_rows.append(decision_row(day, territory_label, sid, fuel, identity.get("enseigne"), str(row.category), last_declared, _as_float(row.price), decision, age))
         eligible.append(bool(decision.eligible)); reasons[decision.reason]+=1; reasons_by_territory[f"{territory_label}/{fuel}/{decision.reason}"]+=1
     out=state.copy(); out["eligible_publication"]=eligible
     return out, {"evaluate_station_days":sum(1 for d in state["date"] if pd.Timestamp(d).date() >= start),"reason_counts":dict(reasons),"reason_counts_by_territory_fuel":dict(reasons_by_territory),"r2_calls":r2_calls,"r2_true":r2_true,"r2_false":r2_false,"r2_unavailable":r2_unavailable,"r2_errors":dict(r2_errors)}
@@ -328,7 +335,8 @@ def main() -> None:
     from scripts.v2_event_guards import EventGuards
     guards=EventGuards.from_release(args.release_tag,metadata=meta)
     corse_payload=json.loads(CORSE_REGISTRY.read_text(encoding="utf-8")); corse_stations=corse_payload.get("stations") or {}
-    v2_state,engine=_evaluate_v2(state,bouclier=bouclier,event_guards=guards,corse_stations=corse_stations,start=SWITCH_DAY,end=target_end)
+    decision_rows=[]
+    v2_state,engine=_evaluate_v2(state,bouclier=bouclier,event_guards=guards,corse_stations=corse_stations,start=SWITCH_DAY,end=target_end,decision_rows=decision_rows)
 
     candidate=deepcopy(baseline); report_series={}; allow_transition=not already_active
     cases=[("gazole","sp95","Gazole","Gazole"),("sp95","sp95","SP95","SP95"),("sp95","e10","SP95","E10")]
@@ -355,6 +363,7 @@ def main() -> None:
     output=ROOT/args.output; summary_path=ROOT/args.summary; output.parent.mkdir(parents=True,exist_ok=True); summary_path.parent.mkdir(parents=True,exist_ok=True)
     output.write_text(json.dumps(candidate,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
     summary={"status":"v2-production-candidate","production_modified":False,"initial_transition":allow_transition,"daily_switch_date":SWITCH_DAY.isoformat(),"weekly_switch_date":WEEKLY_SWITCH.isoformat(),"target_end":target_end.isoformat(),"weekly_end":weekly_end.isoformat(),"c1_release_tag":args.release_tag,"series":report_series,"rewritten_rows_total":sum(v["rewritten_rows"] for v in report_series.values()),"added_rows_total":sum(v["added_rows"] for v in report_series.values()),"missing_replacements_total":missing,"engine":engine,"official_event_guards":guards.audit(),"bdr_resolution":resolution,"bdr_perimeter_guard_from":perimeter_guard_from.isoformat(),"unknown_recent_bdr_stations":unknown}
+    summary["exclusion_evidence"] = write_evidence(ROOT, "c2", decision_rows, release_tag=args.release_tag, source_files=[ROOT/"data.json", output, CORSE_REGISTRY, BDR_REGISTRY, LEGACY_BDR, C1_META, Path(__file__), *sorted((ROOT/"outputs"/"ufip").glob("*.csv"))])
     summary_path.write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding="utf-8"); print(json.dumps(summary,ensure_ascii=False,indent=2))
 
 if __name__ == "__main__": main()
