@@ -247,7 +247,7 @@ function makePlugin(minTs,maxTs,ck){
         let x2=Math.min(right,x.getPixelForValue(endTs));
         // En hebdomadaire, l'axe finit au lundi de la dernière semaine.
         // Réserver la fraction correspondant aux derniers jours inactifs.
-        if(inclusiveEnd&&currentGran==='weekly'&&endTs>maxTs){
+        if(inclusiveEnd&&(currentGran==='weekly'||(currentCarbu==='gazole'&&currentVue==='marge'))&&endTs>maxTs){
           const latest=window.A4C_DATA_META?.daily_target_end;
           const actualEnd=latest?ts(latest)+86400000:NaN;
           const span=actualEnd-maxTs;
