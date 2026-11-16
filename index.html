@@ -243,7 +243,19 @@ function makePlugin(minTs,maxTs,ck){
       const{ctx,chartArea:{top,bottom,left,right},scales:{x}}=c;
       const fillPeriod=(p,color,inclusiveEnd=false)=>{
         const x1=Math.max(left,x.getPixelForValue(ts(p.d1)));
-        const x2=Math.min(right,x.getPixelForValue(ts(p.d2)+(inclusiveEnd?86400000:0)));
+        const endTs=ts(p.d2)+(inclusiveEnd?86400000:0);
+        let x2=Math.min(right,x.getPixelForValue(endTs));
+        // En hebdomadaire, l'axe finit au lundi de la dernière semaine.
+        // Réserver la fraction correspondant aux derniers jours inactifs.
+        if(inclusiveEnd&&currentGran==='weekly'&&endTs>maxTs){
+          const latest=window.A4C_DATA_META?.daily_target_end;
+          const actualEnd=latest?ts(latest)+86400000:NaN;
+          const span=actualEnd-maxTs;
+          if(Number.isFinite(span)&&span>0&&span<=8*86400000&&endTs<actualEnd){
+            const weekWidth=Math.abs(x.getPixelForValue(maxTs)-x.getPixelForValue(maxTs-7*86400000));
+            x2=Math.max(left,right-weekWidth*(actualEnd-endTs)/span);
+          }
+        }
         if(x2<=left||x1>=right)return;
         ctx.save();ctx.fillStyle=color;ctx.fillRect(x1,top,x2-x1,bottom-top);ctx.restore();
       };
