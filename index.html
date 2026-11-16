@@ -241,14 +241,14 @@ function makePlugin(minTs,maxTs,ck){
   return{id:'zp',
     beforeDraw(c){
       const{ctx,chartArea:{top,bottom,left,right},scales:{x}}=c;
-      const fillPeriod=(p,color)=>{
+      const fillPeriod=(p,color,inclusiveEnd=false)=>{
         const x1=Math.max(left,x.getPixelForValue(ts(p.d1)));
-        const x2=Math.min(right,x.getPixelForValue(ts(p.d2)));
+        const x2=Math.min(right,x.getPixelForValue(ts(p.d2)+(inclusiveEnd?86400000:0)));
         if(x2<=left||x1>=right)return;
         ctx.save();ctx.fillStyle=color;ctx.fillRect(x1,top,x2-x1,bottom-top);ctx.restore();
       };
       ZONES.forEach(p=>fillPeriod(p,`rgba(34,197,94,${p.alpha_fill})`));
-      getBouclierRanges(ck).forEach(p=>fillPeriod(p,'rgba(251,191,36,0.20)'));
+      getBouclierRanges(ck).forEach(p=>fillPeriod(p,'rgba(251,191,36,0.20)',true));
       if(ck==='Gazole'){
         (BOUCLIER.Gazole_promo||[]).forEach(p=>fillPeriod(p,'rgba(234,88,12,0.09)'));
       }
@@ -451,6 +451,15 @@ function buildOne(cid,wid,grp,sid,color,raw){
   attachInteraction(charts[cid],canvas);
 }
 
+function inactiveBouclierSince(meta){
+  if(meta?.current_active!==false||!Array.isArray(meta.ranges)||!meta.ranges.length)return null;
+  const end=meta.ranges[meta.ranges.length-1].d2;
+  const ms=Date.parse(end+'T00:00:00Z');
+  if(!Number.isFinite(ms))return null;
+  const next=new Date(ms+86400000).toISOString().slice(0,10);
+  const through=window.A4C_DATA_META?.daily_target_end;
+  return !through||next<=through?next:null;
+}
 function updateBouclierInfo(){
   const bi=document.getElementById('bouclier-info');if(!bi)return;
   const ck=currentCarbu==='gazole'?'Gazole':'SP95';
@@ -463,7 +472,10 @@ function updateBouclierInfo(){
   }
   if(meta&&meta.current_active&&meta.current_active_since){
     const d=new Date(meta.current_active_since+'T12:00:00');
-    base+=' · <b>Actuellement contraignant depuis le '+d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})+'</b>';
+    base+=' · <b>Bouclier TotalEnergies actif depuis le '+d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})+'</b>';
+  } else if(meta&&meta.current_active===false){
+    const since=inactiveBouclierSince(meta);
+    base+=' · <b>Bouclier TotalEnergies inactif'+(since?' depuis le '+new Date(since+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}):'')+'</b>';
   }
   bi.innerHTML=base;
 }
@@ -553,7 +565,11 @@ function editorialEvolutionText(pct){
 function editorialBouclierStatus(fuel){
   const meta=getBouclierMeta(fuel);
   if(meta&&meta.current_active&&meta.current_active_since){
-    return ` Il est actuellement contraignant depuis le <strong>${editorialLongDate(meta.current_active_since)}</strong>.`;
+    return ` Bouclier TotalEnergies actif depuis le <strong>${editorialLongDate(meta.current_active_since)}</strong>.`;
+  }
+  if(meta&&meta.current_active===false){
+    const since=inactiveBouclierSince(meta);
+    return since?` Bouclier TotalEnergies inactif depuis le <strong>${editorialLongDate(since)}</strong>.`:' Bouclier TotalEnergies inactif au dernier relevé.';
   }
   return '';
 }
