@@ -4,119 +4,42 @@
       "all": {
         "daily": {
           "four_weeks_ago": {
-            "bdr_ht_eur_l": 1.954,
-            "bdr_ttc_eur_l": 2.3447,
-            "corse_ht_eur_l": 2.0192,
-            "corse_ttc_eur_l": 2.2817,
-            "date": "2026-10-11",
-            "gap_ht_c_l": 7.02,
-            "n_bdr": 243,
-            "n_bdr_guard": 243,
+            "bdr_ht_eur_l": 1.9651,
+            "bdr_ttc_eur_l": 2.3581,
+            "corse_ht_eur_l": 2.0102,
+            "corse_ttc_eur_l": 2.2715,
+            "date": "2026-10-18",
+            "gap_ht_c_l": 4.91,
+            "n_bdr": 237,
+            "n_bdr_guard": 237,
             "n_corse": 124
           },
-          "gap_change_4w_c_l": 8.79,
-          "gap_change_wow_c_l": -0.16,
+          "gap_change_4w_c_l": 13.43,
+          "gap_change_wow_c_l": -0.11,
           "gap_change_yoy_c_l": null,
           "latest": {
-            "bdr_ht_eur_l": 1.8315,
-            "bdr_ttc_eur_l": 2.1977,
-            "corse_ht_eur_l": 1.9896,
-            "corse_ttc_eur_l": 2.2482,
-            "date": "2026-11-08",
-            "gap_ht_c_l": 15.81,
-            "n_bdr": 240,
-            "n_bdr_guard": 240,
-            "n_corse": 120
+            "bdr_ht_eur_l": 1.7922,
+            "bdr_ttc_eur_l": 2.1507,
+            "corse_ht_eur_l": 1.9756,
+            "corse_ttc_eur_l": 2.2324,
+            "date": "2026-11-15",
+            "gap_ht_c_l": 18.34,
+            "n_bdr": 251,
+            "n_bdr_guard": 251,
+            "n_corse": 115
           },
           "previous": {
-            "bdr_ht_eur_l": 1.8315,
-            "bdr_ttc_eur_l": 2.1978,
-            "corse_ht_eur_l": 1.9912,
-            "corse_ttc_eur_l": 2.25,
-            "date": "2026-11-07",
-            "gap_ht_c_l": 15.97,
-            "n_bdr": 244,
-            "n_bdr_guard": 244,
-            "n_corse": 120
+            "bdr_ht_eur_l": 1.7916,
+            "bdr_ttc_eur_l": 2.15,
+            "corse_ht_eur_l": 1.9762,
+            "corse_ttc_eur_l": 2.233,
+            "date": "2026-11-14",
+            "gap_ht_c_l": 18.45,
+            "n_bdr": 252,
+            "n_bdr_guard": 252,
+            "n_corse": 115
           },
           "recent": [
-            {
-              "bdr_ht_eur_l": 1.9504,
-              "bdr_ttc_eur_l": 2.3405,
-              "corse_ht_eur_l": 2.014,
-              "corse_ttc_eur_l": 2.2759,
-              "date": "2026-11-01",
-              "gap_ht_c_l": 6.37,
-              "n_bdr": 237,
-              "n_bdr_guard": 237,
-              "n_corse": 122
-            },
-            {
-              "bdr_ht_eur_l": 1.8993,
-              "bdr_ttc_eur_l": 2.2792,
-              "corse_ht_eur_l": 2.0131,
-              "corse_ttc_eur_l": 2.2748,
-              "date": "2026-11-02",
-              "gap_ht_c_l": 11.38,
-              "n_bdr": 224,
-              "n_bdr_guard": 224,
-              "n_corse": 121
-            },
-            {
-              "bdr_ht_eur_l": 1.887,
-              "bdr_ttc_eur_l": 2.2644,
-              "corse_ht_eur_l": 2.0086,
-              "corse_ttc_eur_l": 2.2697,
-              "date": "2026-11-03",
-              "gap_ht_c_l": 12.16,
-              "n_bdr": 231,
-              "n_bdr_guard": 231,
-              "n_corse": 120
-            },
-            {
-              "bdr_ht_eur_l": 1.8723,
-              "bdr_ttc_eur_l": 2.2467,
-              "corse_ht_eur_l": 2.0046,
-              "corse_ttc_eur_l": 2.2652,
-              "date": "2026-11-04",
-              "gap_ht_c_l": 13.24,
-              "n_bdr": 245,
-              "n_bdr_guard": 245,
-              "n_corse": 121
-            },
-            {
-              "bdr_ht_eur_l": 1.858,
-              "bdr_ttc_eur_l": 2.2296,
-              "corse_ht_eur_l": 1.9972,
-              "corse_ttc_eur_l": 2.2568,
-              "date": "2026-11-05",
-              "gap_ht_c_l": 13.91,
-              "n_bdr": 246,
-              "n_bdr_guard": 246,
-              "n_corse": 120
-            },
-            {
-              "bdr_ht_eur_l": 1.8383,
-              "bdr_ttc_eur_l": 2.206,
-              "corse_ht_eur_l": 1.9922,
-              "corse_ttc_eur_l": 2.2511,
-              "date": "2026-11-06",
-              "gap_ht_c_l": 15.39,
-              "n_bdr": 246,
-              "n_bdr_guard": 246,
-              "n_corse": 119
-            },
-            {
-              "bdr_ht_eur_l": 1.8315,
-              "bdr_ttc_eur_l": 2.1978,
-              "corse_ht_eur_l": 1.9912,
-              "corse_ttc_eur_l": 2.25,
-              "date": "2026-11-07",
-              "gap_ht_c_l": 15.97,
-              "n_bdr": 244,
-              "n_bdr_guard": 244,
-              "n_corse": 120
-            },
             {
               "bdr_ht_eur_l": 1.8315,
               "bdr_ttc_eur_l": 2.1977,
@@ -127,26 +50,114 @@
               "n_bdr": 240,
               "n_bdr_guard": 240,
               "n_corse": 120
+            },
+            {
+              "bdr_ht_eur_l": 1.8254,
+              "bdr_ttc_eur_l": 2.1905,
+              "corse_ht_eur_l": 1.9857,
+              "corse_ttc_eur_l": 2.2438,
+              "date": "2026-11-09",
+              "gap_ht_c_l": 16.03,
+              "n_bdr": 232,
+              "n_bdr_guard": 232,
+              "n_corse": 121
+            },
+            {
+              "bdr_ht_eur_l": 1.8146,
+              "bdr_ttc_eur_l": 2.1775,
+              "corse_ht_eur_l": 1.9841,
+              "corse_ttc_eur_l": 2.242,
+              "date": "2026-11-10",
+              "gap_ht_c_l": 16.95,
+              "n_bdr": 241,
+              "n_bdr_guard": 241,
+              "n_corse": 120
+            },
+            {
+              "bdr_ht_eur_l": 1.8109,
+              "bdr_ttc_eur_l": 2.1731,
+              "corse_ht_eur_l": 1.9843,
+              "corse_ttc_eur_l": 2.2422,
+              "date": "2026-11-11",
+              "gap_ht_c_l": 17.33,
+              "n_bdr": 247,
+              "n_bdr_guard": 247,
+              "n_corse": 121
+            },
+            {
+              "bdr_ht_eur_l": 1.8048,
+              "bdr_ttc_eur_l": 2.1658,
+              "corse_ht_eur_l": 1.9821,
+              "corse_ttc_eur_l": 2.2398,
+              "date": "2026-11-12",
+              "gap_ht_c_l": 17.73,
+              "n_bdr": 246,
+              "n_bdr_guard": 246,
+              "n_corse": 121
+            },
+            {
+              "bdr_ht_eur_l": 1.7947,
+              "bdr_ttc_eur_l": 2.1536,
+              "corse_ht_eur_l": 1.9815,
+              "corse_ttc_eur_l": 2.239,
+              "date": "2026-11-13",
+              "gap_ht_c_l": 18.68,
+              "n_bdr": 250,
+              "n_bdr_guard": 250,
+              "n_corse": 122
+            },
+            {
+              "bdr_ht_eur_l": 1.7916,
+              "bdr_ttc_eur_l": 2.15,
+              "corse_ht_eur_l": 1.9762,
+              "corse_ttc_eur_l": 2.233,
+              "date": "2026-11-14",
+              "gap_ht_c_l": 18.45,
+              "n_bdr": 252,
+              "n_bdr_guard": 252,
+              "n_corse": 115
+            },
+            {
+              "bdr_ht_eur_l": 1.7922,
+              "bdr_ttc_eur_l": 2.1507,
+              "corse_ht_eur_l": 1.9756,
+              "corse_ttc_eur_l": 2.2324,
+              "date": "2026-11-15",
+              "gap_ht_c_l": 18.34,
+              "n_bdr": 251,
+              "n_bdr_guard": 251,
+              "n_corse": 115
             }
           ],
           "year_ago": null
         },
         "weekly": {
           "four_weeks_ago": {
-            "bdr_ht_eur_l": 1.9606,
-            "bdr_ttc_eur_l": 2.3527,
-            "corse_ht_eur_l": 2.0278,
-            "corse_ttc_eur_l": 2.2914,
-            "date": "2026-10-05",
-            "gap_ht_c_l": 7.33,
-            "n_bdr": 253,
-            "n_bdr_guard": 253,
+            "bdr_ht_eur_l": 1.9612,
+            "bdr_ttc_eur_l": 2.3535,
+            "corse_ht_eur_l": 2.0132,
+            "corse_ttc_eur_l": 2.2749,
+            "date": "2026-10-12",
+            "gap_ht_c_l": 5.63,
+            "n_bdr": 252,
+            "n_bdr_guard": 252,
             "n_corse": 124
           },
-          "gap_change_4w_c_l": 6.72,
-          "gap_change_wow_c_l": 10.29,
-          "gap_change_yoy_c_l": -3.26,
+          "gap_change_4w_c_l": 12.05,
+          "gap_change_wow_c_l": 3.63,
+          "gap_change_yoy_c_l": 0.35,
           "latest": {
+            "bdr_ht_eur_l": 1.8046,
+            "bdr_ttc_eur_l": 2.1655,
+            "corse_ht_eur_l": 1.9814,
+            "corse_ttc_eur_l": 2.239,
+            "date": "2026-11-09",
+            "gap_ht_c_l": 17.68,
+            "n_bdr": 255,
+            "n_bdr_guard": 255,
+            "n_corse": 122
+          },
+          "previous": {
             "bdr_ht_eur_l": 1.8591,
             "bdr_ttc_eur_l": 2.2309,
             "corse_ht_eur_l": 1.9995,
@@ -157,29 +168,7 @@
             "n_bdr_guard": 254,
             "n_corse": 122
           },
-          "previous": {
-            "bdr_ht_eur_l": 1.9752,
-            "bdr_ttc_eur_l": 2.3702,
-            "corse_ht_eur_l": 2.0128,
-            "corse_ttc_eur_l": 2.2745,
-            "date": "2026-10-26",
-            "gap_ht_c_l": 3.76,
-            "n_bdr": 250,
-            "n_bdr_guard": 250,
-            "n_corse": 123
-          },
           "recent": [
-            {
-              "bdr_ht_eur_l": 1.9854,
-              "bdr_ttc_eur_l": 2.3825,
-              "corse_ht_eur_l": 2.0305,
-              "corse_ttc_eur_l": 2.2945,
-              "date": "2026-09-14",
-              "gap_ht_c_l": 4.95,
-              "n_bdr": 250,
-              "n_bdr_guard": 250,
-              "n_corse": 121
-            },
             {
               "bdr_ht_eur_l": 2.0021,
               "bdr_ttc_eur_l": 2.4026,
@@ -256,15 +245,26 @@
               "n_bdr": 254,
               "n_bdr_guard": 254,
               "n_corse": 122
+            },
+            {
+              "bdr_ht_eur_l": 1.8046,
+              "bdr_ttc_eur_l": 2.1655,
+              "corse_ht_eur_l": 1.9814,
+              "corse_ttc_eur_l": 2.239,
+              "date": "2026-11-09",
+              "gap_ht_c_l": 17.68,
+              "n_bdr": 255,
+              "n_bdr_guard": 255,
+              "n_corse": 122
             }
           ],
           "year_ago": {
-            "bdr_ht_eur_l": 1.3854,
-            "bdr_ttc_eur_l": 1.6624,
-            "corse_ht_eur_l": 1.5587,
-            "corse_ttc_eur_l": 1.7613,
-            "date": "2025-11-03",
-            "gap_ht_c_l": 17.31,
+            "bdr_ht_eur_l": 1.4074,
+            "bdr_ttc_eur_l": 1.6888,
+            "corse_ht_eur_l": 1.5807,
+            "corse_ttc_eur_l": 1.7862,
+            "date": "2025-11-10",
+            "gap_ht_c_l": 17.33,
             "n_bdr": 241,
             "n_bdr_guard": 241,
             "n_corse": 116
@@ -274,119 +274,42 @@
       "network": {
         "daily": {
           "four_weeks_ago": {
-            "bdr_ht_eur_l": 1.9758,
-            "bdr_ttc_eur_l": 2.3709,
-            "corse_ht_eur_l": 2.0192,
-            "corse_ttc_eur_l": 2.2817,
-            "date": "2026-10-11",
-            "gap_ht_c_l": 4.85,
-            "n_bdr": 100,
-            "n_bdr_guard": 243,
+            "bdr_ht_eur_l": 1.979,
+            "bdr_ttc_eur_l": 2.3747,
+            "corse_ht_eur_l": 2.0102,
+            "corse_ttc_eur_l": 2.2715,
+            "date": "2026-10-18",
+            "gap_ht_c_l": 3.5,
+            "n_bdr": 97,
+            "n_bdr_guard": 237,
             "n_corse": 124
           },
-          "gap_change_4w_c_l": 5.96,
-          "gap_change_wow_c_l": 0.08,
+          "gap_change_4w_c_l": 9.94,
+          "gap_change_wow_c_l": 0.01,
           "gap_change_yoy_c_l": null,
           "latest": {
-            "bdr_ht_eur_l": 1.8815,
-            "bdr_ttc_eur_l": 2.2578,
-            "corse_ht_eur_l": 1.9896,
-            "corse_ttc_eur_l": 2.2482,
-            "date": "2026-11-08",
-            "gap_ht_c_l": 10.81,
-            "n_bdr": 103,
-            "n_bdr_guard": 240,
-            "n_corse": 120
+            "bdr_ht_eur_l": 1.8411,
+            "bdr_ttc_eur_l": 2.2094,
+            "corse_ht_eur_l": 1.9756,
+            "corse_ttc_eur_l": 2.2324,
+            "date": "2026-11-15",
+            "gap_ht_c_l": 13.44,
+            "n_bdr": 108,
+            "n_bdr_guard": 251,
+            "n_corse": 115
           },
           "previous": {
-            "bdr_ht_eur_l": 1.8839,
-            "bdr_ttc_eur_l": 2.2607,
-            "corse_ht_eur_l": 1.9912,
-            "corse_ttc_eur_l": 2.25,
-            "date": "2026-11-07",
-            "gap_ht_c_l": 10.73,
-            "n_bdr": 104,
-            "n_bdr_guard": 244,
-            "n_corse": 120
+            "bdr_ht_eur_l": 1.8418,
+            "bdr_ttc_eur_l": 2.2102,
+            "corse_ht_eur_l": 1.9762,
+            "corse_ttc_eur_l": 2.233,
+            "date": "2026-11-14",
+            "gap_ht_c_l": 13.43,
+            "n_bdr": 107,
+            "n_bdr_guard": 252,
+            "n_corse": 115
           },
           "recent": [
-            {
-              "bdr_ht_eur_l": 1.9612,
-              "bdr_ttc_eur_l": 2.3534,
-              "corse_ht_eur_l": 2.014,
-              "corse_ttc_eur_l": 2.2759,
-              "date": "2026-11-01",
-              "gap_ht_c_l": 5.29,
-              "n_bdr": 101,
-              "n_bdr_guard": 237,
-              "n_corse": 122
-            },
-            {
-              "bdr_ht_eur_l": 1.9498,
-              "bdr_ttc_eur_l": 2.3397,
-              "corse_ht_eur_l": 2.0131,
-              "corse_ttc_eur_l": 2.2748,
-              "date": "2026-11-02",
-              "gap_ht_c_l": 6.34,
-              "n_bdr": 92,
-              "n_bdr_guard": 224,
-              "n_corse": 121
-            },
-            {
-              "bdr_ht_eur_l": 1.9375,
-              "bdr_ttc_eur_l": 2.3251,
-              "corse_ht_eur_l": 2.0086,
-              "corse_ttc_eur_l": 2.2697,
-              "date": "2026-11-03",
-              "gap_ht_c_l": 7.1,
-              "n_bdr": 96,
-              "n_bdr_guard": 231,
-              "n_corse": 120
-            },
-            {
-              "bdr_ht_eur_l": 1.9238,
-              "bdr_ttc_eur_l": 2.3085,
-              "corse_ht_eur_l": 2.0046,
-              "corse_ttc_eur_l": 2.2652,
-              "date": "2026-11-04",
-              "gap_ht_c_l": 8.08,
-              "n_bdr": 103,
-              "n_bdr_guard": 245,
-              "n_corse": 121
-            },
-            {
-              "bdr_ht_eur_l": 1.9036,
-              "bdr_ttc_eur_l": 2.2843,
-              "corse_ht_eur_l": 1.9972,
-              "corse_ttc_eur_l": 2.2568,
-              "date": "2026-11-05",
-              "gap_ht_c_l": 9.36,
-              "n_bdr": 106,
-              "n_bdr_guard": 246,
-              "n_corse": 120
-            },
-            {
-              "bdr_ht_eur_l": 1.8891,
-              "bdr_ttc_eur_l": 2.267,
-              "corse_ht_eur_l": 1.9922,
-              "corse_ttc_eur_l": 2.2511,
-              "date": "2026-11-06",
-              "gap_ht_c_l": 10.3,
-              "n_bdr": 105,
-              "n_bdr_guard": 246,
-              "n_corse": 119
-            },
-            {
-              "bdr_ht_eur_l": 1.8839,
-              "bdr_ttc_eur_l": 2.2607,
-              "corse_ht_eur_l": 1.9912,
-              "corse_ttc_eur_l": 2.25,
-              "date": "2026-11-07",
-              "gap_ht_c_l": 10.73,
-              "n_bdr": 104,
-              "n_bdr_guard": 244,
-              "n_corse": 120
-            },
             {
               "bdr_ht_eur_l": 1.8815,
               "bdr_ttc_eur_l": 2.2578,
@@ -397,26 +320,114 @@
               "n_bdr": 103,
               "n_bdr_guard": 240,
               "n_corse": 120
+            },
+            {
+              "bdr_ht_eur_l": 1.8748,
+              "bdr_ttc_eur_l": 2.2498,
+              "corse_ht_eur_l": 1.9857,
+              "corse_ttc_eur_l": 2.2438,
+              "date": "2026-11-09",
+              "gap_ht_c_l": 11.09,
+              "n_bdr": 99,
+              "n_bdr_guard": 232,
+              "n_corse": 121
+            },
+            {
+              "bdr_ht_eur_l": 1.8636,
+              "bdr_ttc_eur_l": 2.2363,
+              "corse_ht_eur_l": 1.9841,
+              "corse_ttc_eur_l": 2.242,
+              "date": "2026-11-10",
+              "gap_ht_c_l": 12.05,
+              "n_bdr": 103,
+              "n_bdr_guard": 241,
+              "n_corse": 120
+            },
+            {
+              "bdr_ht_eur_l": 1.8578,
+              "bdr_ttc_eur_l": 2.2294,
+              "corse_ht_eur_l": 1.9843,
+              "corse_ttc_eur_l": 2.2422,
+              "date": "2026-11-11",
+              "gap_ht_c_l": 12.64,
+              "n_bdr": 107,
+              "n_bdr_guard": 247,
+              "n_corse": 121
+            },
+            {
+              "bdr_ht_eur_l": 1.8525,
+              "bdr_ttc_eur_l": 2.223,
+              "corse_ht_eur_l": 1.9821,
+              "corse_ttc_eur_l": 2.2398,
+              "date": "2026-11-12",
+              "gap_ht_c_l": 12.96,
+              "n_bdr": 106,
+              "n_bdr_guard": 246,
+              "n_corse": 121
+            },
+            {
+              "bdr_ht_eur_l": 1.8425,
+              "bdr_ttc_eur_l": 2.211,
+              "corse_ht_eur_l": 1.9815,
+              "corse_ttc_eur_l": 2.239,
+              "date": "2026-11-13",
+              "gap_ht_c_l": 13.9,
+              "n_bdr": 106,
+              "n_bdr_guard": 250,
+              "n_corse": 122
+            },
+            {
+              "bdr_ht_eur_l": 1.8418,
+              "bdr_ttc_eur_l": 2.2102,
+              "corse_ht_eur_l": 1.9762,
+              "corse_ttc_eur_l": 2.233,
+              "date": "2026-11-14",
+              "gap_ht_c_l": 13.43,
+              "n_bdr": 107,
+              "n_bdr_guard": 252,
+              "n_corse": 115
+            },
+            {
+              "bdr_ht_eur_l": 1.8411,
+              "bdr_ttc_eur_l": 2.2094,
+              "corse_ht_eur_l": 1.9756,
+              "corse_ttc_eur_l": 2.2324,
+              "date": "2026-11-15",
+              "gap_ht_c_l": 13.44,
+              "n_bdr": 108,
+              "n_bdr_guard": 251,
+              "n_corse": 115
             }
           ],
           "year_ago": null
         },
         "weekly": {
           "four_weeks_ago": {
-            "bdr_ht_eur_l": 1.9813,
-            "bdr_ttc_eur_l": 2.3775,
-            "corse_ht_eur_l": 2.0278,
-            "corse_ttc_eur_l": 2.2914,
-            "date": "2026-10-05",
-            "gap_ht_c_l": 5.29,
-            "n_bdr": 106,
-            "n_bdr_guard": 253,
+            "bdr_ht_eur_l": 1.9769,
+            "bdr_ttc_eur_l": 2.3722,
+            "corse_ht_eur_l": 2.0132,
+            "corse_ttc_eur_l": 2.2749,
+            "date": "2026-10-12",
+            "gap_ht_c_l": 4.05,
+            "n_bdr": 105,
+            "n_bdr_guard": 252,
             "n_corse": 124
           },
-          "gap_change_4w_c_l": 3.77,
-          "gap_change_wow_c_l": 6.3,
-          "gap_change_yoy_c_l": -4.53,
+          "gap_change_4w_c_l": 8.77,
+          "gap_change_wow_c_l": 3.76,
+          "gap_change_yoy_c_l": -0.84,
           "latest": {
+            "bdr_ht_eur_l": 1.8532,
+            "bdr_ttc_eur_l": 2.2238,
+            "corse_ht_eur_l": 1.9814,
+            "corse_ttc_eur_l": 2.239,
+            "date": "2026-11-09",
+            "gap_ht_c_l": 12.82,
+            "n_bdr": 109,
+            "n_bdr_guard": 255,
+            "n_corse": 122
+          },
+          "previous": {
             "bdr_ht_eur_l": 1.9089,
             "bdr_ttc_eur_l": 2.2907,
             "corse_ht_eur_l": 1.9995,
@@ -427,29 +438,7 @@
             "n_bdr_guard": 254,
             "n_corse": 122
           },
-          "previous": {
-            "bdr_ht_eur_l": 1.9852,
-            "bdr_ttc_eur_l": 2.3823,
-            "corse_ht_eur_l": 2.0128,
-            "corse_ttc_eur_l": 2.2745,
-            "date": "2026-10-26",
-            "gap_ht_c_l": 2.76,
-            "n_bdr": 106,
-            "n_bdr_guard": 250,
-            "n_corse": 123
-          },
           "recent": [
-            {
-              "bdr_ht_eur_l": 1.9982,
-              "bdr_ttc_eur_l": 2.3978,
-              "corse_ht_eur_l": 2.0305,
-              "corse_ttc_eur_l": 2.2945,
-              "date": "2026-09-14",
-              "gap_ht_c_l": 3.44,
-              "n_bdr": 107,
-              "n_bdr_guard": 250,
-              "n_corse": 121
-            },
             {
               "bdr_ht_eur_l": 2.0186,
               "bdr_ttc_eur_l": 2.4223,
@@ -526,16 +515,27 @@
               "n_bdr": 108,
               "n_bdr_guard": 254,
               "n_corse": 122
+            },
+            {
+              "bdr_ht_eur_l": 1.8532,
+              "bdr_ttc_eur_l": 2.2238,
+              "corse_ht_eur_l": 1.9814,
+              "corse_ttc_eur_l": 2.239,
+              "date": "2026-11-09",
+              "gap_ht_c_l": 12.82,
+              "n_bdr": 109,
+              "n_bdr_guard": 255,
+              "n_corse": 122
             }
           ],
           "year_ago": {
-            "bdr_ht_eur_l": 1.4226,
-            "bdr_ttc_eur_l": 1.7071,
-            "corse_ht_eur_l": 1.5587,
-            "corse_ttc_eur_l": 1.7613,
-            "date": "2025-11-03",
-            "gap_ht_c_l": 13.59,
-            "n_bdr": 109,
+            "bdr_ht_eur_l": 1.4441,
+            "bdr_ttc_eur_l": 1.7329,
+            "corse_ht_eur_l": 1.5807,
+            "corse_ttc_eur_l": 1.7862,
+            "date": "2025-11-10",
+            "gap_ht_c_l": 13.66,
+            "n_bdr": 107,
             "n_bdr_guard": 241,
             "n_corse": 116
           }
@@ -546,119 +546,42 @@
       "all": {
         "daily": {
           "four_weeks_ago": {
-            "bdr_ht_eur_l": 1.8762,
-            "bdr_ttc_eur_l": 2.2514,
-            "corse_ht_eur_l": 1.869,
-            "corse_ttc_eur_l": 2.1119,
-            "date": "2026-10-11",
-            "gap_ht_c_l": 0.03,
+            "bdr_ht_eur_l": 1.8576,
+            "bdr_ttc_eur_l": 2.2291,
+            "corse_ht_eur_l": 1.8709,
+            "corse_ttc_eur_l": 2.1141,
+            "date": "2026-10-18",
+            "gap_ht_c_l": 2.1,
             "n_bdr": 50,
             "n_bdr_guard": 50,
             "n_corse": 124
           },
-          "gap_change_4w_c_l": 7.23,
-          "gap_change_wow_c_l": 0.09,
+          "gap_change_4w_c_l": 8.0,
+          "gap_change_wow_c_l": -0.2,
           "gap_change_yoy_c_l": null,
           "latest": {
-            "bdr_ht_eur_l": 1.7799,
-            "bdr_ttc_eur_l": 2.1358,
-            "corse_ht_eur_l": 1.8524,
-            "corse_ttc_eur_l": 2.0932,
-            "date": "2026-11-08",
-            "gap_ht_c_l": 7.26,
-            "n_bdr": 49,
-            "n_bdr_guard": 49,
-            "n_corse": 120
+            "bdr_ht_eur_l": 1.7285,
+            "bdr_ttc_eur_l": 2.0742,
+            "corse_ht_eur_l": 1.8295,
+            "corse_ttc_eur_l": 2.0673,
+            "date": "2026-11-15",
+            "gap_ht_c_l": 10.1,
+            "n_bdr": 51,
+            "n_bdr_guard": 51,
+            "n_corse": 122
           },
           "previous": {
-            "bdr_ht_eur_l": 1.7809,
-            "bdr_ttc_eur_l": 2.1371,
-            "corse_ht_eur_l": 1.8526,
-            "corse_ttc_eur_l": 2.0935,
-            "date": "2026-11-07",
-            "gap_ht_c_l": 7.17,
-            "n_bdr": 50,
-            "n_bdr_guard": 50,
-            "n_corse": 120
+            "bdr_ht_eur_l": 1.7271,
+            "bdr_ttc_eur_l": 2.0725,
+            "corse_ht_eur_l": 1.8301,
+            "corse_ttc_eur_l": 2.068,
+            "date": "2026-11-14",
+            "gap_ht_c_l": 10.3,
+            "n_bdr": 52,
+            "n_bdr_guard": 52,
+            "n_corse": 122
           },
           "recent": [
-            {
-              "bdr_ht_eur_l": 1.8218,
-              "bdr_ttc_eur_l": 2.1861,
-              "corse_ht_eur_l": 1.8659,
-              "corse_ttc_eur_l": 2.1085,
-              "date": "2026-11-01",
-              "gap_ht_c_l": 4.41,
-              "n_bdr": 50,
-              "n_bdr_guard": 50,
-              "n_corse": 122
-            },
-            {
-              "bdr_ht_eur_l": 1.813,
-              "bdr_ttc_eur_l": 2.1756,
-              "corse_ht_eur_l": 1.8641,
-              "corse_ttc_eur_l": 2.1064,
-              "date": "2026-11-02",
-              "gap_ht_c_l": 5.11,
-              "n_bdr": 48,
-              "n_bdr_guard": 48,
-              "n_corse": 120
-            },
-            {
-              "bdr_ht_eur_l": 1.8073,
-              "bdr_ttc_eur_l": 2.1687,
-              "corse_ht_eur_l": 1.8618,
-              "corse_ttc_eur_l": 2.1038,
-              "date": "2026-11-03",
-              "gap_ht_c_l": 5.45,
-              "n_bdr": 48,
-              "n_bdr_guard": 48,
-              "n_corse": 120
-            },
-            {
-              "bdr_ht_eur_l": 1.8034,
-              "bdr_ttc_eur_l": 2.1641,
-              "corse_ht_eur_l": 1.8608,
-              "corse_ttc_eur_l": 2.1027,
-              "date": "2026-11-04",
-              "gap_ht_c_l": 5.74,
-              "n_bdr": 50,
-              "n_bdr_guard": 50,
-              "n_corse": 121
-            },
-            {
-              "bdr_ht_eur_l": 1.797,
-              "bdr_ttc_eur_l": 2.1564,
-              "corse_ht_eur_l": 1.8565,
-              "corse_ttc_eur_l": 2.0978,
-              "date": "2026-11-05",
-              "gap_ht_c_l": 5.94,
-              "n_bdr": 50,
-              "n_bdr_guard": 50,
-              "n_corse": 120
-            },
-            {
-              "bdr_ht_eur_l": 1.784,
-              "bdr_ttc_eur_l": 2.1407,
-              "corse_ht_eur_l": 1.8535,
-              "corse_ttc_eur_l": 2.0944,
-              "date": "2026-11-06",
-              "gap_ht_c_l": 6.95,
-              "n_bdr": 50,
-              "n_bdr_guard": 50,
-              "n_corse": 119
-            },
-            {
-              "bdr_ht_eur_l": 1.7809,
-              "bdr_ttc_eur_l": 2.1371,
-              "corse_ht_eur_l": 1.8526,
-              "corse_ttc_eur_l": 2.0935,
-              "date": "2026-11-07",
-              "gap_ht_c_l": 7.17,
-              "n_bdr": 50,
-              "n_bdr_guard": 50,
-              "n_corse": 120
-            },
             {
               "bdr_ht_eur_l": 1.7799,
               "bdr_ttc_eur_l": 2.1358,
@@ -669,26 +592,114 @@
               "n_bdr": 49,
               "n_bdr_guard": 49,
               "n_corse": 120
+            },
+            {
+              "bdr_ht_eur_l": 1.7776,
+              "bdr_ttc_eur_l": 2.1331,
+              "corse_ht_eur_l": 1.8489,
+              "corse_ttc_eur_l": 2.0893,
+              "date": "2026-11-09",
+              "gap_ht_c_l": 7.13,
+              "n_bdr": 48,
+              "n_bdr_guard": 48,
+              "n_corse": 120
+            },
+            {
+              "bdr_ht_eur_l": 1.7612,
+              "bdr_ttc_eur_l": 2.1135,
+              "corse_ht_eur_l": 1.8447,
+              "corse_ttc_eur_l": 2.0845,
+              "date": "2026-11-10",
+              "gap_ht_c_l": 8.34,
+              "n_bdr": 50,
+              "n_bdr_guard": 50,
+              "n_corse": 120
+            },
+            {
+              "bdr_ht_eur_l": 1.7581,
+              "bdr_ttc_eur_l": 2.1097,
+              "corse_ht_eur_l": 1.8439,
+              "corse_ttc_eur_l": 2.0836,
+              "date": "2026-11-11",
+              "gap_ht_c_l": 8.58,
+              "n_bdr": 50,
+              "n_bdr_guard": 50,
+              "n_corse": 120
+            },
+            {
+              "bdr_ht_eur_l": 1.7482,
+              "bdr_ttc_eur_l": 2.0978,
+              "corse_ht_eur_l": 1.8384,
+              "corse_ttc_eur_l": 2.0774,
+              "date": "2026-11-12",
+              "gap_ht_c_l": 9.02,
+              "n_bdr": 49,
+              "n_bdr_guard": 49,
+              "n_corse": 120
+            },
+            {
+              "bdr_ht_eur_l": 1.731,
+              "bdr_ttc_eur_l": 2.0772,
+              "corse_ht_eur_l": 1.832,
+              "corse_ttc_eur_l": 2.0702,
+              "date": "2026-11-13",
+              "gap_ht_c_l": 10.1,
+              "n_bdr": 51,
+              "n_bdr_guard": 51,
+              "n_corse": 121
+            },
+            {
+              "bdr_ht_eur_l": 1.7271,
+              "bdr_ttc_eur_l": 2.0725,
+              "corse_ht_eur_l": 1.8301,
+              "corse_ttc_eur_l": 2.068,
+              "date": "2026-11-14",
+              "gap_ht_c_l": 10.3,
+              "n_bdr": 52,
+              "n_bdr_guard": 52,
+              "n_corse": 122
+            },
+            {
+              "bdr_ht_eur_l": 1.7285,
+              "bdr_ttc_eur_l": 2.0742,
+              "corse_ht_eur_l": 1.8295,
+              "corse_ttc_eur_l": 2.0673,
+              "date": "2026-11-15",
+              "gap_ht_c_l": 10.1,
+              "n_bdr": 51,
+              "n_bdr_guard": 51,
+              "n_corse": 122
             }
           ],
           "year_ago": null
         },
         "weekly": {
           "four_weeks_ago": {
-            "bdr_ht_eur_l": 1.8753,
-            "bdr_ttc_eur_l": 2.2503,
-            "corse_ht_eur_l": 1.8704,
-            "corse_ttc_eur_l": 2.1135,
-            "date": "2026-10-05",
-            "gap_ht_c_l": 0.31,
-            "n_bdr": 53,
-            "n_bdr_guard": 53,
+            "bdr_ht_eur_l": 1.8642,
+            "bdr_ttc_eur_l": 2.237,
+            "corse_ht_eur_l": 1.8696,
+            "corse_ttc_eur_l": 2.1127,
+            "date": "2026-10-12",
+            "gap_ht_c_l": 1.31,
+            "n_bdr": 54,
+            "n_bdr_guard": 54,
             "n_corse": 124
           },
-          "gap_change_4w_c_l": 5.94,
-          "gap_change_wow_c_l": 2.28,
-          "gap_change_yoy_c_l": -10.55,
+          "gap_change_4w_c_l": 7.81,
+          "gap_change_wow_c_l": 2.87,
+          "gap_change_yoy_c_l": -7.5,
           "latest": {
+            "bdr_ht_eur_l": 1.747,
+            "bdr_ttc_eur_l": 2.0964,
+            "corse_ht_eur_l": 1.8382,
+            "corse_ttc_eur_l": 2.0771,
+            "date": "2026-11-09",
+            "gap_ht_c_l": 9.12,
+            "n_bdr": 52,
+            "n_bdr_guard": 52,
+            "n_corse": 122
+          },
+          "previous": {
             "bdr_ht_eur_l": 1.7949,
             "bdr_ttc_eur_l": 2.1539,
             "corse_ht_eur_l": 1.8574,
@@ -699,29 +710,7 @@
             "n_bdr_guard": 52,
             "n_corse": 121
           },
-          "previous": {
-            "bdr_ht_eur_l": 1.8261,
-            "bdr_ttc_eur_l": 2.1913,
-            "corse_ht_eur_l": 1.8664,
-            "corse_ttc_eur_l": 2.109,
-            "date": "2026-10-26",
-            "gap_ht_c_l": 3.97,
-            "n_bdr": 53,
-            "n_bdr_guard": 53,
-            "n_corse": 123
-          },
           "recent": [
-            {
-              "bdr_ht_eur_l": 1.8451,
-              "bdr_ttc_eur_l": 2.2141,
-              "corse_ht_eur_l": 1.8501,
-              "corse_ttc_eur_l": 2.0906,
-              "date": "2026-09-14",
-              "gap_ht_c_l": 0.82,
-              "n_bdr": 51,
-              "n_bdr_guard": 51,
-              "n_corse": 122
-            },
             {
               "bdr_ht_eur_l": 1.8558,
               "bdr_ttc_eur_l": 2.227,
@@ -798,15 +787,26 @@
               "n_bdr": 52,
               "n_bdr_guard": 52,
               "n_corse": 121
+            },
+            {
+              "bdr_ht_eur_l": 1.747,
+              "bdr_ttc_eur_l": 2.0964,
+              "corse_ht_eur_l": 1.8382,
+              "corse_ttc_eur_l": 2.0771,
+              "date": "2026-11-09",
+              "gap_ht_c_l": 9.12,
+              "n_bdr": 52,
+              "n_bdr_guard": 52,
+              "n_corse": 122
             }
           ],
           "year_ago": {
-            "bdr_ht_eur_l": 1.4427,
-            "bdr_ttc_eur_l": 1.7313,
-            "corse_ht_eur_l": 1.6109,
-            "corse_ttc_eur_l": 1.8203,
-            "date": "2025-11-03",
-            "gap_ht_c_l": 16.8,
+            "bdr_ht_eur_l": 1.4543,
+            "bdr_ttc_eur_l": 1.7452,
+            "corse_ht_eur_l": 1.6207,
+            "corse_ttc_eur_l": 1.8314,
+            "date": "2025-11-10",
+            "gap_ht_c_l": 16.62,
             "n_bdr": 50,
             "n_bdr_guard": 50,
             "n_corse": 115
@@ -816,119 +816,42 @@
       "network": {
         "daily": {
           "four_weeks_ago": {
-            "bdr_ht_eur_l": 1.8869,
-            "bdr_ttc_eur_l": 2.2642,
-            "corse_ht_eur_l": 1.869,
-            "corse_ttc_eur_l": 2.1119,
-            "date": "2026-10-11",
-            "gap_ht_c_l": -1.03,
-            "n_bdr": 27,
+            "bdr_ht_eur_l": 1.8671,
+            "bdr_ttc_eur_l": 2.2405,
+            "corse_ht_eur_l": 1.8709,
+            "corse_ttc_eur_l": 2.1141,
+            "date": "2026-10-18",
+            "gap_ht_c_l": 1.14,
+            "n_bdr": 28,
             "n_bdr_guard": 50,
             "n_corse": 124
           },
-          "gap_change_4w_c_l": 5.06,
-          "gap_change_wow_c_l": 0.05,
+          "gap_change_4w_c_l": 6.04,
+          "gap_change_wow_c_l": -0.4,
           "gap_change_yoy_c_l": null,
           "latest": {
-            "bdr_ht_eur_l": 1.8121,
-            "bdr_ttc_eur_l": 2.1745,
-            "corse_ht_eur_l": 1.8524,
-            "corse_ttc_eur_l": 2.0932,
-            "date": "2026-11-08",
-            "gap_ht_c_l": 4.03,
-            "n_bdr": 26,
-            "n_bdr_guard": 49,
-            "n_corse": 120
+            "bdr_ht_eur_l": 1.7577,
+            "bdr_ttc_eur_l": 2.1092,
+            "corse_ht_eur_l": 1.8295,
+            "corse_ttc_eur_l": 2.0673,
+            "date": "2026-11-15",
+            "gap_ht_c_l": 7.18,
+            "n_bdr": 28,
+            "n_bdr_guard": 51,
+            "n_corse": 122
           },
           "previous": {
-            "bdr_ht_eur_l": 1.8128,
-            "bdr_ttc_eur_l": 2.1754,
-            "corse_ht_eur_l": 1.8526,
-            "corse_ttc_eur_l": 2.0935,
-            "date": "2026-11-07",
-            "gap_ht_c_l": 3.98,
-            "n_bdr": 27,
-            "n_bdr_guard": 50,
-            "n_corse": 120
+            "bdr_ht_eur_l": 1.7543,
+            "bdr_ttc_eur_l": 2.1051,
+            "corse_ht_eur_l": 1.8301,
+            "corse_ttc_eur_l": 2.068,
+            "date": "2026-11-14",
+            "gap_ht_c_l": 7.58,
+            "n_bdr": 29,
+            "n_bdr_guard": 52,
+            "n_corse": 122
           },
           "recent": [
-            {
-              "bdr_ht_eur_l": 1.8349,
-              "bdr_ttc_eur_l": 2.2019,
-              "corse_ht_eur_l": 1.8659,
-              "corse_ttc_eur_l": 2.1085,
-              "date": "2026-11-01",
-              "gap_ht_c_l": 3.1,
-              "n_bdr": 29,
-              "n_bdr_guard": 50,
-              "n_corse": 122
-            },
-            {
-              "bdr_ht_eur_l": 1.8288,
-              "bdr_ttc_eur_l": 2.1946,
-              "corse_ht_eur_l": 1.8641,
-              "corse_ttc_eur_l": 2.1064,
-              "date": "2026-11-02",
-              "gap_ht_c_l": 3.53,
-              "n_bdr": 27,
-              "n_bdr_guard": 48,
-              "n_corse": 120
-            },
-            {
-              "bdr_ht_eur_l": 1.8315,
-              "bdr_ttc_eur_l": 2.1977,
-              "corse_ht_eur_l": 1.8618,
-              "corse_ttc_eur_l": 2.1038,
-              "date": "2026-11-03",
-              "gap_ht_c_l": 3.03,
-              "n_bdr": 26,
-              "n_bdr_guard": 48,
-              "n_corse": 120
-            },
-            {
-              "bdr_ht_eur_l": 1.8319,
-              "bdr_ttc_eur_l": 2.1983,
-              "corse_ht_eur_l": 1.8608,
-              "corse_ttc_eur_l": 2.1027,
-              "date": "2026-11-04",
-              "gap_ht_c_l": 2.89,
-              "n_bdr": 27,
-              "n_bdr_guard": 50,
-              "n_corse": 121
-            },
-            {
-              "bdr_ht_eur_l": 1.8288,
-              "bdr_ttc_eur_l": 2.1946,
-              "corse_ht_eur_l": 1.8565,
-              "corse_ttc_eur_l": 2.0978,
-              "date": "2026-11-05",
-              "gap_ht_c_l": 2.77,
-              "n_bdr": 27,
-              "n_bdr_guard": 50,
-              "n_corse": 120
-            },
-            {
-              "bdr_ht_eur_l": 1.8135,
-              "bdr_ttc_eur_l": 2.1761,
-              "corse_ht_eur_l": 1.8535,
-              "corse_ttc_eur_l": 2.0944,
-              "date": "2026-11-06",
-              "gap_ht_c_l": 4.0,
-              "n_bdr": 27,
-              "n_bdr_guard": 50,
-              "n_corse": 119
-            },
-            {
-              "bdr_ht_eur_l": 1.8128,
-              "bdr_ttc_eur_l": 2.1754,
-              "corse_ht_eur_l": 1.8526,
-              "corse_ttc_eur_l": 2.0935,
-              "date": "2026-11-07",
-              "gap_ht_c_l": 3.98,
-              "n_bdr": 27,
-              "n_bdr_guard": 50,
-              "n_corse": 120
-            },
             {
               "bdr_ht_eur_l": 1.8121,
               "bdr_ttc_eur_l": 2.1745,
@@ -939,26 +862,114 @@
               "n_bdr": 26,
               "n_bdr_guard": 49,
               "n_corse": 120
+            },
+            {
+              "bdr_ht_eur_l": 1.8121,
+              "bdr_ttc_eur_l": 2.1745,
+              "corse_ht_eur_l": 1.8489,
+              "corse_ttc_eur_l": 2.0893,
+              "date": "2026-11-09",
+              "gap_ht_c_l": 3.68,
+              "n_bdr": 26,
+              "n_bdr_guard": 48,
+              "n_corse": 120
+            },
+            {
+              "bdr_ht_eur_l": 1.7861,
+              "bdr_ttc_eur_l": 2.1433,
+              "corse_ht_eur_l": 1.8447,
+              "corse_ttc_eur_l": 2.0845,
+              "date": "2026-11-10",
+              "gap_ht_c_l": 5.86,
+              "n_bdr": 27,
+              "n_bdr_guard": 50,
+              "n_corse": 120
+            },
+            {
+              "bdr_ht_eur_l": 1.7811,
+              "bdr_ttc_eur_l": 2.1373,
+              "corse_ht_eur_l": 1.8439,
+              "corse_ttc_eur_l": 2.0836,
+              "date": "2026-11-11",
+              "gap_ht_c_l": 6.28,
+              "n_bdr": 27,
+              "n_bdr_guard": 50,
+              "n_corse": 120
+            },
+            {
+              "bdr_ht_eur_l": 1.7684,
+              "bdr_ttc_eur_l": 2.1221,
+              "corse_ht_eur_l": 1.8384,
+              "corse_ttc_eur_l": 2.0774,
+              "date": "2026-11-12",
+              "gap_ht_c_l": 7.0,
+              "n_bdr": 26,
+              "n_bdr_guard": 49,
+              "n_corse": 120
+            },
+            {
+              "bdr_ht_eur_l": 1.7577,
+              "bdr_ttc_eur_l": 2.1092,
+              "corse_ht_eur_l": 1.832,
+              "corse_ttc_eur_l": 2.0702,
+              "date": "2026-11-13",
+              "gap_ht_c_l": 7.43,
+              "n_bdr": 28,
+              "n_bdr_guard": 51,
+              "n_corse": 121
+            },
+            {
+              "bdr_ht_eur_l": 1.7543,
+              "bdr_ttc_eur_l": 2.1051,
+              "corse_ht_eur_l": 1.8301,
+              "corse_ttc_eur_l": 2.068,
+              "date": "2026-11-14",
+              "gap_ht_c_l": 7.58,
+              "n_bdr": 29,
+              "n_bdr_guard": 52,
+              "n_corse": 122
+            },
+            {
+              "bdr_ht_eur_l": 1.7577,
+              "bdr_ttc_eur_l": 2.1092,
+              "corse_ht_eur_l": 1.8295,
+              "corse_ttc_eur_l": 2.0673,
+              "date": "2026-11-15",
+              "gap_ht_c_l": 7.18,
+              "n_bdr": 28,
+              "n_bdr_guard": 51,
+              "n_corse": 122
             }
           ],
           "year_ago": null
         },
         "weekly": {
           "four_weeks_ago": {
-            "bdr_ht_eur_l": 1.885,
-            "bdr_ttc_eur_l": 2.262,
-            "corse_ht_eur_l": 1.8704,
-            "corse_ttc_eur_l": 2.1135,
-            "date": "2026-10-05",
-            "gap_ht_c_l": -0.67,
-            "n_bdr": 29,
-            "n_bdr_guard": 53,
+            "bdr_ht_eur_l": 1.8732,
+            "bdr_ttc_eur_l": 2.2478,
+            "corse_ht_eur_l": 1.8696,
+            "corse_ttc_eur_l": 2.1127,
+            "date": "2026-10-12",
+            "gap_ht_c_l": 0.4,
+            "n_bdr": 30,
+            "n_bdr_guard": 54,
             "n_corse": 124
           },
-          "gap_change_4w_c_l": 4.13,
-          "gap_change_wow_c_l": 1.19,
-          "gap_change_yoy_c_l": -9.59,
+          "gap_change_4w_c_l": 6.08,
+          "gap_change_wow_c_l": 3.02,
+          "gap_change_yoy_c_l": -6.6,
           "latest": {
+            "bdr_ht_eur_l": 1.7734,
+            "bdr_ttc_eur_l": 2.128,
+            "corse_ht_eur_l": 1.8382,
+            "corse_ttc_eur_l": 2.0771,
+            "date": "2026-11-09",
+            "gap_ht_c_l": 6.48,
+            "n_bdr": 29,
+            "n_bdr_guard": 52,
+            "n_corse": 122
+          },
+          "previous": {
             "bdr_ht_eur_l": 1.8228,
             "bdr_ttc_eur_l": 2.1873,
             "corse_ht_eur_l": 1.8574,
@@ -969,29 +980,7 @@
             "n_bdr_guard": 52,
             "n_corse": 121
           },
-          "previous": {
-            "bdr_ht_eur_l": 1.8437,
-            "bdr_ttc_eur_l": 2.2125,
-            "corse_ht_eur_l": 1.8664,
-            "corse_ttc_eur_l": 2.109,
-            "date": "2026-10-26",
-            "gap_ht_c_l": 2.27,
-            "n_bdr": 31,
-            "n_bdr_guard": 53,
-            "n_corse": 123
-          },
           "recent": [
-            {
-              "bdr_ht_eur_l": 1.8431,
-              "bdr_ttc_eur_l": 2.2117,
-              "corse_ht_eur_l": 1.8501,
-              "corse_ttc_eur_l": 2.0906,
-              "date": "2026-09-14",
-              "gap_ht_c_l": 1.02,
-              "n_bdr": 27,
-              "n_bdr_guard": 51,
-              "n_corse": 122
-            },
             {
               "bdr_ht_eur_l": 1.8577,
               "bdr_ttc_eur_l": 2.2293,
@@ -1068,15 +1057,26 @@
               "n_bdr": 29,
               "n_bdr_guard": 52,
               "n_corse": 121
+            },
+            {
+              "bdr_ht_eur_l": 1.7734,
+              "bdr_ttc_eur_l": 2.128,
+              "corse_ht_eur_l": 1.8382,
+              "corse_ttc_eur_l": 2.0771,
+              "date": "2026-11-09",
+              "gap_ht_c_l": 6.48,
+              "n_bdr": 29,
+              "n_bdr_guard": 52,
+              "n_corse": 122
             }
           ],
           "year_ago": {
-            "bdr_ht_eur_l": 1.4802,
-            "bdr_ttc_eur_l": 1.7763,
-            "corse_ht_eur_l": 1.6109,
-            "corse_ttc_eur_l": 1.8203,
-            "date": "2025-11-03",
-            "gap_ht_c_l": 13.05,
+            "bdr_ht_eur_l": 1.4897,
+            "bdr_ttc_eur_l": 1.7877,
+            "corse_ht_eur_l": 1.6207,
+            "corse_ttc_eur_l": 1.8314,
+            "date": "2025-11-10",
+            "gap_ht_c_l": 13.08,
             "n_bdr": 22,
             "n_bdr_guard": 50,
             "n_corse": 115
@@ -1085,20 +1085,20 @@
       }
     }
   },
-  "generated_at": "2026-11-09T16:48:51.224409+00:00",
+  "generated_at": "2026-11-16T07:08:34.543755+00:00",
   "homepage_default": {
     "comparison": "Corse vs Bouches-du-Rhone - reseau traditionnel",
     "gazole": {
-      "gap_change_wow_c_l": 6.3,
-      "gap_ht_c_l": 9.06
+      "gap_change_wow_c_l": 3.76,
+      "gap_ht_c_l": 12.82
     },
     "period": "latest_complete_week",
     "sp95": {
-      "gap_change_wow_c_l": 1.19,
-      "gap_ht_c_l": 3.46
+      "gap_change_wow_c_l": 3.02,
+      "gap_ht_c_l": 6.48
     },
-    "week_end": "2026-11-08",
-    "week_start": "2026-11-02"
+    "week_end": "2026-11-15",
+    "week_start": "2026-11-09"
   },
   "margin_gazole": {
     "all": {
@@ -1246,16 +1246,16 @@
     "weekly_switch_date": "2026-07-27"
   },
   "quality": {
-    "r2_calls": 6254,
+    "r2_calls": 6489,
     "r2_unavailable": 0,
-    "source_revision_reconciliation_count": 325,
+    "source_revision_reconciliation_count": 293,
     "source_revision_reconciliations_recent": [
       {
         "date": "2026-06-08",
         "fuel": "SP95",
         "granularity": "weekly",
         "published_gap_ht_c_l": 7.02,
-        "recomputed_gap_ht_c_l": 6.95,
+        "recomputed_gap_ht_c_l": 6.96,
         "scope": "network"
       },
       {
@@ -1263,7 +1263,7 @@
         "fuel": "SP95",
         "granularity": "weekly",
         "published_gap_ht_c_l": 9.43,
-        "recomputed_gap_ht_c_l": 9.36,
+        "recomputed_gap_ht_c_l": 9.35,
         "scope": "network"
       },
       {
@@ -1271,7 +1271,7 @@
         "fuel": "SP95",
         "granularity": "weekly",
         "published_gap_ht_c_l": 11.32,
-        "recomputed_gap_ht_c_l": 11.24,
+        "recomputed_gap_ht_c_l": 11.2,
         "scope": "network"
       },
       {
@@ -1279,7 +1279,7 @@
         "fuel": "SP95",
         "granularity": "weekly",
         "published_gap_ht_c_l": 11.98,
-        "recomputed_gap_ht_c_l": 11.9,
+        "recomputed_gap_ht_c_l": 11.86,
         "scope": "network"
       },
       {
@@ -1287,7 +1287,7 @@
         "fuel": "SP95",
         "granularity": "weekly",
         "published_gap_ht_c_l": 11.58,
-        "recomputed_gap_ht_c_l": 11.5,
+        "recomputed_gap_ht_c_l": 11.48,
         "scope": "network"
       },
       {
@@ -1295,7 +1295,7 @@
         "fuel": "SP95",
         "granularity": "weekly",
         "published_gap_ht_c_l": 9.18,
-        "recomputed_gap_ht_c_l": 9.11,
+        "recomputed_gap_ht_c_l": 9.12,
         "scope": "network"
       },
       {
@@ -1303,7 +1303,7 @@
         "fuel": "SP95",
         "granularity": "weekly",
         "published_gap_ht_c_l": 6.31,
-        "recomputed_gap_ht_c_l": 5.87,
+        "recomputed_gap_ht_c_l": 6.03,
         "scope": "network"
       },
       {
@@ -1311,7 +1311,7 @@
         "fuel": "SP95",
         "granularity": "weekly",
         "published_gap_ht_c_l": 3.65,
-        "recomputed_gap_ht_c_l": 3.64,
+        "recomputed_gap_ht_c_l": 3.9,
         "scope": "network"
       },
       {
@@ -1319,7 +1319,7 @@
         "fuel": "SP95",
         "granularity": "weekly",
         "published_gap_ht_c_l": 4.37,
-        "recomputed_gap_ht_c_l": 4.36,
+        "recomputed_gap_ht_c_l": 4.61,
         "scope": "network"
       },
       {
@@ -1327,7 +1327,7 @@
         "fuel": "SP95",
         "granularity": "weekly",
         "published_gap_ht_c_l": 4.16,
-        "recomputed_gap_ht_c_l": 4.18,
+        "recomputed_gap_ht_c_l": 4.36,
         "scope": "network"
       },
       {
@@ -1335,7 +1335,7 @@
         "fuel": "SP95",
         "granularity": "weekly",
         "published_gap_ht_c_l": 4.26,
-        "recomputed_gap_ht_c_l": 4.25,
+        "recomputed_gap_ht_c_l": 4.31,
         "scope": "network"
       },
       {
@@ -1413,22 +1413,22 @@
     ],
     "unknown_recent_bdr_station_ids": [],
     "warnings": [
-      "source_revision_reconciliations=325"
+      "source_revision_reconciliations=293"
     ]
   },
   "schema": "a4c-homepage-summary-v1",
   "shield": {
     "Gazole": {
-      "current_active": true,
-      "current_active_since": "2026-07-23",
+      "current_active": false,
+      "current_active_since": null,
       "current_cap": 2.25,
-      "latest_at_cap_count": 2,
-      "latest_at_cap_share": 0.1818,
+      "latest_at_cap_count": 0,
+      "latest_at_cap_share": 0.0,
       "latest_market_pressure": true,
-      "latest_near_share": 0.1818,
-      "latest_non_total_p75": 2.279,
-      "latest_non_total_stations": 73,
-      "latest_total_stations": 11,
+      "latest_near_share": 0.0,
+      "latest_non_total_p75": 2.25,
+      "latest_non_total_stations": 75,
+      "latest_total_stations": 40,
       "phases": [
         {
           "cap": 1.99,
@@ -1457,7 +1457,7 @@
         {
           "cap": 2.25,
           "d1": "2026-07-23",
-          "d2": "2026-11-08",
+          "d2": "2026-11-13",
           "phase_id": "Gazole:2026-07-23:2.250"
         }
       ],
@@ -1472,7 +1472,7 @@
         },
         {
           "d1": "2026-07-23",
-          "d2": "2026-11-08"
+          "d2": "2026-11-13"
         }
       ],
       "rule": {
@@ -1492,13 +1492,13 @@
       "current_active": true,
       "current_active_since": "2026-03-12",
       "current_cap": 1.99,
-      "latest_at_cap_count": 4,
-      "latest_at_cap_share": 0.4444,
+      "latest_at_cap_count": 14,
+      "latest_at_cap_share": 0.5833,
       "latest_market_pressure": true,
-      "latest_near_share": 0.4444,
-      "latest_non_total_p75": 2.19,
-      "latest_non_total_stations": 73,
-      "latest_total_stations": 9,
+      "latest_near_share": 0.5833,
+      "latest_non_total_p75": 2.17,
+      "latest_non_total_stations": 75,
+      "latest_total_stations": 24,
       "phases": [
         {
           "cap": 1.99,
@@ -1527,7 +1527,7 @@
         {
           "cap": 1.99,
           "d1": "2026-03-12",
-          "d2": "2026-11-08",
+          "d2": "2026-11-15",
           "phase_id": "SP95:2026-03-12:1.990"
         }
       ],
@@ -1550,7 +1550,7 @@
         },
         {
           "d1": "2026-03-12",
-          "d2": "2026-11-08"
+          "d2": "2026-11-15"
         }
       ],
       "rule": {
@@ -1568,15 +1568,15 @@
     }
   },
   "source": {
-    "c1_release_published_at": "2026-11-09T16:22:30Z",
-    "c1_release_tag": "a4c-v2-shared-20261109T162227Z-42653313702",
-    "c1_snapshot_sha256": "cad6167f5b7b74835e74199b7fe9e01e49b9e8c2317606a4016fb8d9dd5f6e57",
-    "daily_data_through": "2026-11-08",
-    "official_source_max_date": "2026-11-08",
+    "c1_release_published_at": "2026-11-16T06:12:59Z",
+    "c1_release_tag": "a4c-v2-shared-20261116T061256Z-43814617801",
+    "c1_snapshot_sha256": "563a205b35300f0aadd9559171a2d49e29561aa80c96a2799030c2c4ec317ba5",
+    "daily_data_through": "2026-11-15",
+    "official_source_max_date": "2026-11-15",
     "ufip_last_observed_date": "2026-11-06",
     "ufip_reference_source": "Thomson-Reuters",
     "ufip_smoothing": "5-day moving average",
     "ufip_unit": "EUR/L",
-    "weekly_data_through": "2026-11-08"
+    "weekly_data_through": "2026-11-15"
   }
 }
