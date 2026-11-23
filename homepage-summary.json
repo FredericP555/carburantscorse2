@@ -1085,7 +1085,7 @@
       }
     }
   },
-  "generated_at": "2026-11-23T07:08:37.096893+00:00",
+  "generated_at": "2026-11-23T16:49:12.098810+00:00",
   "homepage_default": {
     "comparison": "Corse vs Bouches-du-Rhone - reseau traditionnel",
     "gazole": {
@@ -1103,24 +1103,18 @@
   "margin_gazole": {
     "all": {
       "latest": {
+        "bdr": 18.19,
+        "corse": 38.61,
+        "date": "2026-11-16",
+        "ecart": 20.42
+      },
+      "previous": {
         "bdr": 17.2,
         "corse": 36.17,
         "date": "2026-11-09",
         "ecart": 18.97
       },
-      "previous": {
-        "bdr": 15.89,
-        "corse": 31.23,
-        "date": "2026-11-02",
-        "ecart": 15.34
-      },
       "recent": [
-        {
-          "bdr": 29.73,
-          "corse": 35.71,
-          "date": "2026-09-21",
-          "ecart": 5.98
-        },
         {
           "bdr": 30.49,
           "corse": 38.67,
@@ -1162,29 +1156,29 @@
           "corse": 36.17,
           "date": "2026-11-09",
           "ecart": 18.97
+        },
+        {
+          "bdr": 18.19,
+          "corse": 38.61,
+          "date": "2026-11-16",
+          "ecart": 20.42
         }
       ]
     },
     "network": {
       "latest": {
+        "bdr": 22.67,
+        "corse": 38.61,
+        "date": "2026-11-16",
+        "ecart": 15.94
+      },
+      "previous": {
         "bdr": 22.06,
         "corse": 36.17,
         "date": "2026-11-09",
         "ecart": 14.11
       },
-      "previous": {
-        "bdr": 20.9,
-        "corse": 31.23,
-        "date": "2026-11-02",
-        "ecart": 10.33
-      },
       "recent": [
-        {
-          "bdr": 31.36,
-          "corse": 35.71,
-          "date": "2026-09-21",
-          "ecart": 4.35
-        },
         {
           "bdr": 31.91,
           "corse": 38.67,
@@ -1226,10 +1220,16 @@
           "corse": 36.17,
           "date": "2026-11-09",
           "ecart": 14.11
+        },
+        {
+          "bdr": 22.67,
+          "corse": 38.61,
+          "date": "2026-11-16",
+          "ecart": 15.94
         }
       ]
     },
-    "ufip_last_observed_date": "2026-11-13"
+    "ufip_last_observed_date": "2026-11-20"
   },
   "methodology": {
     "bdr_category_policy": {
@@ -1568,12 +1568,12 @@
     }
   },
   "source": {
-    "c1_release_published_at": "2026-11-23T06:13:51Z",
-    "c1_release_tag": "a4c-v2-shared-20261123T061349Z-45122013006",
-    "c1_snapshot_sha256": "c637633bd3c569096d87ec9c14cbe157c03db2112298fb417ef1f0f703f0bb9d",
+    "c1_release_published_at": "2026-11-23T16:23:29Z",
+    "c1_release_tag": "a4c-v2-shared-20261123T162326Z-45214879836",
+    "c1_snapshot_sha256": "4594f70b74fbf1d34f45f2505951d13d38f2c935408b97eb04738dfccb01a13f",
     "daily_data_through": "2026-11-22",
     "official_source_max_date": "2026-11-22",
-    "ufip_last_observed_date": "2026-11-13",
+    "ufip_last_observed_date": "2026-11-20",
     "ufip_reference_source": "Thomson-Reuters",
     "ufip_smoothing": "5-day moving average",
     "ufip_unit": "EUR/L",
